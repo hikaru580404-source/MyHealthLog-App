@@ -1,77 +1,96 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ダッシュボード | 健康管理システム</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    /* クイックアクション専用スタイル */
+    .quick-actions {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;
+    }
+    .btn-quick {
+      background: #111827; color: #fff; border: none; border-radius: 8px;
+      padding: 12px 0; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      transition: opacity 0.2s;
+    }
+    .btn-quick:hover { opacity: 0.85; }
+    .btn-quick i { font-size: 1.2rem; }
+    .btn-quick.meal { background: #fff; color: #111827; border: 1px solid #d1d5db; }
+
+    /* モーダル専用スタイル */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-content {
+      background: #fff; width: 90%; max-width: 400px; border-radius: 12px; padding: 24px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    .modal-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: #111827; }
+    .modal-input {
+      width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px;
+      margin-bottom: 16px; font-size: 0.95rem; font-family: inherit;
+    }
+    .modal-actions { display: flex; gap: 10px; }
+  </style>
 </head>
-<body>
-<header class="app-header">
-  <div class="header-inner">
-    <div class="header-row1">
-      <div class="header-logo"><i class="fas fa-heartbeat"></i><span> 身体戦略ログ</span></div>
-      <div class="header-nav">
-        <button id="logoutBtn" class="btn-form-link"><i class="fas fa-sign-out-alt"></i><span>ログアウト</span></button>
-      </div>
-    </div>
-    <div class="header-row2" style="display: flex; justify-content: center; color: #fff; font-weight: 700; padding: 4px 0;">
-      <span id="currentDateLabel">記録を読み込み中...</span>
-    </div>
+<body style="background: var(--clr-bg);">
+<header class="app-header" style="background: #fff; border-bottom: 1px solid #f3f4f6;">
+  <div class="header-inner" style="flex-direction: row; justify-content: space-between; align-items: center;">
+    <div style="font-weight: 800; color: #111827;">身体管理ダッシュボード</div>
+    <button id="logoutBtn" style="background:none; border:none; color:#4b5563; font-size:0.85rem; cursor:pointer; font-weight:700;">ログアウト</button>
   </div>
 </header>
+
 <main class="app-main">
+  <div class="quick-actions">
+    <button class="btn-quick" id="btnBedtime"><i class="fas fa-moon"></i> 就寝</button>
+    <button class="btn-quick" id="btnWaketime"><i class="fas fa-sun"></i> 起床</button>
+    <button class="btn-quick meal" id="btnMealOpen"><i class="fas fa-utensils"></i> 食事</button>
+  </div>
+
   <section class="kpi-section">
-    <div class="kpi-card income">
-      <div class="kpi-icon"><i class="fas fa-weight"></i></div>
-      <div class="kpi-body">
-        <div class="kpi-label">最新の体重</div>
-        <div class="kpi-value" id="latestWeight">-- kg</div>
-      </div>
-    </div>
-    <div class="kpi-card expense">
-      <div class="kpi-icon"><i class="fas fa-bed"></i></div>
-      <div class="kpi-body">
-        <div class="kpi-label">昨夜の睡眠</div>
-        <div class="kpi-value" id="latestSleep">-- h</div>
-      </div>
-    </div>
-    <div class="kpi-card balance">
-      <div class="kpi-icon"><i class="fas fa-brain"></i></div>
-      <div class="kpi-body">
-        <div class="kpi-label">メンタル</div>
-        <div class="kpi-value" id="latestMental">--</div>
-      </div>
-    </div>
-    <div class="kpi-card forecast">
-      <div class="kpi-icon"><i class="fas fa-calendar-check"></i></div>
-      <div class="kpi-body">
-        <div class="kpi-label">今月の記録</div>
-        <div class="kpi-value" id="monthCount">0 日</div>
-      </div>
-    </div>
+    <div class="kpi-card" style="background:#fff; border:1px solid #f3f4f6;"><div class="kpi-body"><div class="kpi-label">最新の体重</div><div class="kpi-value" id="latestWeight">-- kg</div></div></div>
+    <div class="kpi-card" style="background:#fff; border:1px solid #f3f4f6;"><div class="kpi-body"><div class="kpi-label">昨夜の睡眠</div><div class="kpi-value" id="latestSleep">-- h</div></div></div>
+    <div class="kpi-card" style="background:#fff; border:1px solid #f3f4f6;"><div class="kpi-body"><div class="kpi-label">メンタル</div><div class="kpi-value" id="latestMental">--</div></div></div>
+    <div class="kpi-card" style="background:#fff; border:1px solid #f3f4f6;"><div class="kpi-body"><div class="kpi-label">今月の記録</div><div class="kpi-value" id="monthCount">0 日</div></div></div>
   </section>
-  <nav class="tab-nav">
-    <button class="tab-btn active"><i class="fas fa-chart-line"></i><span>分析</span></button>
-    <button class="tab-btn" onclick="location.href='form.html'"><i class="fas fa-plus-circle"></i><span>記録</span></button>
-    <button class="tab-btn" onclick="location.href='summary.html'"><i class="fas fa-history"></i><span>履歴</span></button>
+
+  <nav class="tab-nav" style="border:1px solid #f3f4f6;">
+    <button class="tab-btn active">分析</button>
+    <button class="tab-btn" onclick="location.href='form.html'">日次記録</button>
+    <button class="tab-btn" onclick="location.href='summary.html'">履歴</button>
   </nav>
-  <section class="tab-content">
-    <div class="chart-card">
-      <div class="chart-card-header"><i class="fas fa-project-diagram"></i><span>身体・睡眠相関グラフ（直近7日間）</span></div>
-      <div class="chart-wrap" style="height:280px; position:relative;">
-        <canvas id="healthCorrelationChart"></canvas>
-      </div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-card-header"><i class="fas fa-sticky-note"></i><span>最新のメモ</span></div>
-      <div id="latestNote" style="font-size: .85rem; color: var(--clr-text-secondary); line-height: 1.5; padding: 5px;">記録がありません。</div>
-    </div>
-  </section>
+
+  <div class="chart-card" style="border:1px solid #f3f4f6;">
+    <div class="chart-card-header" style="color:#111827;">直近7日間の推移</div>
+    <div style="height:250px;"><canvas id="healthCorrelationChart"></canvas></div>
+  </div>
 </main>
+
+<div class="modal-overlay" id="mealModal">
+  <div class="modal-content">
+    <div class="modal-title">食事の記録</div>
+    <select id="quickMealType" class="modal-input">
+      <option value="朝食">朝食</option>
+      <option value="昼食">昼食</option>
+      <option value="夕食">夕食</option>
+      <option value="間食">間食</option>
+    </select>
+    <input type="text" id="quickMealMemo" class="modal-input" placeholder="内容（例：鶏むね肉のサラダ）">
+    <div class="modal-actions">
+      <button id="btnMealCancel" style="flex:1; padding:12px; background:#f3f4f6; border:none; border-radius:8px; font-weight:700; cursor:pointer;">キャンセル</button>
+      <button id="btnMealSave" style="flex:1; padding:12px; background:#111827; color:#fff; border:none; border-radius:8px; font-weight:700; cursor:pointer;">保存</button>
+    </div>
+  </div>
+</div>
+
 <script src="supabase-client.js"></script>
 <script src="app.js"></script>
 </body>
