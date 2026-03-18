@@ -17,7 +17,11 @@
 <header class="app-header" style="background: var(--clr-surface); border-bottom: 1px solid var(--clr-border);">
   <div class="header-inner" style="flex-direction: row; justify-content: space-between; align-items: center;">
     <div style="font-weight: 800; color: var(--clr-text-accent); font-size: 1rem; font-family: var(--font-en); letter-spacing: 0.05em;">HEALTH LOG // DB</div>
-    <button id="logoutBtn" style="background:none; border:none; color: var(--clr-text-secondary); font-size:0.8rem; cursor:pointer; font-weight:700;">ログアウト</button>
+    
+    <div style="display: flex; gap: 16px; align-items: center;">
+      <button id="settingsBtn" style="background:none; border:none; color: var(--clr-text-secondary); font-size:1.1rem; cursor:pointer; transition: 0.2s;"><i class="fas fa-cog"></i></button>
+      <button id="logoutBtn" style="background:none; border:none; color: var(--clr-text-secondary); font-size:0.8rem; cursor:pointer; font-weight:700;">ログアウト</button>
+    </div>
   </div>
 </header>
 
@@ -59,7 +63,6 @@
     <div class="modal-title">初期セットアップ</div>
     <div class="modal-desc">管理の基準となる最初のデータと、<br><span style="color: var(--clr-accent); font-weight:700;">あなたの目標値</span>を入力してください。</div>
     <form id="initialSetupForm">
-      
       <div class="form-row-grid" style="background: rgba(245, 158, 11, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 16px; border: 1px solid rgba(245, 158, 11, 0.3);">
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label" style="color: var(--clr-accent);">🎯 目標体重 (kg)</label>
@@ -70,7 +73,6 @@
           <input type="number" id="initTargetFat" class="form-input" step="0.1" value="13.0" required>
         </div>
       </div>
-
       <div class="form-row-grid">
         <div class="form-group">
           <label class="form-label">昨晩の就寝</label>
@@ -103,6 +105,26 @@
       </div>
       <button type="submit" class="btn-primary" id="initSaveBtn">目標を設定して始める</button>
     </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-content">
+    <div class="modal-title">目標設定の変更</div>
+    <div class="form-row-grid" style="margin-bottom: 20px;">
+      <div class="form-group">
+        <label class="form-label" style="color: var(--clr-accent);">🎯 目標体重 (kg)</label>
+        <input type="number" id="settingTargetWeight" class="form-input" step="0.1" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="color: var(--clr-accent);">🎯 目標体脂肪 (%)</label>
+        <input type="number" id="settingTargetFat" class="form-input" step="0.1" required>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button id="btnSettingsCancel" class="btn-secondary" style="margin-top:0;">キャンセル</button>
+      <button id="btnSettingsSave" class="btn-primary" style="margin-top:0;">変更を保存</button>
+    </div>
   </div>
 </div>
 
