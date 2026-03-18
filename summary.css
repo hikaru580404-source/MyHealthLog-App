@@ -1,0 +1,35 @@
+.table-container {
+    background: #fff;
+    overflow-x: auto;
+    border-radius: 8px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    text-align: left;
+}
+
+th {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.cell-notes {
+    font-size: 0.85em;
+    color: #666;
+}
+
+.btn-delete {
+    background: var(--danger-color);
+    color: #fff;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+}

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>「**ログイン**」 | 健康管理システム</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="login-container">
+        <form id="login-form">
+            <h2>「**健康管理システムにログイン**」</h2>
+            <div class="input-group">
+                <label>「**メールアドレス**」</label>
+                <input type="email" id="email" required placeholder="example@mail.com">
+            </div>
+            <div class="input-group">
+                <label>「**パスワード**」</label>
+                <input type="password" id="password" required>
+            </div>
+            <button type="submit" class="btn-full">「**ログイン**」</button>
+            <p id="error-msg" class="text-danger"></p>
+        </form>
+    </div>
+
+    <script src="js/supabase-client.js"></script>
+    <script src="js/login.js"></script>
+</body>
+</html>

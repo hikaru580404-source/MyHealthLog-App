@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>「**健康管理システム**」 | Health Log Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>「**健康管理ダッシュボード**」</h1>
+            <nav>
+                <button id="logout-btn">「**ログアウト**」</button>
+            </nav>
+        </header>
+
+        <main>
+            <section class="summary-cards">
+                <div class="card">
+                    <h3>「**最新の体重**」</h3>
+                    <p id="latest-weight">「**読み込み中...**」</p>
+                </div>
+                <div class="card">
+                    <h3>「**今月の計測日数**」</h3>
+                    <p id="log-count">0 日</p>
+                </div>
+            </section>
+
+            <section class="actions">
+                <a href="form.html" class="btn-primary">「**新しいデータを記録する**」</a>
+                <a href="summary.html" class="btn-secondary">「**履歴一覧を確認する**」</a>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/supabase-client.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
