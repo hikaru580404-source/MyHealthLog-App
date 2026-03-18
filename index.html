@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ダッシュボード | 健康管理システム</title>
+  <title>HEALTH LOG // DB</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,45 +13,65 @@
   <link rel="stylesheet" href="form.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body style="background: var(--clr-bg);">
-<header class="app-header" style="background: var(--clr-surface); border-bottom: 1px solid var(--clr-border);">
-  <div class="header-inner" style="flex-direction: row; justify-content: space-between; align-items: center;">
-    <div style="font-weight: 800; color: var(--clr-text-accent); font-size: 1rem; font-family: var(--font-en); letter-spacing: 0.05em;">HEALTH LOG // DB</div>
-    
+<body>
+<header class="app-header">
+  <div class="header-inner">
+    <div class="logo">HEALTH LOG <span style="color:var(--clr-text-secondary); font-weight:400;">// DB</span></div>
     <div style="display: flex; gap: 16px; align-items: center;">
-      <button id="settingsBtn" style="background:none; border:none; color: var(--clr-text-secondary); font-size:1.1rem; cursor:pointer; transition: 0.2s;"><i class="fas fa-cog"></i></button>
-      <button id="logoutBtn" style="background:none; border:none; color: var(--clr-text-secondary); font-size:0.8rem; cursor:pointer; font-weight:700;">ログアウト</button>
+      <button id="settingsBtn" class="header-icon-btn"><i class="fas fa-cog"></i></button>
+      <button id="logoutBtn" class="header-logout-btn"><i class="fas fa-sign-out-alt"></i> Log Out</button>
     </div>
   </div>
 </header>
 
 <main class="app-main">
+  <div class="section-title">Quick Action</div>
   <div class="quick-actions">
-    <button class="btn-quick wake" id="btnWaketime"><i class="fas fa-sun"></i> 起床</button>
-    <button class="btn-quick meal" id="btnMealOpen"><i class="fas fa-utensils"></i> 食事</button>
-    <button class="btn-quick bed" id="btnBedtime"><i class="fas fa-moon"></i> 就寝</button>
+    <button class="btn-quick wake" id="btnWaketime"><i class="fas fa-sun"></i> Wake Up</button>
+    <button class="btn-quick meal" id="btnMealOpen"><i class="fas fa-utensils"></i> Meal</button>
+    <button class="btn-quick bed" id="btnBedtime">Sleep 🌕</button>
   </div>
 
+  <div class="section-title">KPI</div>
   <section class="kpi-section">
-    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">最新の体重</div><div class="kpi-value"><span id="latestWeight">-- kg</span><span id="deltaWeight" class="kpi-delta"></span></div></div></div>
-    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">昨夜の睡眠</div><div class="kpi-value"><span id="latestSleep">-- h</span><span id="deltaSleep" class="kpi-delta"></span></div></div></div>
-    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">メンタル</div><div class="kpi-value"><span id="latestMental" style="color: var(--clr-text-accent);">--</span><span id="deltaMental" class="kpi-delta"></span></div></div></div>
-    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">今月の記録</div><div class="kpi-value"><span id="monthCount">0 日</span></div></div></div>
+    <div class="kpi-card">
+      <div class="kpi-label">Weight</div>
+      <div class="kpi-value"><span id="latestWeight">-- kg</span></div>
+      <div id="deltaWeight" class="kpi-delta"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Sleep</div>
+      <div class="kpi-value"><span id="latestSleep">-- h</span></div>
+      <div id="deltaSleep" class="kpi-delta"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Mental Condition</div>
+      <div class="kpi-value" style="font-size: 1.2rem;"><span id="latestMental">--</span></div>
+      <div id="deltaMental" class="kpi-delta" style="color:var(--clr-text-secondary);">--</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Month Count</div>
+      <div class="kpi-value"><span id="monthCount">0</span> <span style="font-size: 0.9rem; margin-left:4px;">Days</span></div>
+      <div class="kpi-delta delta-good">Logging</div>
+    </div>
   </section>
 
-  <nav class="tab-nav" style="overflow-x: auto; white-space: nowrap;">
-    <button class="tab-btn active"><i class="fas fa-chart-line"></i> 分析</button>
-    <button class="tab-btn" onclick="location.href='meals.html'"><i class="fas fa-camera"></i> 食事ログ</button>
-    <button class="tab-btn" onclick="location.href='form.html'"><i class="fas fa-pen"></i> 日次記録</button>
-    <button class="tab-btn" onclick="location.href='summary.html'"><i class="fas fa-history"></i> 履歴</button>
-  </nav>
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
+    <div class="section-title" style="margin-bottom: 0;">7-Day Trend</div>
+    <nav class="tab-nav">
+      <button class="tab-btn active">Analysis</button>
+      <button class="tab-btn" onclick="location.href='meals.html'">Meals</button>
+      <button class="tab-btn" onclick="location.href='form.html'">Daily Log</button>
+      <button class="tab-btn" onclick="location.href='summary.html'">History</button>
+    </nav>
+  </div>
 
   <div class="chart-card">
     <div class="chart-header-flex">
-      <div class="chart-card-header" style="margin-bottom: 0;">直近7日間の推移</div>
+      <div class="chart-card-title">Recent 7-Day Trend</div>
       <div class="chart-toggle">
-        <button class="btn-toggle active" id="modeWeight">体重・体脂肪</button>
-        <button class="btn-toggle" id="modeSleep">睡眠・メンタル</button>
+        <button class="btn-toggle active" id="modeWeight">Weight / Fat</button>
+        <button class="btn-toggle" id="modeSleep">Sleep / Mental</button>
       </div>
     </div>
     <div style="height:250px;"><canvas id="healthCorrelationChart"></canvas></div>
@@ -60,38 +80,26 @@
 
 <div class="modal-overlay" id="initialSetupModal">
   <div class="modal-content" id="initModalBlock">
-    <div class="modal-title">初期セットアップ</div>
+    <div class="modal-title">Initial Setup</div>
     <div class="modal-desc">管理の基準となる最初のデータと、<br><span style="color: var(--clr-accent); font-weight:700;">あなたの目標値</span>を入力してください。</div>
     <form id="initialSetupForm">
-      <div class="form-row-grid" style="background: rgba(245, 158, 11, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 16px; border: 1px solid rgba(245, 158, 11, 0.3);">
+      <div class="form-row-grid" style="background: rgba(251, 191, 36, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(251, 191, 36, 0.2);">
         <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label" style="color: var(--clr-accent);">🎯 目標体重 (kg)</label>
+          <label class="form-label" style="color: var(--clr-accent);">TARGET Weight (kg)</label>
           <input type="number" id="initTargetWeight" class="form-input" step="0.1" value="65.0" required>
         </div>
         <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label" style="color: var(--clr-accent);">🎯 目標体脂肪 (%)</label>
+          <label class="form-label" style="color: var(--clr-accent);">TARGET Fat (%)</label>
           <input type="number" id="initTargetFat" class="form-input" step="0.1" value="13.0" required>
         </div>
       </div>
       <div class="form-row-grid">
-        <div class="form-group">
-          <label class="form-label">昨晩の就寝</label>
-          <input type="time" id="initBedtime" class="form-input" required>
-        </div>
-        <div class="form-group">
-          <label class="form-label">今朝の起床</label>
-          <input type="time" id="initWaketime" class="form-input" required>
-        </div>
+        <div class="form-group"><label class="form-label">昨晩の就寝</label><input type="time" id="initBedtime" class="form-input" required></div>
+        <div class="form-group"><label class="form-label">今朝の起床</label><input type="time" id="initWaketime" class="form-input" required></div>
       </div>
       <div class="form-row-grid">
-        <div class="form-group">
-          <label class="form-label">現在の体重 (kg)</label>
-          <input type="number" id="initWeight" class="form-input" step="0.1">
-        </div>
-        <div class="form-group">
-          <label class="form-label">現在の体脂肪 (%)</label>
-          <input type="number" id="initFat" class="form-input" step="0.1">
-        </div>
+        <div class="form-group"><label class="form-label">現在の体重 (kg)</label><input type="number" id="initWeight" class="form-input" step="0.1"></div>
+        <div class="form-group"><label class="form-label">現在の体脂肪 (%)</label><input type="number" id="initFat" class="form-input" step="0.1"></div>
       </div>
       <div class="form-group">
         <label class="form-label">コンディション</label>
@@ -103,46 +111,46 @@
           <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
         </div>
       </div>
-      <button type="submit" class="btn-primary" id="initSaveBtn">目標を設定して始める</button>
+      <button type="submit" class="btn-primary" id="initSaveBtn">Set Targets & Start</button>
     </form>
   </div>
 </div>
 
 <div class="modal-overlay" id="settingsModal">
   <div class="modal-content">
-    <div class="modal-title">目標設定の変更</div>
+    <div class="modal-title">Settings</div>
     <div class="form-row-grid" style="margin-bottom: 20px;">
       <div class="form-group">
-        <label class="form-label" style="color: var(--clr-accent);">🎯 目標体重 (kg)</label>
+        <label class="form-label" style="color: var(--clr-accent);">TARGET Weight (kg)</label>
         <input type="number" id="settingTargetWeight" class="form-input" step="0.1" required>
       </div>
       <div class="form-group">
-        <label class="form-label" style="color: var(--clr-accent);">🎯 目標体脂肪 (%)</label>
+        <label class="form-label" style="color: var(--clr-accent);">TARGET Fat (%)</label>
         <input type="number" id="settingTargetFat" class="form-input" step="0.1" required>
       </div>
     </div>
     <div class="modal-actions">
-      <button id="btnSettingsCancel" class="btn-secondary" style="margin-top:0;">キャンセル</button>
-      <button id="btnSettingsSave" class="btn-primary" style="margin-top:0;">変更を保存</button>
+      <button id="btnSettingsCancel" class="btn-secondary" style="margin-top:0;">Cancel</button>
+      <button id="btnSettingsSave" class="btn-primary" style="margin-top:0;">Save Changes</button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="mealModal">
   <div class="modal-content">
-    <div class="modal-title">食事の記録</div>
+    <div class="modal-title">Meal Log</div>
     <input type="date" id="quickMealDate" class="form-input" style="margin-bottom: 20px;">
     <select id="quickMealType" class="form-input" style="margin-bottom: 20px;">
-      <option value="朝食">朝食</option>
-      <option value="昼食">昼食</option>
-      <option value="夕食">夕食</option>
-      <option value="間食">間食</option>
+      <option value="Breakfast">Breakfast</option>
+      <option value="Lunch">Lunch</option>
+      <option value="Dinner">Dinner</option>
+      <option value="Snack">Snack</option>
     </select>
-    <input type="file" id="quickMealImage" accept="image/*" class="form-input" style="margin-bottom: 20px; background: #1e293b; padding: 10px; color: #94a3b8;">
-    <input type="text" id="quickMealMemo" class="form-input" placeholder="食べたもの・カロリーなど" style="margin-bottom: 20px;">
+    <input type="file" id="quickMealImage" accept="image/*" class="form-input" style="margin-bottom: 20px;">
+    <input type="text" id="quickMealMemo" class="form-input" placeholder="Memo / Calories" style="margin-bottom: 20px;">
     <div class="modal-actions">
-      <button id="btnMealCancel" class="btn-secondary" style="margin-top:0;">キャンセル</button>
-      <button id="btnMealSave" class="btn-primary" style="margin-top:0;">保存</button>
+      <button id="btnMealCancel" class="btn-secondary" style="margin-top:0;">Cancel</button>
+      <button id="btnMealSave" class="btn-primary" style="margin-top:0;">Save</button>
     </div>
   </div>
 </div>
