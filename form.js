@@ -3,18 +3,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!user) return;
     let mVal = 3;
 
-    // 論理日付の取得（午前4時境界）
-    function getLogicalDate(dateObj) {
-        const d = new Date(dateObj);
+    // タイムゾーンバグを修正した日付生成関数
+    function getLocalLogicalDateStr(dateObj) {
+        const d = new Date(dateObj.getTime());
         if (d.getHours() < 4) {
             d.setDate(d.getDate() - 1);
         }
-        return d.toISOString().split('T')[0];
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
     }
-    const today = getLogicalDate(new Date());
-    document.getElementById('date').value = today;
 
-    // コンディションボタンの制御
+    function formatTimeForInput(isoString) {
+        if (!isoString) return "";
+        const d = new Date(isoString);
+        const h = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${h}:${min}`;
+    }
+
+    const todayStr = getLocalLogicalDateStr(new Date());
+    document.getElementById('date').value = todayStr;
+
     document.querySelectorAll('#mGrp .cond-btn').forEach(b => {
         b.addEventListener('click', () => {
             document.querySelectorAll('#mGrp .cond-btn').forEach(x => x.classList.remove('active'));
@@ -23,26 +34,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // 「**段階的保存データ（打刻データ）の自動読み込み**」
     async function loadExistingData() {
         const { data } = await supabaseClient
             .from('health_logs')
             .select('*')
             .eq('user_id', user.id)
-            .eq('measured_date', today)
+            .eq('measured_date', todayStr)
             .single();
 
         if (data) {
             if (data.weight) document.getElementById('w').value = data.weight;
             if (data.body_fat) document.getElementById('f').value = data.body_fat;
-            if (data.bedtime) {
-                const btDate = new Date(data.bedtime);
-                document.getElementById('bt').value = btDate.toTimeString().slice(0, 5);
-            }
-            if (data.waketime) {
-                const wtDate = new Date(data.waketime);
-                document.getElementById('wt').value = wtDate.toTimeString().slice(0, 5);
-            }
+            if (data.waketime) document.getElementById('wt').value = formatTimeForInput(data.waketime);
+            if (data.bedtime) document.getElementById('bt').value = formatTimeForInput(data.bedtime);
             if (data.mental_condition) {
                 document.querySelectorAll('#mGrp .cond-btn').forEach(b => b.classList.remove('active'));
                 const targetBtn = document.querySelector(`#mGrp .cond-btn[data-v="${data.mental_condition}"]`);
@@ -55,26 +59,44 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     await loadExistingData();
 
-    // 確認画面への遷移処理
-    document.getElementById('hForm').addEventListener('submit', e => {
+    document.getElementById('hForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const date = document.getElementById('date').value;
-        const bt = document.getElementById('bt').value;
         const wt = document.getElementById('wt').value;
+        const bt = document.getElementById('bt').value;
         const wValue = document.getElementById('w').value;
         
-        let diff = "未入力";
-        if (bt && wt) {
-            let d_bt = new Date(date + "T" + bt);
-            let d_wt = new Date(date + "T" + wt);
-            if (d_wt <= d_bt) d_wt.setDate(d_wt.getDate() + 1);
-            diff = ((d_wt - d_bt) / 3600000).toFixed(1) + " h";
+        let diff = "未計算";
+
+        if (wt) {
+            const dDate = new Date(date);
+            dDate.setDate(dDate.getDate() - 1);
+            const prevDateStr = getLocalLogicalDateStr(dDate);
+            
+            const { data: prevDay } = await supabaseClient
+                .from('health_logs')
+                .select('bedtime')
+                .eq('user_id', user.id)
+                .eq('measured_date', prevDateStr)
+                .single();
+
+            if (prevDay && prevDay.bedtime) {
+                const btDate = new Date(prevDay.bedtime);
+                const wtDate = new Date(`${date}T${wt}:00`);
+                let hours = (wtDate - btDate) / 3600000;
+                if (hours < 0) hours += 24;
+                diff = hours.toFixed(1) + " h";
+            } else {
+                diff = "前日の記録なし";
+            }
         }
 
         document.getElementById('cList').innerHTML = `
             <div><span>日付:</span><span>${date}</span></div>
-            <div><span>体重:</span><span>${wValue ? wValue + " kg" : "未入力"}</span></div>
+            <div><span>起床:</span><span>${wt ? wt : "未入力"}</span></div>
+            <div><span>就寝:</span><span>${bt ? bt : "未入力"}</span></div>
             <div><span>睡眠:</span><span>${diff}</span></div>
+            <div><span>体重:</span><span>${wValue ? wValue + " kg" : "未入力"}</span></div>
         `;
         document.getElementById('p1').classList.remove('active');
         document.getElementById('p2').classList.add('active');
@@ -82,29 +104,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('s2').classList.add('active');
     });
 
-    // データベースへの確定保存処理（UPSERTマージ）
     document.getElementById('saveBtn').addEventListener('click', async () => {
         const btn = document.getElementById('saveBtn');
         btn.disabled = true;
         btn.innerText = "保存中...";
 
         const date = document.getElementById('date').value;
-        const bt = document.getElementById('bt').value;
         const wt = document.getElementById('wt').value;
+        const bt = document.getElementById('bt').value;
         const wValue = document.getElementById('w').value;
         const fValue = document.getElementById('f').value;
         
         let sleepHours = null;
-        let bedTS = null;
         let wakeTS = null;
+        let bedTS = null;
 
-        if (bt && wt) {
-            let d_bt = new Date(date + "T" + bt);
-            let d_wt = new Date(date + "T" + wt);
-            if (d_wt <= d_bt) d_wt.setDate(d_wt.getDate() + 1);
-            sleepHours = parseFloat(((d_wt - d_bt) / 3600000).toFixed(1));
-            bedTS = d_bt.toISOString();
-            wakeTS = d_wt.toISOString();
+        if (wt) {
+            wakeTS = new Date(`${date}T${wt}:00`).toISOString();
+            const dDate = new Date(date);
+            dDate.setDate(dDate.getDate() - 1);
+            const prevDateStr = getLocalLogicalDateStr(dDate);
+            
+            const { data: prevDay } = await supabaseClient
+                .from('health_logs')
+                .select('bedtime')
+                .eq('user_id', user.id)
+                .eq('measured_date', prevDateStr)
+                .single();
+
+            if (prevDay && prevDay.bedtime) {
+                const btDate = new Date(prevDay.bedtime);
+                const wtDate = new Date(wakeTS);
+                let hours = (wtDate - btDate) / 3600000;
+                if (hours < 0) hours += 24;
+                sleepHours = parseFloat(hours.toFixed(1));
+            }
+        }
+
+        if (bt) {
+            let bDate = new Date(`${date}T${bt}:00`);
+            if (bDate.getHours() < 4) bDate.setDate(bDate.getDate() + 1);
+            bedTS = bDate.toISOString();
         }
 
         const payload = {
@@ -116,8 +156,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (wValue) payload.weight = parseFloat(wValue);
         if (fValue) payload.body_fat = parseFloat(fValue);
-        if (bedTS) payload.bedtime = bedTS;
         if (wakeTS) payload.waketime = wakeTS;
+        if (bedTS) payload.bedtime = bedTS;
         if (sleepHours !== null) payload.sleep_hours = sleepHours;
 
         const { error } = await supabaseClient.from('health_logs').upsert(payload);

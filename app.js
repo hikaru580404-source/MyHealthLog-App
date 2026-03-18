@@ -8,17 +8,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = "login.html";
     });
 
-    function getLogicalDate(dateObj) {
-        const d = new Date(dateObj);
+    // タイムゾーンのズレを防ぐ厳密な日付生成
+    function getLocalLogicalDateStr(dateObj) {
+        const d = new Date(dateObj.getTime());
         if (d.getHours() < 4) {
             d.setDate(d.getDate() - 1);
         }
-        return d.toISOString().split('T')[0];
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
     }
 
-    // 初回セットアップの判定と実行
     async function checkInitialSetup() {
-        const { count } = await supabaseClient.from('health_logs')
+        const { count, error } = await supabaseClient.from('health_logs')
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id);
 
@@ -29,7 +32,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 初期セットアップのコンディションボタン制御
     let initMVal = 3;
     document.querySelectorAll('#initMGrp .cond-btn').forEach(b => {
         b.addEventListener('click', () => {
@@ -39,18 +41,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // 初期セットアップフォームの保存処理（前日と今日にデータを分割して格納）
     document.getElementById('initialSetupForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('initSaveBtn');
         btn.disabled = true;
-        btn.innerText = "保存中...";
+        btn.innerText = "処理中...";
 
         const now = new Date();
-        const todayStr = getLogicalDate(now);
-        const yesterday = new Date(now);
+        const todayStr = getLocalLogicalDateStr(now);
+        const yesterday = new Date(now.getTime());
         yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = getLogicalDate(yesterday);
+        const yesterdayStr = getLocalLogicalDateStr(yesterday);
 
         const btVal = document.getElementById('initBedtime').value;
         const wtVal = document.getElementById('initWaketime').value;
@@ -58,17 +59,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const fVal = document.getElementById('initFat').value;
         const noteVal = document.getElementById('initNote').value;
 
-        let bDate = new Date(yesterdayStr + "T" + btVal);
-        let wDate = new Date(todayStr + "T" + wtVal);
+        let bDate = new Date(`${yesterdayStr}T${btVal}:00`);
+        let wDate = new Date(`${todayStr}T${wtVal}:00`);
         if (wDate <= bDate) wDate.setDate(wDate.getDate() + 1);
         let sleepHours = parseFloat(((wDate - bDate) / 3600000).toFixed(1));
 
-        // 1. 昨日の就寝データを保存
         await supabaseClient.from('health_logs').upsert({
             user_id: user.id, measured_date: yesterdayStr, bedtime: bDate.toISOString()
         });
 
-        // 2. 今日の起床・各種データを保存
         const todayPayload = {
             user_id: user.id, measured_date: todayStr,
             waketime: wDate.toISOString(),
@@ -86,25 +85,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadDashboard();
     });
 
-    // 以降、通常のダッシュボード処理
     async function recordTime(type) {
         const now = new Date();
-        const logicalDate = getLogicalDate(now);
+        const logicalDateStr = getLocalLogicalDateStr(now);
         const timeISO = now.toISOString();
 
         const { data: existing } = await supabaseClient
-            .from('health_logs').select('*').eq('user_id', user.id).eq('measured_date', logicalDate).single();
+            .from('health_logs').select('*').eq('user_id', user.id).eq('measured_date', logicalDateStr).single();
 
-        const payload = existing || { user_id: user.id, measured_date: logicalDate };
+        const payload = existing || { user_id: user.id, measured_date: logicalDateStr };
 
         if (type === 'wake') {
             payload.waketime = timeISO;
-            const yesterday = new Date(now);
+            const yesterday = new Date(now.getTime());
             yesterday.setDate(yesterday.getDate() - 1);
-            const logicalYesterday = getLogicalDate(yesterday);
+            const logicalYesterdayStr = getLocalLogicalDateStr(yesterday);
             
             const { data: prevDay } = await supabaseClient
-                .from('health_logs').select('bedtime').eq('user_id', user.id).eq('measured_date', logicalYesterday).single();
+                .from('health_logs').select('bedtime').eq('user_id', user.id).eq('measured_date', logicalYesterdayStr).single();
 
             if (prevDay && prevDay.bedtime) {
                 const bt = new Date(prevDay.bedtime);
@@ -121,6 +119,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!error) {
             alert(type === 'bed' ? "就寝時刻を記録しました。" : "起床時刻と睡眠時間を記録しました。");
             loadDashboard();
+        } else {
+            alert("打刻エラー: " + error.message);
         }
     }
 
@@ -136,9 +136,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const memo = document.getElementById('quickMealMemo').value;
         if (!memo) return;
 
-        const logicalDate = getLogicalDate(new Date());
+        const logicalDateStr = getLocalLogicalDateStr(new Date());
         const { error } = await supabaseClient.from('meal_logs').insert({
-            user_id: user.id, meal_date: logicalDate, meal_type: type, content: memo
+            user_id: user.id, meal_date: logicalDateStr, meal_type: type, content: memo
         });
 
         if (!error) {
@@ -150,7 +150,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     async function loadDashboard() {
         const now = new Date();
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        const firstDayStr = getLocalLogicalDateStr(firstDay);
         
         const { data: latestData } = await supabaseClient.from('health_logs')
             .select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(1);
@@ -163,7 +164,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const { count } = await supabaseClient.from('health_logs')
-            .select('*', { count: 'exact', head: true }).eq('user_id', user.id).gte('measured_date', firstDay);
+            .select('*', { count: 'exact', head: true }).eq('user_id', user.id).gte('measured_date', firstDayStr);
         document.getElementById('monthCount').innerText = (count || 0) + " 日";
 
         const { data: chartData } = await supabaseClient.from('health_logs')
