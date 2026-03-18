@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>健康データ入力 | 健康管理システム</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="form.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <header class="form-header">
+    <div class="form-header-inner">
+      <a href="index.html" class="header-back-btn"><i class="fas fa-chart-pie"></i><span>ダッシュボード</span></a>
+      <div class="header-title"><i class="fas fa-pen-alt"></i><span>戦略的記録</span></div>
+      <div class="header-date" id="headerDate"></div>
+    </div>
+  </header>
+
+  <main class="form-main">
+    <div class="step-indicator">
+      <div class="step active" id="step1Dot"><div class="step-dot"><span>1</span></div><div class="step-label">入力</div></div>
+      <div class="step-line"></div>
+      <div class="step" id="step2Dot"><div class="step-dot"><span>2</span></div><div class="step-label">確認</div></div>
+      <div class="step-line"></div>
+      <div class="step" id="step3Dot"><div class="step-dot"><span>3</span></div><div class="step-label">完了</div></div>
+    </div>
+
+    <div class="step-panel active" id="panelInput">
+      <div class="form-card">
+        <form id="healthForm" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="inputDate"><i class="fas fa-calendar-day"></i> 記録日</label>
+            <input type="date" id="inputDate" class="form-input" required />
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-group">
+              <label class="form-label" for="inputWeight"><i class="fas fa-weight"></i> 体重(kg)</label>
+              <input type="number" id="inputWeight" class="form-input" step="0.1" placeholder="00.0" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inputFat"><i class="fas fa-percent"></i> 体脂肪(%)</label>
+              <input type="number" id="inputFat" class="form-input" step="0.1" placeholder="00.0" />
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-group">
+              <label class="form-label" for="inputBedtime"><i class="fas fa-moon"></i> 就寝時刻</label>
+              <input type="time" id="inputBedtime" class="form-input" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="inputWaketime"><i class="fas fa-sun"></i> 起床時刻</label>
+              <input type="time" id="inputWaketime" class="form-input" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label"><i class="fas fa-brain"></i> メンタルコンディション</label>
+            <div class="cond-group" id="mentalGroup">
+              <button type="button" class="cond-btn" data-level="1"><i class="fas fa-tired"></i><span>不調</span></button>
+              <button type="button" class="cond-btn" data-level="2"><i class="fas fa-frown"></i><span>低調</span></button>
+              <button type="button" class="cond-btn" data-level="3" class="active"><i class="fas fa-meh"></i><span>普通</span></button>
+              <button type="button" class="cond-btn" data-level="4"><i class="fas fa-smile"></i><span>良好</span></button>
+              <button type="button" class="cond-btn" data-level="5"><i class="fas fa-grin-beam"></i><span>最高</span></button>
+            </div>
+            <input type="hidden" id="inputMental" value="3" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label"><i class="fas fa-utensils"></i> 食事の記録</label>
+            <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+              <select id="inputMealType" class="form-input" style="flex: 0 0 100px;">
+                <option value="朝食">朝食</option>
+                <option value="昼食">昼食</option>
+                <option value="夕食">夕食</option>
+                <option value="間食">間食</option>
+              </select>
+              <input type="text" id="inputMealMemo" class="form-input" placeholder="食べたもの、内容" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="inputNotes"><i class="fas fa-sticky-note"></i> 総括メモ</label>
+            <textarea id="inputNotes" class="form-input" rows="2" placeholder="気づきや今日の変化"></textarea>
+          </div>
+
+          <button type="submit" class="btn-next">内容を確認する <i class="fas fa-arrow-right"></i></button>
+        </form>
+      </div>
+    </div>
+
+    <div class="step-panel" id="panelConfirm">
+      <div class="confirm-card">
+        <div class="confirm-header">
+          <div class="confirm-type-badge income">入力内容の確認</div>
+          <div class="confirm-amount" id="confirmSummary"></div>
+        </div>
+        <div class="confirm-table" id="confirmDataList">
+          </div>
+        <div class="confirm-actions">
+          <button class="btn-back" id="backToInputBtn">修正する</button>
+          <button class="btn-confirm" id="confirmSaveBtn">この内容で確定</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-panel" id="panelDone">
+      <div class="done-card">
+        <div class="done-icon"><i class="fas fa-check-circle"></i></div>
+        <h2 class="done-title">記録完了</h2>
+        <div class="done-actions">
+          <button class="btn-add-more" onclick="location.reload()">続けて記録</button>
+          <a href="index.html" class="btn-go-dashboard">ダッシュボードに戻る</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="supabase-client.js"></script>
+  <script src="form.js"></script>
+</body>
+</html>
