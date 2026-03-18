@@ -1,25 +1,93 @@
-.step-indicator { display: flex; align-items: center; justify-content: center; margin-bottom: 25px; }
-.step { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.step-dot { width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 2px solid var(--clr-border); display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; }
-.step.active .step-dot { border-color: var(--clr-balance); background: var(--clr-balance); color: #fff; }
-.step.done .step-dot { border-color: var(--clr-income); background: var(--clr-income); color: #fff; }
-.step-label { font-size: .65rem; font-weight: 700; color: var(--clr-text-secondary); }
-.step-line { flex: 1; height: 2px; background: var(--clr-border); margin: -15px 10px 0; max-width: 40px; }
+/* --- 刷新されたプロフェッショナル・ヘッダー --- */
+.form-header {
+  background: #fff;
+  border-bottom: 1px solid var(--clr-border);
+  position: sticky; top: 0; z-index: 100;
+  height: 56px;
+}
+.form-header-inner {
+  max-width: 640px; margin: 0 auto;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 100px 1fr 100px;
+  align-items: center;
+  padding: 0 16px;
+}
+.header-back-link {
+  color: var(--clr-balance-dark);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex; align-items: center; gap: 4px;
+}
+.header-center-title {
+  text-align: center;
+  font-size: 0.95rem; font-weight: 800;
+  color: var(--clr-text-primary);
+}
 
-.step-panel { display: none; }
-.step-panel.active { display: block; }
+/* --- カードとグリッドの論理配置 --- */
+.form-main { max-width: 640px; margin: 0 auto; padding: 24px 16px; }
+.form-row-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
-.form-card { background: #fff; border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-md); }
-.form-group { margin-bottom: 18px; }
-.form-label { display: block; font-size: .8rem; font-weight: 800; margin-bottom: 8px; }
-.form-input { width: 100%; padding: 12px; border: 1.5px solid var(--clr-border); border-radius: 10px; font-size: 1rem; }
+.form-card {
+  background: #fff; border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  border: 1px solid var(--clr-border);
+}
 
-.cond-group { display: flex; gap: 8px; }
-.cond-btn { flex: 1; aspect-ratio: 1; border-radius: 12px; border: 2px solid var(--clr-border); background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
-.cond-btn i { font-size: 1.2rem; margin-bottom: 4px; }
-.cond-btn span { font-size: .6rem; font-weight: 700; }
-.cond-btn.active { border-color: var(--clr-balance); color: var(--clr-balance); background: var(--clr-balance-light); }
+.form-label {
+  display: block; font-size: 0.78rem; font-weight: 800;
+  color: var(--clr-text-secondary); margin-bottom: 6px;
+}
+.form-input {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid #d1d5db; border-radius: 6px;
+  font-size: 1rem; color: var(--clr-text-primary);
+  background: #f9fafb;
+}
+.form-input:focus {
+  outline: none; border-color: var(--clr-balance); background: #fff;
+  box-shadow: 0 0 0 3px var(--clr-balance-light);
+}
 
-.btn-next, .btn-confirm { width: 100%; padding: 15px; border-radius: 10px; border: none; background: var(--clr-balance); color: #fff; font-weight: 800; cursor: pointer; }
-.confirm-table { border-top: 1px solid var(--clr-border); margin-bottom: 20px; }
-.confirm-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--clr-border); font-size: .85rem; }
+/* --- コンディション選択のモダン化 --- */
+.cond-group { display: flex; gap: 8px; margin-top: 4px; }
+.cond-btn {
+  flex: 1; height: 54px; border-radius: 8px;
+  border: 1px solid #d1d5db; background: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  cursor: pointer; transition: all .2s; color: #9ca3af;
+}
+.cond-btn i { font-size: 1.1rem; margin-bottom: 2px; }
+.cond-btn span { font-size: 0.6rem; font-weight: 800; }
+.cond-btn.active {
+  border-color: var(--clr-balance); color: var(--clr-balance-dark);
+  background: var(--clr-balance-light); border-width: 2px;
+}
+
+/* --- ボタンアクションの強化 --- */
+.btn-primary-action {
+  width: 100%; padding: 14px; margin-top: 24px;
+  background: var(--clr-text-primary); color: #fff;
+  border: none; border-radius: 6px;
+  font-size: 0.95rem; font-weight: 700; cursor: pointer;
+  transition: opacity .2s;
+}
+.btn-secondary-action {
+  width: 100%; padding: 14px; margin-top: 24px;
+  background: #fff; color: var(--clr-text-secondary);
+  border: 1px solid var(--clr-border); border-radius: 6px;
+  font-size: 0.95rem; font-weight: 700; cursor: pointer;
+}
+
+/* --- 確認画面の整理 --- */
+.confirm-table { margin: 20px 0; border-top: 1px solid var(--clr-border); }
+.confirm-row {
+  display: flex; justify-content: space-between; padding: 14px 0;
+  border-bottom: 1px solid var(--clr-border); font-size: 0.88rem;
+}
+
+.done-card { text-align: center; padding: 40px 20px; }
+.done-icon { font-size: 3.5rem; color: var(--clr-income); margin-bottom: 16px; }
