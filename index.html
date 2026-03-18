@@ -7,37 +7,19 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="form.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* クイックアクション専用スタイル */
-    .quick-actions {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;
-    }
+    .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
     .btn-quick {
       background: #111827; color: #fff; border: none; border-radius: 8px;
       padding: 12px 0; font-size: 0.85rem; font-weight: 700; cursor: pointer;
-      display: flex; flex-direction: column; align-items: center; gap: 6px;
-      transition: opacity 0.2s;
+      display: flex; flex-direction: column; align-items: center; gap: 6px; transition: opacity 0.2s;
     }
     .btn-quick:hover { opacity: 0.85; }
     .btn-quick i { font-size: 1.2rem; }
     .btn-quick.meal { background: #fff; color: #111827; border: 1px solid #d1d5db; }
-
-    /* モーダル専用スタイル */
-    .modal-overlay {
-      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;
-    }
-    .modal-content {
-      background: #fff; width: 90%; max-width: 400px; border-radius: 12px; padding: 24px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    }
-    .modal-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: #111827; }
-    .modal-input {
-      width: 100%; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px;
-      margin-bottom: 16px; font-size: 0.95rem; font-family: inherit;
-    }
-    .modal-actions { display: flex; gap: 10px; }
+    .btn-quick.bed { background: #374151; }
   </style>
 </head>
 <body style="background: var(--clr-bg);">
@@ -50,9 +32,9 @@
 
 <main class="app-main">
   <div class="quick-actions">
-    <button class="btn-quick" id="btnBedtime"><i class="fas fa-moon"></i> 就寝</button>
     <button class="btn-quick" id="btnWaketime"><i class="fas fa-sun"></i> 起床</button>
     <button class="btn-quick meal" id="btnMealOpen"><i class="fas fa-utensils"></i> 食事</button>
+    <button class="btn-quick bed" id="btnBedtime"><i class="fas fa-moon"></i> 就寝</button>
   </div>
 
   <section class="kpi-section">
@@ -74,19 +56,63 @@
   </div>
 </main>
 
+<div class="modal-overlay" id="initialSetupModal">
+  <div class="modal-content" id="initModalBlock">
+    <div class="modal-title">初期セットアップ</div>
+    <div class="modal-desc">これからの管理の基準となる最初のデータを入力してください。<br>（就寝と起床時刻のみ必須です）</div>
+    <form id="initialSetupForm">
+      <div class="form-row-grid">
+        <div class="form-group">
+          <label class="form-label">昨晩の就寝</label>
+          <input type="time" id="initBedtime" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">今朝の起床</label>
+          <input type="time" id="initWaketime" class="form-input" required>
+        </div>
+      </div>
+      <div class="form-row-grid">
+        <div class="form-group">
+          <label class="form-label">現在の体重 (kg)</label>
+          <input type="number" id="initWeight" class="form-input" step="0.1" placeholder="任意">
+        </div>
+        <div class="form-group">
+          <label class="form-label">体脂肪 (%)</label>
+          <input type="number" id="initFat" class="form-input" step="0.1" placeholder="任意">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">コンディション（任意）</label>
+        <div class="cond-group" id="initMGrp">
+          <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
+          <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
+          <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
+          <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
+          <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">メモ（任意）</label>
+        <textarea id="initNote" class="form-input" rows="2" placeholder="意気込みなど"></textarea>
+      </div>
+      <button type="submit" class="btn-primary" id="initSaveBtn">記録して始める</button>
+    </form>
+  </div>
+</div>
+
 <div class="modal-overlay" id="mealModal">
   <div class="modal-content">
     <div class="modal-title">食事の記録</div>
-    <select id="quickMealType" class="modal-input">
+    <select id="quickMealType" class="form-input">
       <option value="朝食">朝食</option>
       <option value="昼食">昼食</option>
       <option value="夕食">夕食</option>
       <option value="間食">間食</option>
     </select>
-    <input type="text" id="quickMealMemo" class="modal-input" placeholder="内容（例：鶏むね肉のサラダ）">
+    <input type="text" id="quickMealMemo" class="form-input" placeholder="内容">
     <div class="modal-actions">
-      <button id="btnMealCancel" style="flex:1; padding:12px; background:#f3f4f6; border:none; border-radius:8px; font-weight:700; cursor:pointer;">キャンセル</button>
-      <button id="btnMealSave" style="flex:1; padding:12px; background:#111827; color:#fff; border:none; border-radius:8px; font-weight:700; cursor:pointer;">保存</button>
+      <button id="btnMealCancel" class="btn-secondary" style="margin-top:0;">キャンセル</button>
+      <button id="btnMealSave" class="btn-primary" style="margin-top:0;">保存</button>
     </div>
   </div>
 </div>

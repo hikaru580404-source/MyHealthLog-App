@@ -12,13 +12,26 @@
     <h1 class="login-title" id="authTitle">システム ログイン</h1>
     <form id="authForm">
       <div class="login-form-group">
-        <label class="login-label" for="email">メールアドレス</label>
+        <label class="login-label">メールアドレス</label>
         <input type="email" id="email" class="login-input" required placeholder="example@mail.com">
       </div>
       <div class="login-form-group">
-        <label class="login-label" for="password">パスワード</label>
-        <input type="password" id="password" class="login-input" minlength="6" placeholder="6文字以上" required>
+        <label class="login-label">パスワード</label>
+        <input type="password" id="password" class="login-input" minlength="6" required>
       </div>
+
+      <div class="login-form-group" id="consentGroup" style="display: none; margin-top: 20px; background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
+          <input type="checkbox" id="consentCheck" style="margin-top: 4px; transform: scale(1.2);">
+          <span style="font-size: 0.8rem; color: #374151; line-height: 1.4; font-weight: 700;">
+            個人情報の取り扱いおよび利用規約に同意する。<br>
+            <span style="font-size: 0.7rem; color: #6b7280; font-weight: 500; display: block; margin-top: 6px;">
+              ※入力されたデータは暗号化され、システム管理者であっても閲覧できないセキュアな仕組み（RLS）で完全に保護されます。
+            </span>
+          </span>
+        </label>
+      </div>
+
       <button type="submit" class="login-btn" id="authSubmitBtn">ログイン</button>
       <div id="authMsg" class="login-msg"></div>
     </form>
