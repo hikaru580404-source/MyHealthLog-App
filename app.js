@@ -142,7 +142,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mealModal = document.getElementById('mealModal');
     
     document.getElementById('btnMealOpen').addEventListener('click', () => {
-        // モーダルを開いた時に今日の日付を自動セットする
         document.getElementById('quickMealDate').value = getLocalLogicalDateStr(new Date());
         mealModal.style.display = 'flex';
     });
@@ -204,14 +203,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 if (uploadError) throw uploadError;
 
-                // 2. 公開URLを取得
                 const { data: publicUrlData } = supabaseClient.storage.from('meal_images').getPublicUrl(fileName);
                 imageUrl = publicUrlData.publicUrl;
             }
 
-            // 3. DBに記録（選択された日付を使用）
+            // 3. DBに記録（★エラー回避のため、システム側で現在時刻を強制付与★）
             const { error } = await supabaseClient.from('meal_logs').insert({
-                user_id: user.id, meal_date: mealDate, meal_type: type, content: memo, image_url: imageUrl
+                user_id: user.id, 
+                meal_date: mealDate, 
+                meal_type: type, 
+                content: memo, 
+                image_url: imageUrl,
+                created_at: new Date().toISOString()
             });
 
             if (error) throw error;
@@ -240,7 +243,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const log = latestData[0];
             document.getElementById('latestWeight').innerText = log.weight ? log.weight.toFixed(1) + " kg" : "-- kg";
             document.getElementById('latestSleep').innerText = log.sleep_hours ? log.sleep_hours.toFixed(1) + " h" : "-- h";
-            // メンタルを顔文字アイコン化
             document.getElementById('latestMental').innerHTML = log.mental_condition ? mentalIcons[log.mental_condition - 1] : "--";
         }
 
