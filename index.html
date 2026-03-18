@@ -29,10 +29,10 @@
   </div>
 
   <section class="kpi-section">
-    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">最新の体重</div><div class="kpi-value" id="latestWeight">-- kg</div></div></div>
-    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">昨夜の睡眠</div><div class="kpi-value" id="latestSleep">-- h</div></div></div>
-    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">メンタル</div><div class="kpi-value" id="latestMental" style="color: var(--clr-text-accent);">--</div></div></div>
-    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">今月の記録</div><div class="kpi-value" id="monthCount">0 日</div></div></div>
+    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">最新の体重</div><div class="kpi-value"><span id="latestWeight">-- kg</span><span id="deltaWeight" class="kpi-delta"></span></div></div></div>
+    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">昨夜の睡眠</div><div class="kpi-value"><span id="latestSleep">-- h</span><span id="deltaSleep" class="kpi-delta"></span></div></div></div>
+    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">メンタル</div><div class="kpi-value"><span id="latestMental" style="color: var(--clr-text-accent);">--</span><span id="deltaMental" class="kpi-delta"></span></div></div></div>
+    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">今月の記録</div><div class="kpi-value"><span id="monthCount">0 日</span></div></div></div>
   </section>
 
   <nav class="tab-nav">
@@ -42,7 +42,13 @@
   </nav>
 
   <div class="chart-card">
-    <div class="chart-card-header">直近7日間の推移</div>
+    <div class="chart-header-flex">
+      <div class="chart-card-header" style="margin-bottom: 0;">直近7日間の推移</div>
+      <div class="chart-toggle">
+        <button class="btn-toggle active" id="modeWeight">体重</button>
+        <button class="btn-toggle" id="modeSleep">睡眠</button>
+      </div>
+    </div>
     <div style="height:250px;"><canvas id="healthCorrelationChart"></canvas></div>
   </div>
 </main>
@@ -94,18 +100,14 @@
 <div class="modal-overlay" id="mealModal">
   <div class="modal-content">
     <div class="modal-title">食事の記録</div>
-    
     <input type="date" id="quickMealDate" class="form-input" style="margin-bottom: 20px;">
-
     <select id="quickMealType" class="form-input" style="margin-bottom: 20px;">
       <option value="朝食">朝食</option>
       <option value="昼食">昼食</option>
       <option value="夕食">夕食</option>
       <option value="間食">間食</option>
     </select>
-    
     <input type="file" id="quickMealImage" accept="image/*" class="form-input" style="margin-bottom: 20px; background: #1e293b; padding: 10px; color: #94a3b8;">
-    
     <input type="text" id="quickMealMemo" class="form-input" placeholder="食べたもの・カロリーなど" style="margin-bottom: 20px;">
     <div class="modal-actions">
       <button id="btnMealCancel" class="btn-secondary" style="margin-top:0;">キャンセル</button>

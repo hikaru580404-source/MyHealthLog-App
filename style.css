@@ -100,3 +100,43 @@ body { font-family: var(--font-jp); background: var(--clr-bg); color: var(--clr-
 .modal-input { width: 100%; padding: 14px; background: var(--clr-bg); border: 1px solid var(--clr-border); border-radius: 8px; margin-bottom: 20px; font-size: 1rem; color: var(--clr-text-primary); font-family: inherit; }
 .modal-input:focus { border-color: var(--clr-accent); outline: none; }
 .modal-actions { display: flex; gap: 14px; margin-top: 28px; }
+/* デルタ（前回差分）のスタイル */
+.kpi-delta {
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-left: 8px;
+  font-family: var(--font-en);
+}
+.delta-good { color: #10b981; } /* 緑（体重減など） */
+.delta-bad { color: #ef4444; } /* 赤（体重増など） */
+.delta-neutral { color: var(--clr-text-secondary); }
+
+/* グラフ切り替えトグルボタン */
+.chart-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.chart-toggle {
+  display: flex;
+  background: var(--clr-bg);
+  border-radius: 8px;
+  padding: 4px;
+  border: 1px solid var(--clr-border);
+}
+.btn-toggle {
+  background: none;
+  border: none;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--clr-text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.btn-toggle.active {
+  background: var(--clr-surface2);
+  color: var(--clr-text-primary);
+}
