@@ -27,17 +27,22 @@
     }
 
     .summary-header {
-      padding: 2rem 1.5rem;
+      padding: 1.5rem 1.5rem;
       background: #fff;
       border-bottom: 1px solid var(--clr-premium-border);
       display: flex;
       justify-content: space-between;
       align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
     .header-title {
-      font-size: 1.25rem;
+      font-size: 1.1rem;
       font-weight: 700;
+      font-family: var(--font-en);
+      letter-spacing: 0.05em;
       color: var(--clr-premium-text);
     }
 
@@ -59,7 +64,7 @@
       border-radius: 12px;
       border: 1px solid var(--clr-premium-border);
       overflow: hidden;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
     }
 
     .table-wrapper {
@@ -74,39 +79,62 @@
 
     th {
       background: #fdfdfd;
-      padding: 1rem;
+      padding: 1rem 1.2rem;
       font-size: 0.75rem;
       font-weight: 600;
+      font-family: var(--font-en);
       color: var(--clr-premium-sub);
       text-transform: uppercase;
+      letter-spacing: 0.05em;
       border-bottom: 1px solid var(--clr-premium-border);
     }
 
     td {
-      padding: 1.2rem 1rem;
-      font-size: 0.9rem;
+      padding: 1.2rem;
+      font-size: 0.95rem;
       border-bottom: 1px solid #f3f4f6;
       font-family: var(--font-en);
+      color: var(--clr-premium-text);
+      transition: background-color 0.2s ease;
     }
 
-    .col-date { font-weight: 600; color: var(--clr-premium-text); }
-    .col-val { font-weight: 500; }
-    .col-mental { font-family: var(--font-jp); font-size: 0.85rem; }
-    .col-note { font-family: var(--font-jp); color: var(--clr-premium-sub); font-size: 0.8rem; max-width: 250px; }
+    tbody tr:hover td {
+      background-color: #f9fafb;
+    }
+
+    .col-date { font-weight: 600; white-space: nowrap; }
+    .col-date .dow { font-size: 0.75rem; color: var(--clr-premium-sub); font-weight: 400; margin-left: 4px; }
+    
+    /* 数値データは右揃えで比較しやすくする */
+    .col-val { font-weight: 500; text-align: right; white-space: nowrap; }
+    th.col-val { text-align: right; }
+    
+    .col-mental { font-family: var(--font-jp); text-align: center; }
+    th.col-mental { text-align: center; }
+    
+    .col-note { font-family: var(--font-jp); color: var(--clr-premium-sub); font-size: 0.85rem; line-height: 1.5; min-width: 200px; }
 
     .badge-mental {
-      padding: 0.2rem 0.6rem;
-      border-radius: 4px;
-      font-weight: 500;
+      display: inline-block;
+      padding: 0.3rem 0.8rem;
+      border-radius: 99px;
+      font-weight: 600;
       font-size: 0.75rem;
+      letter-spacing: 0.02em;
     }
+    
+    /* 5段階のコンディションカラー定義 */
     .m-5 { background: #f0fdf4; color: #166534; } /* 絶好調 */
     .m-4 { background: #f0f9ff; color: #075985; } /* 良 */
+    .m-3 { background: #f3f4f6; color: #374151; } /* 並 */
+    .m-2 { background: #fff7ed; color: #9a3412; } /* 低調 */
     .m-1 { background: #fef2f2; color: #991b1b; } /* 不調 */
 
     @media (max-width: 640px) {
       .summary-header { padding: 1rem; }
-      td, th { padding: 0.8rem 0.5rem; font-size: 0.8rem; }
+      .summary-container { margin: 1rem auto; }
+      td, th { padding: 1rem 0.8rem; font-size: 0.85rem; }
+      .col-note { min-width: 150px; }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -125,9 +153,9 @@
           <thead>
             <tr>
               <th>Date</th>
-              <th>Weight</th>
-              <th>Sleep</th>
-              <th>Condition</th>
+              <th class="col-val">Weight</th>
+              <th class="col-val">Sleep</th>
+              <th class="col-mental">Condition</th>
               <th>Note</th>
             </tr>
           </thead>
@@ -138,7 +166,7 @@
     </div>
   </main>
 
-  <script src="auth.js"></script>
-  <script src="summary.js"></script>
+  <script src="supabase-client.js"></script>
+  <script src="app.js"></script> <script src="summary.js"></script>
 </body>
 </html>
