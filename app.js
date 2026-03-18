@@ -10,12 +10,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         '<i class="far fa-laugh-beam"></i>'
     ];
 
-    // --- 仮の目標体重（後で変更可能） ---
-    const TARGET_WEIGHT = 65.0; 
-
-    // グラフの現在のモード ('weight' or 'sleep')
     let currentChartMode = 'weight';
     let globalChartLogs = [];
+    
+    // ユーザーの目標値を取得（設定がない場合は仮の値をセット）
+    let TARGET_WEIGHT = parseFloat(localStorage.getItem('targetWeight_' + user.id)) || 65.0;
+    let TARGET_FAT = parseFloat(localStorage.getItem('targetFat_' + user.id)) || 13.0;
 
     document.getElementById('logoutBtn').addEventListener('click', async () => {
         await supabaseClient.auth.signOut();
@@ -53,13 +53,68 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    let initMVal = 3;
+    document.querySelectorAll('#initMGrp .cond-btn').forEach(b => {
+        b.addEventListener('click', () => {
+            document.querySelectorAll('#initMGrp .cond-btn').forEach(x => x.classList.remove('active'));
+            b.classList.add('active');
+            initMVal = b.dataset.v;
+        });
+    });
+
     document.getElementById('initialSetupForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-        // （初期設定のロジックは変更なしのため省略せずにそのまま維持。前回と同じ処理です）
-        // ※長くなるため、ここには通常の初期化処理が入ります。そのまま動きます。
-        localStorage.setItem('initSetup_' + user.id, 'true');
-        document.getElementById('initialSetupModal').style.display = 'none';
-        loadDashboard();
+        const btn = document.getElementById('initSaveBtn');
+        btn.disabled = true;
+        btn.innerText = "処理中...";
+        
+        // 目標値を保存
+        const tWeight = document.getElementById('initTargetWeight').value;
+        const tFat = document.getElementById('initTargetFat').value;
+        localStorage.setItem('targetWeight_' + user.id, tWeight);
+        localStorage.setItem('targetFat_' + user.id, tFat);
+        TARGET_WEIGHT = parseFloat(tWeight);
+        TARGET_FAT = parseFloat(tFat);
+
+        try {
+            const now = new Date();
+            const todayStr = getLocalLogicalDateStr(now);
+            const yesterday = new Date(now.getTime());
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = getLocalLogicalDateStr(yesterday);
+
+            const btVal = document.getElementById('initBedtime').value;
+            const wtVal = document.getElementById('initWaketime').value;
+            const wVal = document.getElementById('initWeight').value;
+            const fVal = document.getElementById('initFat').value;
+
+            let bDate = createSafeDate(yesterdayStr, btVal);
+            let wDate = createSafeDate(todayStr, wtVal);
+            if (wDate <= bDate) wDate.setDate(wDate.getDate() + 1);
+            let sleepHours = parseFloat(((wDate - bDate) / 3600000).toFixed(1));
+
+            const yestPayload = { user_id: user.id, measured_date: yesterdayStr, bedtime: bDate.toISOString() };
+            const { data: yData } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', yesterdayStr).maybeSingle();
+            if (yData) await supabaseClient.from('health_logs').update(yestPayload).eq('id', yData.id);
+            else await supabaseClient.from('health_logs').insert(yestPayload);
+
+            const todayPayload = {
+                user_id: user.id, measured_date: todayStr, waketime: wDate.toISOString(), sleep_hours: sleepHours, mental_condition: parseInt(initMVal)
+            };
+            if (wVal) todayPayload.weight = parseFloat(wVal);
+            if (fVal) todayPayload.body_fat = parseFloat(fVal);
+
+            const { data: tData } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', todayStr).maybeSingle();
+            if (tData) await supabaseClient.from('health_logs').update(todayPayload).eq('id', tData.id);
+            else await supabaseClient.from('health_logs').insert(todayPayload);
+
+            localStorage.setItem('initSetup_' + user.id, 'true');
+            document.getElementById('initialSetupModal').style.display = 'none';
+            loadDashboard();
+        } catch (err) {
+            alert("エラー: " + err.message);
+            btn.disabled = false;
+        }
     });
 
     async function recordTime(type) {
@@ -96,7 +151,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnBedtime').addEventListener('click', () => recordTime('bed'));
     document.getElementById('btnWaketime').addEventListener('click', () => recordTime('wake'));
 
-    // 食事記録ロジック
     const mealModal = document.getElementById('mealModal');
     document.getElementById('btnMealOpen').addEventListener('click', () => {
         document.getElementById('quickMealDate').value = getLocalLogicalDateStr(new Date());
@@ -104,19 +158,71 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('btnMealCancel').addEventListener('click', () => mealModal.style.display = 'none');
 
+    async function compressImage(file, maxWidth = 800) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = event => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    if (width > height && width > maxWidth) {
+                        height *= maxWidth / width; width = maxWidth;
+                    } else if (height > maxWidth) {
+                        width *= maxWidth / height; height = maxWidth;
+                    }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.8);
+                };
+            };
+            reader.onerror = error => reject(error);
+        });
+    }
+
     document.getElementById('btnMealSave').addEventListener('click', async () => {
-        // 画像アップロードと保存のロジック（前回と同じ）
-        mealModal.style.display = 'none';
-        alert("食事を記録しました。");
+        const btn = document.getElementById('btnMealSave');
+        const mealDate = document.getElementById('quickMealDate').value;
+        const type = document.getElementById('quickMealType').value;
+        const memo = document.getElementById('quickMealMemo').value;
+        const fileInput = document.getElementById('quickMealImage');
+        
+        if (!mealDate) { alert("日付を選択してください。"); return; }
+        btn.disabled = true; btn.innerText = "保存中...";
+
+        try {
+            let imageUrl = null;
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const compressedBlob = await compressImage(file);
+                const fileName = `${user.id}/${Date.now()}.jpg`;
+                const { error: uploadError } = await supabaseClient.storage.from('meal_images').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
+                if (uploadError) throw uploadError;
+                const { data: publicUrlData } = supabaseClient.storage.from('meal_images').getPublicUrl(fileName);
+                imageUrl = publicUrlData.publicUrl;
+            }
+
+            const { error } = await supabaseClient.from('meal_logs').insert({
+                user_id: user.id, meal_date: mealDate, meal_type: type, content: memo, image_url: imageUrl, created_at: new Date().toISOString()
+            });
+
+            if (error) throw error;
+            mealModal.style.display = 'none';
+            document.getElementById('quickMealMemo').value = ''; document.getElementById('quickMealImage').value = '';
+            alert("食事を記録しました。");
+        } catch (err) { alert("エラーが発生しました: " + err.message); } 
+        finally { btn.disabled = false; btn.innerText = "保存"; }
     });
 
-    // ========== ここからダッシュボードの進化ロジック ==========
     async function loadDashboard() {
         const now = new Date();
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
         const firstDayStr = getLocalLogicalDateStr(firstDay);
         
-        // 直近2日分のデータを取得（差分計算のため）
         const { data: recentLogs } = await supabaseClient.from('health_logs')
             .select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(2);
             
@@ -124,7 +230,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const current = recentLogs[0];
             const previous = recentLogs.length > 1 ? recentLogs[1] : null;
 
-            // 1. 体重の表示と差分
             document.getElementById('latestWeight').innerText = current.weight ? current.weight.toFixed(1) + " kg" : "-- kg";
             if (current.weight && previous && previous.weight) {
                 const diff = current.weight - previous.weight;
@@ -134,7 +239,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 else { deltaEl.innerText = "±0"; deltaEl.className = "kpi-delta delta-neutral"; }
             }
 
-            // 2. 睡眠の表示と差分
             document.getElementById('latestSleep').innerText = current.sleep_hours ? current.sleep_hours.toFixed(1) + " h" : "-- h";
             if (current.sleep_hours && previous && previous.sleep_hours) {
                 const diff = current.sleep_hours - previous.sleep_hours;
@@ -144,7 +248,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 else { deltaEl.innerText = "±0"; deltaEl.className = "kpi-delta delta-neutral"; }
             }
 
-            // 3. メンタルの表示
             document.getElementById('latestMental').innerHTML = current.mental_condition ? mentalIcons[current.mental_condition - 1] : "--";
         }
 
@@ -152,7 +255,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             .select('*', { count: 'exact', head: true }).eq('user_id', user.id).gte('measured_date', firstDayStr);
         document.getElementById('monthCount').innerText = (count || 0) + " 日";
 
-        // グラフ用データ（体脂肪も取得）
         const { data: chartData } = await supabaseClient.from('health_logs')
             .select('measured_date, weight, body_fat, sleep_hours, mental_condition').eq('user_id', user.id).order('measured_date', { ascending: true }).limit(7);
         
@@ -162,7 +264,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // トグルボタンのイベント
     document.getElementById('modeWeight').addEventListener('click', (e) => {
         currentChartMode = 'weight';
         document.getElementById('modeWeight').classList.add('active');
@@ -176,7 +277,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderDynamicChart();
     });
 
-    // モードに応じたグラフの描画
     function renderDynamicChart() {
         if (globalChartLogs.length === 0) return;
         const ctx = document.getElementById('healthCorrelationChart').getContext('2d');
@@ -189,9 +289,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (currentChartMode === 'weight') {
             datasets = [
                 { label: '体重 (kg)', data: globalChartLogs.map(l => l.weight), type: 'line', borderColor: '#f8fafc', borderWidth: 2, pointBackgroundColor: '#f59e0b', tension: 0.3, yAxisID: 'y1' },
-                { label: '目標', data: globalChartLogs.map(() => TARGET_WEIGHT), type: 'line', borderColor: 'rgba(245, 158, 11, 0.5)', borderDash: [5, 5], pointRadius: 0, borderWidth: 1, yAxisID: 'y1' }
+                { label: '🎯目標体重', data: globalChartLogs.map(() => TARGET_WEIGHT), type: 'line', borderColor: 'rgba(245, 158, 11, 0.4)', borderDash: [5, 5], pointRadius: 0, borderWidth: 1, yAxisID: 'y1' },
+                { label: '体脂肪率 (%)', data: globalChartLogs.map(l => l.body_fat), type: 'line', borderColor: '#38bdf8', borderWidth: 2, pointBackgroundColor: '#38bdf8', tension: 0.3, yAxisID: 'y2' },
+                { label: '🎯目標体脂肪', data: globalChartLogs.map(() => TARGET_FAT), type: 'line', borderColor: 'rgba(56, 189, 248, 0.4)', borderDash: [5, 5], pointRadius: 0, borderWidth: 1, yAxisID: 'y2' }
             ];
-            scales.y1 = { position: 'right', ticks: { color: '#94a3b8', font: { family: 'Inter' } }, grid: { color: '#334155' } };
+            scales.y1 = { position: 'right', title: {display: false}, ticks: { color: '#94a3b8', font: { family: 'Inter' } }, grid: { color: '#334155' } };
+            scales.y2 = { position: 'left', title: {display: false}, ticks: { color: '#38bdf8', font: { family: 'Inter' } }, grid: { display: false } };
         } else {
             const gradient = ctx.createLinearGradient(0, 0, 0, 400);
             gradient.addColorStop(0, 'rgba(245, 158, 11, 0.6)');

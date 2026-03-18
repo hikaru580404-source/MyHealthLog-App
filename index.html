@@ -46,8 +46,8 @@
     <div class="chart-header-flex">
       <div class="chart-card-header" style="margin-bottom: 0;">直近7日間の推移</div>
       <div class="chart-toggle">
-        <button class="btn-toggle active" id="modeWeight">体重</button>
-        <button class="btn-toggle" id="modeSleep">睡眠</button>
+        <button class="btn-toggle active" id="modeWeight">体重・体脂肪</button>
+        <button class="btn-toggle" id="modeSleep">睡眠・メンタル</button>
       </div>
     </div>
     <div style="height:250px;"><canvas id="healthCorrelationChart"></canvas></div>
@@ -57,8 +57,20 @@
 <div class="modal-overlay" id="initialSetupModal">
   <div class="modal-content" id="initModalBlock">
     <div class="modal-title">初期セットアップ</div>
-    <div class="modal-desc">これからの管理の基準となる最初のデータを入力してください。<br>（就寝と起床時刻のみ必須です）</div>
+    <div class="modal-desc">管理の基準となる最初のデータと、<br><span style="color: var(--clr-accent); font-weight:700;">あなたの目標値</span>を入力してください。</div>
     <form id="initialSetupForm">
+      
+      <div class="form-row-grid" style="background: rgba(245, 158, 11, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 16px; border: 1px solid rgba(245, 158, 11, 0.3);">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="color: var(--clr-accent);">🎯 目標体重 (kg)</label>
+          <input type="number" id="initTargetWeight" class="form-input" step="0.1" value="65.0" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="color: var(--clr-accent);">🎯 目標体脂肪 (%)</label>
+          <input type="number" id="initTargetFat" class="form-input" step="0.1" value="13.0" required>
+        </div>
+      </div>
+
       <div class="form-row-grid">
         <div class="form-group">
           <label class="form-label">昨晩の就寝</label>
@@ -72,15 +84,15 @@
       <div class="form-row-grid">
         <div class="form-group">
           <label class="form-label">現在の体重 (kg)</label>
-          <input type="number" id="initWeight" class="form-input" step="0.1" placeholder="任意">
+          <input type="number" id="initWeight" class="form-input" step="0.1">
         </div>
         <div class="form-group">
-          <label class="form-label">体脂肪 (%)</label>
-          <input type="number" id="initFat" class="form-input" step="0.1" placeholder="任意">
+          <label class="form-label">現在の体脂肪 (%)</label>
+          <input type="number" id="initFat" class="form-input" step="0.1">
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">コンディション（任意）</label>
+        <label class="form-label">コンディション</label>
         <div class="cond-group" id="initMGrp">
           <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
           <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
@@ -89,11 +101,7 @@
           <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label">メモ（任意）</label>
-        <textarea id="initNote" class="form-input" rows="2" placeholder="意気込みなど"></textarea>
-      </div>
-      <button type="submit" class="btn-primary" id="initSaveBtn">記録して始める</button>
+      <button type="submit" class="btn-primary" id="initSaveBtn">目標を設定して始める</button>
     </form>
   </div>
 </div>
