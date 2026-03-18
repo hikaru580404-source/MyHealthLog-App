@@ -1,93 +1,108 @@
-/* --- 刷新されたプロフェッショナル・ヘッダー --- */
+/* =============================================
+   form.css - 記録画面専用 洗練スタイル
+   ============================================= */
+
+/* --- モダンヘッダー --- */
 .form-header {
-  background: #fff;
-  border-bottom: 1px solid var(--clr-border);
-  position: sticky; top: 0; z-index: 100;
   height: 56px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; background: #fff;
+  border-bottom: 1px solid #f3f4f6;
+  position: sticky; top: 0; z-index: 100;
 }
-.form-header-inner {
-  max-width: 640px; margin: 0 auto;
-  height: 100%;
-  display: grid;
-  grid-template-columns: 100px 1fr 100px;
-  align-items: center;
-  padding: 0 16px;
+.header-left, .header-right { width: 40px; }
+.header-center { flex: 1; text-align: center; font-weight: 700; font-size: 1rem; color: #111827; }
+.nav-back {
+  color: #4b5563; text-decoration: none; font-size: 1.2rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 50%; transition: background 0.2s;
 }
-.header-back-link {
-  color: var(--clr-balance-dark);
-  text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 700;
-  display: flex; align-items: center; gap: 4px;
-}
-.header-center-title {
-  text-align: center;
-  font-size: 0.95rem; font-weight: 800;
-  color: var(--clr-text-primary);
-}
+.nav-back:hover { background: #f3f4f6; }
 
-/* --- カードとグリッドの論理配置 --- */
+/* --- レイアウト基盤 --- */
 .form-main { max-width: 640px; margin: 0 auto; padding: 24px 16px; }
-.form-row-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 
+/* --- ステップインジケーター --- */
+.step-indicator { display: flex; align-items: center; justify-content: center; margin-bottom: 24px; padding: 0 20px; }
+.step { display: flex; flex-direction: column; align-items: center; }
+.step-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #f3f4f6; color: #9ca3af;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.8rem; font-weight: 700; transition: all 0.3s;
+}
+.step.active .step-dot { background: var(--clr-balance); color: #fff; box-shadow: 0 0 0 4px var(--clr-balance-light); }
+.step.done .step-dot { background: #10b981; color: #fff; }
+.step-line { flex: 1; height: 2px; background: #f3f4f6; margin: 0 10px; max-width: 40px; }
+
+/* --- パネル切り替えロジック（必須） --- */
+.step-panel { display: none; }
+.step-panel.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* --- フォームカードと入力要素 --- */
 .form-card {
-  background: #fff; border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  border: 1px solid var(--clr-border);
+  background: #fff; border-radius: 12px; padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  border: 1px solid #f3f4f6;
 }
+.form-group { margin-bottom: 20px; }
+.form-row-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-.form-label {
-  display: block; font-size: 0.78rem; font-weight: 800;
-  color: var(--clr-text-secondary); margin-bottom: 6px;
-}
+.form-label { display: block; font-size: 0.8rem; font-weight: 600; color: #4b5563; margin-bottom: 8px; }
 .form-input {
-  width: 100%; padding: 10px 12px;
-  border: 1px solid #d1d5db; border-radius: 6px;
-  font-size: 1rem; color: var(--clr-text-primary);
-  background: #f9fafb;
+  width: 100%; padding: 14px;
+  background: #f9fafb; border: 1px solid #e5e7eb;
+  border-radius: 8px; font-size: 1rem; color: #111827;
+  font-family: inherit; transition: all 0.2s;
 }
 .form-input:focus {
-  outline: none; border-color: var(--clr-balance); background: #fff;
+  outline: none; background: #fff; border-color: var(--clr-balance);
   box-shadow: 0 0 0 3px var(--clr-balance-light);
 }
 
-/* --- コンディション選択のモダン化 --- */
-.cond-group { display: flex; gap: 8px; margin-top: 4px; }
+/* --- コンディションボタン --- */
+.cond-group { display: flex; gap: 8px; }
 .cond-btn {
-  flex: 1; height: 54px; border-radius: 8px;
-  border: 1px solid #d1d5db; background: #fff;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  cursor: pointer; transition: all .2s; color: #9ca3af;
+  flex: 1; aspect-ratio: 1; max-height: 54px;
+  border-radius: 8px; border: 1px solid #e5e7eb;
+  background: #fff; color: #9ca3af;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.2s;
 }
-.cond-btn i { font-size: 1.1rem; margin-bottom: 2px; }
-.cond-btn span { font-size: 0.6rem; font-weight: 800; }
+.cond-btn i { font-size: 1.4rem; }
 .cond-btn.active {
-  border-color: var(--clr-balance); color: var(--clr-balance-dark);
-  background: var(--clr-balance-light); border-width: 2px;
+  background: #f0f9ff; border-color: #3b82f6; color: #3b82f6;
 }
 
-/* --- ボタンアクションの強化 --- */
-.btn-primary-action {
-  width: 100%; padding: 14px; margin-top: 24px;
-  background: var(--clr-text-primary); color: #fff;
-  border: none; border-radius: 6px;
-  font-size: 0.95rem; font-weight: 700; cursor: pointer;
-  transition: opacity .2s;
+/* --- ボタンデザイン --- */
+.btn-primary {
+  width: 100%; padding: 15px; margin-top: 10px;
+  background: #111827; color: #fff; /* シャープな黒ベース */
+  border: none; border-radius: 8px;
+  font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
 }
-.btn-secondary-action {
-  width: 100%; padding: 14px; margin-top: 24px;
-  background: #fff; color: var(--clr-text-secondary);
-  border: 1px solid var(--clr-border); border-radius: 6px;
-  font-size: 0.95rem; font-weight: 700; cursor: pointer;
+.btn-primary:hover { opacity: 0.85; }
+
+.btn-secondary {
+  width: 100%; padding: 14px;
+  background: #fff; color: #4b5563;
+  border: 1px solid #d1d5db; border-radius: 8px;
+  font-size: 0.95rem; font-weight: 600; cursor: pointer;
 }
 
-/* --- 確認画面の整理 --- */
-.confirm-table { margin: 20px 0; border-top: 1px solid var(--clr-border); }
-.confirm-row {
-  display: flex; justify-content: space-between; padding: 14px 0;
-  border-bottom: 1px solid var(--clr-border); font-size: 0.88rem;
+.action-group { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+
+/* --- 確認画面のリスト --- */
+.confirm-title { font-size: 1rem; font-weight: 700; text-align: center; margin-bottom: 20px; color: #111827; }
+.confirm-list { border-top: 1px solid #e5e7eb; margin-bottom: 10px; }
+.confirm-list div {
+  display: flex; justify-content: space-between;
+  padding: 16px 4px; border-bottom: 1px solid #f3f4f6;
+  font-size: 0.95rem; color: #374151; font-weight: 600;
 }
 
+/* --- 完了画面 --- */
 .done-card { text-align: center; padding: 40px 20px; }
-.done-icon { font-size: 3.5rem; color: var(--clr-income); margin-bottom: 16px; }
+.done-icon { font-size: 3.5rem; color: #10b981; margin-bottom: 16px; }
+.done-title { font-size: 1.2rem; font-weight: 700; color: #111827; }

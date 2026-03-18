@@ -9,81 +9,89 @@
   <link rel="stylesheet" href="form.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
+<body style="background: var(--clr-bg);">
   <header class="form-header">
-    <div class="form-header-inner">
-      <a href="index.html" class="header-back-link">
-        <i class="fas fa-chevron-left"></i><span>ダッシュボード</span>
-      </a>
-      <div class="header-center-title">記録</div>
-      <div class="header-right-space"></div>
+    <div class="header-left">
+      <a href="index.html" class="nav-back"><i class="fas fa-chevron-left"></i></a>
     </div>
+    <div class="header-center">記録</div>
+    <div class="header-right"></div>
   </header>
 
   <main class="form-main">
     <div class="step-indicator">
-      <div class="step active" id="s1"><div class="step-dot">1</div><div class="step-label">入力</div></div>
+      <div class="step active" id="s1"><div class="step-dot">1</div></div>
       <div class="step-line"></div>
-      <div class="step" id="s2"><div class="step-dot">2</div><div class="step-label">確認</div></div>
+      <div class="step" id="s2"><div class="step-dot">2</div></div>
       <div class="step-line"></div>
-      <div class="step" id="s3"><div class="step-dot">3</div><div class="step-label">完了</div></div>
+      <div class="step" id="s3"><div class="step-dot"><i class="fas fa-check"></i></div></div>
     </div>
 
     <div class="step-panel active" id="p1">
-      <div class="form-card">
-        <form id="hForm">
+      <form id="hForm" class="form-card">
+        <div class="form-group">
+          <label class="form-label">日付</label>
+          <input type="date" id="date" class="form-input" required>
+        </div>
+        
+        <div class="form-row-grid">
           <div class="form-group">
-            <label class="form-label">日付</label>
-            <input type="date" id="date" class="form-input" required>
+            <label class="form-label">体重 (kg)</label>
+            <input type="number" id="w" class="form-input" step="0.1" placeholder="00.0" required>
           </div>
-          
-          <div class="form-row-grid">
-            <div class="form-group"><label class="form-label">体重 (kg)</label><input type="number" id="w" class="form-input" step="0.1" placeholder="00.0" required></div>
-            <div class="form-group"><label class="form-label">体脂肪 (%)</label><input type="number" id="f" class="form-input" step="0.1" placeholder="00.0"></div>
-          </div>
-
-          <div class="form-row-grid">
-            <div class="form-group"><label class="form-label">就寝時刻</label><input type="time" id="bt" class="form-input" required></div>
-            <div class="form-group"><label class="form-label">起床時刻</label><input type="time" id="wt" class="form-input" required></div>
-          </div>
-
           <div class="form-group">
-            <label class="form-label">メンタルコンディション</label>
-            <div class="cond-group" id="mGrp">
-              <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i><span>1</span></button>
-              <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i><span>2</span></button>
-              <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i><span>3</span></button>
-              <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i><span>4</span></button>
-              <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i><span>5</span></button>
-            </div>
+            <label class="form-label">体脂肪 (%)</label>
+            <input type="number" id="f" class="form-input" step="0.1" placeholder="00.0">
           </div>
+        </div>
 
+        <div class="form-row-grid">
           <div class="form-group">
-            <label class="form-label">日次メモ</label>
-            <textarea id="note" class="form-input" rows="3" placeholder="備考があれば入力"></textarea>
+            <label class="form-label">就寝時刻</label>
+            <input type="time" id="bt" class="form-input" required>
           </div>
+          <div class="form-group">
+            <label class="form-label">起床時刻</label>
+            <input type="time" id="wt" class="form-input" required>
+          </div>
+        </div>
 
-          <button type="submit" class="btn-primary-action">内容を確認する</button>
-        </form>
-      </div>
+        <div class="form-group">
+          <label class="form-label">コンディション</label>
+          <div class="cond-group" id="mGrp">
+            <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
+            <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
+            <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
+            <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
+            <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">メモ</label>
+          <textarea id="note" class="form-input" rows="2" placeholder="気づきや特記事項"></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary">確認へ進む</button>
+      </form>
     </div>
 
     <div class="step-panel" id="p2">
       <div class="form-card">
-        <h3 class="panel-title">入力内容の最終確認</h3>
-        <div class="confirm-table" id="cList"></div>
+        <h3 class="confirm-title">入力内容の確認</h3>
+        <div id="cList" class="confirm-list"></div>
         <div class="action-group">
-          <button type="button" class="btn-secondary-action" onclick="location.reload()">修正する</button>
-          <button type="button" class="btn-primary-action" id="saveBtn">この内容で確定する</button>
+          <button type="button" class="btn-secondary" onclick="location.reload()">修正する</button>
+          <button type="button" class="btn-primary" id="saveBtn">確定する</button>
         </div>
       </div>
     </div>
 
     <div class="step-panel" id="p3">
-      <div class="done-card">
+      <div class="form-card done-card">
         <div class="done-icon"><i class="fas fa-check-circle"></i></div>
-        <h2 class="done-title">正常に記録されました</h2>
-        <a href="index.html" class="btn-primary-action" style="text-decoration:none;">ダッシュボードに戻る</a>
+        <h2 class="done-title">記録完了</h2>
+        <a href="index.html" class="btn-secondary" style="display:block; text-decoration:none; text-align:center; margin-top:24px;">ダッシュボードへ</a>
       </div>
     </div>
   </main>
