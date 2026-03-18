@@ -31,7 +31,7 @@
   <section class="kpi-section">
     <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">最新の体重</div><div class="kpi-value" id="latestWeight">-- kg</div></div></div>
     <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">昨夜の睡眠</div><div class="kpi-value" id="latestSleep">-- h</div></div></div>
-    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">メンタル</div><div class="kpi-value" id="latestMental">--</div></div></div>
+    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">メンタル</div><div class="kpi-value" id="latestMental" style="color: var(--clr-text-accent);">--</div></div></div>
     <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">今月の記録</div><div class="kpi-value" id="monthCount">0 日</div></div></div>
   </section>
 
@@ -100,7 +100,10 @@
       <option value="夕食">夕食</option>
       <option value="間食">間食</option>
     </select>
-    <input type="text" id="quickMealMemo" class="form-input" placeholder="内容">
+    
+    <input type="file" id="quickMealImage" accept="image/*" class="form-input" style="margin-bottom: 20px; background: #1e293b; padding: 10px; color: #94a3b8;">
+    
+    <input type="text" id="quickMealMemo" class="form-input" placeholder="食べたもの・カロリーなど">
     <div class="modal-actions">
       <button id="btnMealCancel" class="btn-secondary" style="margin-top:0;">キャンセル</button>
       <button id="btnMealSave" class="btn-primary" style="margin-top:0;">保存</button>
