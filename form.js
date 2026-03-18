@@ -3,7 +3,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!user) return;
     let mVal = 3;
 
-    // タイムゾーンバグを修正した日付生成関数
     function getLocalLogicalDateStr(dateObj) {
         const d = new Date(dateObj.getTime());
         if (d.getHours() < 4) {
@@ -13,6 +12,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         return `${y}-${m}-${day}`;
+    }
+
+    function createSafeDate(dateStr, timeStr) {
+        if (!timeStr) return null;
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const [h, min] = timeStr.split(':').map(Number);
+        return new Date(y, m - 1, d, h, min);
     }
 
     function formatTimeForInput(isoString) {
@@ -34,13 +40,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    // 連携データの引き継ぎ表示
     async function loadExistingData() {
         const { data } = await supabaseClient
             .from('health_logs')
             .select('*')
             .eq('user_id', user.id)
             .eq('measured_date', todayStr)
-            .single();
+            .maybeSingle();
 
         if (data) {
             if (data.weight) document.getElementById('w').value = data.weight;
@@ -78,11 +85,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .select('bedtime')
                 .eq('user_id', user.id)
                 .eq('measured_date', prevDateStr)
-                .single();
+                .maybeSingle();
 
             if (prevDay && prevDay.bedtime) {
                 const btDate = new Date(prevDay.bedtime);
-                const wtDate = new Date(`${date}T${wt}:00`);
+                const wtDate = createSafeDate(date, wt);
                 let hours = (wtDate - btDate) / 3600000;
                 if (hours < 0) hours += 24;
                 diff = hours.toFixed(1) + " h";
@@ -109,66 +116,81 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.disabled = true;
         btn.innerText = "保存中...";
 
-        const date = document.getElementById('date').value;
-        const wt = document.getElementById('wt').value;
-        const bt = document.getElementById('bt').value;
-        const wValue = document.getElementById('w').value;
-        const fValue = document.getElementById('f').value;
-        
-        let sleepHours = null;
-        let wakeTS = null;
-        let bedTS = null;
-
-        if (wt) {
-            wakeTS = new Date(`${date}T${wt}:00`).toISOString();
-            const dDate = new Date(date);
-            dDate.setDate(dDate.getDate() - 1);
-            const prevDateStr = getLocalLogicalDateStr(dDate);
+        try {
+            const date = document.getElementById('date').value;
+            const wt = document.getElementById('wt').value;
+            const bt = document.getElementById('bt').value;
+            const wValue = document.getElementById('w').value;
+            const fValue = document.getElementById('f').value;
             
-            const { data: prevDay } = await supabaseClient
-                .from('health_logs')
-                .select('bedtime')
-                .eq('user_id', user.id)
-                .eq('measured_date', prevDateStr)
-                .single();
+            let sleepHours = null;
+            let wakeTS = null;
+            let bedTS = null;
 
-            if (prevDay && prevDay.bedtime) {
-                const btDate = new Date(prevDay.bedtime);
-                const wtDate = new Date(wakeTS);
-                let hours = (wtDate - btDate) / 3600000;
-                if (hours < 0) hours += 24;
-                sleepHours = parseFloat(hours.toFixed(1));
+            if (wt) {
+                wakeTS = createSafeDate(date, wt).toISOString();
+                const dDate = new Date(date);
+                dDate.setDate(dDate.getDate() - 1);
+                const prevDateStr = getLocalLogicalDateStr(dDate);
+                
+                const { data: prevDay } = await supabaseClient
+                    .from('health_logs')
+                    .select('bedtime')
+                    .eq('user_id', user.id)
+                    .eq('measured_date', prevDateStr)
+                    .maybeSingle();
+
+                if (prevDay && prevDay.bedtime) {
+                    const btDate = new Date(prevDay.bedtime);
+                    const wtDate = new Date(wakeTS);
+                    let hours = (wtDate - btDate) / 3600000;
+                    if (hours < 0) hours += 24;
+                    sleepHours = parseFloat(hours.toFixed(1));
+                }
             }
-        }
 
-        if (bt) {
-            let bDate = new Date(`${date}T${bt}:00`);
-            if (bDate.getHours() < 4) bDate.setDate(bDate.getDate() + 1);
-            bedTS = bDate.toISOString();
-        }
+            if (bt) {
+                let bDate = createSafeDate(date, bt);
+                if (bDate.getHours() < 4) bDate.setDate(bDate.getDate() + 1);
+                bedTS = bDate.toISOString();
+            }
 
-        const payload = {
-            user_id: user.id, 
-            measured_date: date,
-            mental_condition: parseInt(mVal),
-            daily_notes: document.getElementById('note').value
-        };
+            const payload = {
+                user_id: user.id, 
+                measured_date: date,
+                mental_condition: parseInt(mVal),
+                daily_notes: document.getElementById('note').value
+            };
 
-        if (wValue) payload.weight = parseFloat(wValue);
-        if (fValue) payload.body_fat = parseFloat(fValue);
-        if (wakeTS) payload.waketime = wakeTS;
-        if (bedTS) payload.bedtime = bedTS;
-        if (sleepHours !== null) payload.sleep_hours = sleepHours;
+            if (wValue) payload.weight = parseFloat(wValue);
+            if (fValue) payload.body_fat = parseFloat(fValue);
+            if (wakeTS) payload.waketime = wakeTS;
+            if (bedTS) payload.bedtime = bedTS;
+            if (sleepHours !== null) payload.sleep_hours = sleepHours;
 
-        const { error } = await supabaseClient.from('health_logs').upsert(payload);
+            const { data: existing } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', date).maybeSingle();
+            
+            let dbErr;
+            if (existing && existing.id) {
+                const { error } = await supabaseClient.from('health_logs').update(payload).eq('id', existing.id);
+                dbErr = error;
+            } else {
+                const { error } = await supabaseClient.from('health_logs').insert(payload);
+                dbErr = error;
+            }
 
-        if (!error) {
-            document.getElementById('p2').classList.remove('active');
-            document.getElementById('p3').classList.add('active');
-            document.getElementById('s2').classList.add('done');
-            document.getElementById('s3').classList.add('active');
-        } else {
-            alert("保存に失敗しました: " + error.message);
+            if (!dbErr) {
+                document.getElementById('p2').classList.remove('active');
+                document.getElementById('p3').classList.add('active');
+                document.getElementById('s2').classList.add('done');
+                document.getElementById('s3').classList.add('active');
+            } else {
+                alert("保存に失敗しました: " + dbErr.message);
+                btn.disabled = false;
+                btn.innerText = "確定する";
+            }
+        } catch (e) {
+            alert("システムエラー: " + e.message);
             btn.disabled = false;
             btn.innerText = "確定する";
         }

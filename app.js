@@ -20,14 +20,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `${y}-${m}-${day}`;
     }
 
-    async function checkInitialSetup() {
-        const { count, error } = await supabaseClient.from('health_logs')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', user.id);
+    // 確実なローカル時間を作る関数
+    function createSafeDate(dateStr, timeStr) {
+        if (!timeStr) return null;
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const [h, min] = timeStr.split(':').map(Number);
+        return new Date(y, m - 1, d, h, min);
+    }
 
-        if (count === 0 && !sessionStorage.getItem('setupDone')) {
+    // 初回セットアップの確実な判定（LocalStorageとDBの二重チェック）
+    async function checkInitialSetup() {
+        const localFlag = localStorage.getItem('initSetup_' + user.id);
+        if (localFlag === 'true') {
+            loadDashboard();
+            return;
+        }
+
+        const { data } = await supabaseClient.from('health_logs')
+            .select('id').eq('user_id', user.id).limit(1);
+
+        if (!data || data.length === 0) {
             document.getElementById('initialSetupModal').style.display = 'flex';
         } else {
+            localStorage.setItem('initSetup_' + user.id, 'true');
             loadDashboard();
         }
     }
@@ -41,92 +56,120 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    // 初回セットアップフォームの保存処理（エラーで止まらない完全版）
     document.getElementById('initialSetupForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('initSaveBtn');
         btn.disabled = true;
         btn.innerText = "処理中...";
 
-        const now = new Date();
-        const todayStr = getLocalLogicalDateStr(now);
-        const yesterday = new Date(now.getTime());
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = getLocalLogicalDateStr(yesterday);
-
-        const btVal = document.getElementById('initBedtime').value;
-        const wtVal = document.getElementById('initWaketime').value;
-        const wVal = document.getElementById('initWeight').value;
-        const fVal = document.getElementById('initFat').value;
-        const noteVal = document.getElementById('initNote').value;
-
-        let bDate = new Date(`${yesterdayStr}T${btVal}:00`);
-        let wDate = new Date(`${todayStr}T${wtVal}:00`);
-        if (wDate <= bDate) wDate.setDate(wDate.getDate() + 1);
-        let sleepHours = parseFloat(((wDate - bDate) / 3600000).toFixed(1));
-
-        await supabaseClient.from('health_logs').upsert({
-            user_id: user.id, measured_date: yesterdayStr, bedtime: bDate.toISOString()
-        });
-
-        const todayPayload = {
-            user_id: user.id, measured_date: todayStr,
-            waketime: wDate.toISOString(),
-            sleep_hours: sleepHours,
-            mental_condition: parseInt(initMVal)
-        };
-        if (wVal) todayPayload.weight = parseFloat(wVal);
-        if (fVal) todayPayload.body_fat = parseFloat(fVal);
-        if (noteVal) todayPayload.daily_notes = noteVal;
-
-        await supabaseClient.from('health_logs').upsert(todayPayload);
-
-        sessionStorage.setItem('setupDone', 'true');
-        document.getElementById('initialSetupModal').style.display = 'none';
-        loadDashboard();
-    });
-
-    async function recordTime(type) {
-        const now = new Date();
-        const logicalDateStr = getLocalLogicalDateStr(now);
-        const timeISO = now.toISOString();
-
-        const { data: existing } = await supabaseClient
-            .from('health_logs').select('*').eq('user_id', user.id).eq('measured_date', logicalDateStr).single();
-
-        const payload = existing || { user_id: user.id, measured_date: logicalDateStr };
-
-        if (type === 'wake') {
-            payload.waketime = timeISO;
+        try {
+            const now = new Date();
+            const todayStr = getLocalLogicalDateStr(now);
             const yesterday = new Date(now.getTime());
             yesterday.setDate(yesterday.getDate() - 1);
-            const logicalYesterdayStr = getLocalLogicalDateStr(yesterday);
-            
-            const { data: prevDay } = await supabaseClient
-                .from('health_logs').select('bedtime').eq('user_id', user.id).eq('measured_date', logicalYesterdayStr).single();
+            const yesterdayStr = getLocalLogicalDateStr(yesterday);
 
-            if (prevDay && prevDay.bedtime) {
-                const bt = new Date(prevDay.bedtime);
-                const wt = new Date(timeISO);
-                let diff = (wt - bt) / 3600000;
-                if (diff < 0) diff += 24;
-                payload.sleep_hours = parseFloat(diff.toFixed(1));
-            }
-        } else if (type === 'bed') {
-            payload.bedtime = timeISO;
-        }
+            const btVal = document.getElementById('initBedtime').value;
+            const wtVal = document.getElementById('initWaketime').value;
+            const wVal = document.getElementById('initWeight').value;
+            const fVal = document.getElementById('initFat').value;
+            const noteVal = document.getElementById('initNote').value;
 
-        const { error } = await supabaseClient.from('health_logs').upsert(payload);
-        if (!error) {
-            alert(type === 'bed' ? "就寝時刻を記録しました。" : "起床時刻と睡眠時間を記録しました。");
+            let bDate = createSafeDate(yesterdayStr, btVal);
+            let wDate = createSafeDate(todayStr, wtVal);
+            if (wDate <= bDate) wDate.setDate(wDate.getDate() + 1);
+            let sleepHours = parseFloat(((wDate - bDate) / 3600000).toFixed(1));
+
+            // 1. 昨日の就寝データを保存（安全なInsert/Update）
+            const yestPayload = { user_id: user.id, measured_date: yesterdayStr, bedtime: bDate.toISOString() };
+            const { data: yData } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', yesterdayStr).single();
+            if (yData) await supabaseClient.from('health_logs').update(yestPayload).eq('id', yData.id);
+            else await supabaseClient.from('health_logs').insert(yestPayload);
+
+            // 2. 今日のデータを保存
+            const todayPayload = {
+                user_id: user.id, measured_date: todayStr,
+                waketime: wDate.toISOString(),
+                sleep_hours: sleepHours,
+                mental_condition: parseInt(initMVal)
+            };
+            if (wVal) todayPayload.weight = parseFloat(wVal);
+            if (fVal) todayPayload.body_fat = parseFloat(fVal);
+            if (noteVal) todayPayload.daily_notes = noteVal;
+
+            const { data: tData } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', todayStr).single();
+            if (tData) await supabaseClient.from('health_logs').update(todayPayload).eq('id', tData.id);
+            else await supabaseClient.from('health_logs').insert(todayPayload);
+
+            // 完了処理
+            localStorage.setItem('initSetup_' + user.id, 'true');
+            document.getElementById('initialSetupModal').style.display = 'none';
             loadDashboard();
-        } else {
-            alert("打刻エラー: " + error.message);
+        } catch (err) {
+            alert("初期設定エラー: " + err.message);
+            btn.disabled = false;
+            btn.innerText = "記録して始める";
+        }
+    });
+
+    // 打刻ボタンの処理（エラー落ちを防ぐ堅牢な構造）
+    async function recordTime(type) {
+        try {
+            const now = new Date();
+            const logicalDateStr = getLocalLogicalDateStr(now);
+            const timeISO = now.toISOString();
+
+            // .maybeSingle() を使い、データが無い場合のエラーを防止
+            const { data: existing } = await supabaseClient
+                .from('health_logs').select('*').eq('user_id', user.id).eq('measured_date', logicalDateStr).maybeSingle();
+
+            const payload = existing ? { ...existing } : { user_id: user.id, measured_date: logicalDateStr };
+
+            if (type === 'wake') {
+                payload.waketime = timeISO;
+                const yesterday = new Date(now.getTime());
+                yesterday.setDate(yesterday.getDate() - 1);
+                const logicalYesterdayStr = getLocalLogicalDateStr(yesterday);
+                
+                const { data: prevDay } = await supabaseClient
+                    .from('health_logs').select('bedtime').eq('user_id', user.id).eq('measured_date', logicalYesterdayStr).maybeSingle();
+
+                if (prevDay && prevDay.bedtime) {
+                    const bt = new Date(prevDay.bedtime);
+                    const wt = new Date(timeISO);
+                    let diff = (wt - bt) / 3600000;
+                    if (diff < 0) diff += 24;
+                    payload.sleep_hours = parseFloat(diff.toFixed(1));
+                }
+            } else if (type === 'bed') {
+                payload.bedtime = timeISO;
+            }
+
+            let dbErr;
+            if (existing && existing.id) {
+                const { error } = await supabaseClient.from('health_logs').update(payload).eq('id', existing.id);
+                dbErr = error;
+            } else {
+                const { error } = await supabaseClient.from('health_logs').insert(payload);
+                dbErr = error;
+            }
+
+            if (!dbErr) {
+                alert(type === 'bed' ? "就寝時刻を記録しました。" : "起床時刻を記録しました。");
+                loadDashboard();
+            } else {
+                alert("打刻エラー: " + dbErr.message);
+            }
+        } catch (e) {
+            alert("システムエラー: " + e.message);
         }
     }
 
     document.getElementById('btnBedtime').addEventListener('click', () => recordTime('bed'));
     document.getElementById('btnWaketime').addEventListener('click', () => recordTime('wake'));
 
+    // 食事モーダル
     const mealModal = document.getElementById('mealModal');
     document.getElementById('btnMealOpen').addEventListener('click', () => mealModal.style.display = 'flex');
     document.getElementById('btnMealCancel').addEventListener('click', () => mealModal.style.display = 'none');
