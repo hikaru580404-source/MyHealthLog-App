@@ -2,41 +2,143 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>履歴サマリー | 健康管理システム</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>LOG | 履歴</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="summary.css" />
+  <style>
+    :root {
+      --clr-premium-bg: #f9fafb;
+      --clr-premium-text: #111827;
+      --clr-premium-sub: #6b7280;
+      --clr-premium-border: #e5e7eb;
+      --font-en: 'Inter', sans-serif;
+      --font-jp: 'Noto Sans JP', sans-serif;
+    }
+
+    body {
+      background-color: var(--clr-premium-bg);
+      font-family: var(--font-jp);
+      color: var(--clr-premium-text);
+      letter-spacing: 0.02em;
+    }
+
+    .summary-header {
+      padding: 2rem 1.5rem;
+      background: #fff;
+      border-bottom: 1px solid var(--clr-premium-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--clr-premium-text);
+    }
+
+    .nav-back-premium {
+      color: var(--clr-premium-text);
+      text-decoration: none;
+      font-size: 1.1rem;
+      transition: opacity 0.2s;
+    }
+
+    .summary-container {
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+
+    .history-card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid var(--clr-premium-border);
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      background: #fdfdfd;
+      padding: 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--clr-premium-sub);
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--clr-premium-border);
+    }
+
+    td {
+      padding: 1.2rem 1rem;
+      font-size: 0.9rem;
+      border-bottom: 1px solid #f3f4f6;
+      font-family: var(--font-en);
+    }
+
+    .col-date { font-weight: 600; color: var(--clr-premium-text); }
+    .col-val { font-weight: 500; }
+    .col-mental { font-family: var(--font-jp); font-size: 0.85rem; }
+    .col-note { font-family: var(--font-jp); color: var(--clr-premium-sub); font-size: 0.8rem; max-width: 250px; }
+
+    .badge-mental {
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-weight: 500;
+      font-size: 0.75rem;
+    }
+    .m-5 { background: #f0fdf4; color: #166534; } /* 絶好調 */
+    .m-4 { background: #f0f9ff; color: #075985; } /* 良 */
+    .m-1 { background: #fef2f2; color: #991b1b; } /* 不調 */
+
+    @media (max-width: 640px) {
+      .summary-header { padding: 1rem; }
+      td, th { padding: 0.8rem 0.5rem; font-size: 0.8rem; }
+    }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<header class="app-header">
-  <div class="header-inner">
-    <div class="header-logo"><a href="index.html" style="color:inherit;text-decoration:none;"><i class="fas fa-chart-bar"></i><span> 分析サマリー</span></a></div>
-  </div>
-</header>
-<main class="app-main">
-  <div class="summary-month-bar">
-    <button class="month-nav-btn-sm" id="prevMonthBtn"><i class="fas fa-chevron-left"></i></button>
-    <div class="summary-month-label" id="summaryMonthLabel">読み込み中...</div>
-    <button class="month-nav-btn-sm" id="nextMonthBtn"><i class="fas fa-chevron-right"></i></button>
-  </div>
-  <div class="summary-kpi-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px;">
-    <div class="kpi-card income"><div class="kpi-label">平均体重</div><div class="kpi-value" id="avgWeight">-- kg</div></div>
-    <div class="kpi-card expense"><div class="kpi-label">平均睡眠</div><div class="kpi-value" id="avgSleep">-- h</div></div>
-    <div class="kpi-card balance"><div class="kpi-label">記録日数</div><div class="kpi-value" id="monthCount">0 日</div></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-card-header">月間コンディション推移</div>
-    <div style="height:200px; position:relative;"><canvas id="monthlyTrendChart"></canvas></div>
-  </div>
-  <div class="chart-card">
-    <div class="chart-card-header">日次ログ詳細</div>
-    <div id="dailyLogList"></div>
-  </div>
-</main>
-<script src="supabase-client.js"></script>
-<script src="summary.js"></script>
+  <header class="summary-header">
+    <a href="index.html" class="nav-back-premium"><i class="fas fa-arrow-left"></i></a>
+    <h1 class="header-title">ARCHIVE</h1>
+    <div style="width:24px;"></div>
+  </header>
+
+  <main class="summary-container">
+    <div class="history-card">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Weight</th>
+              <th>Sleep</th>
+              <th>Condition</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody">
+            </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="auth.js"></script>
+  <script src="summary.js"></script>
 </body>
 </html>
