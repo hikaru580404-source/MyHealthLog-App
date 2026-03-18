@@ -140,7 +140,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 食事モーダルと画像アップロード機能
     const mealModal = document.getElementById('mealModal');
-    document.getElementById('btnMealOpen').addEventListener('click', () => mealModal.style.display = 'flex');
+    
+    document.getElementById('btnMealOpen').addEventListener('click', () => {
+        // モーダルを開いた時に今日の日付を自動セットする
+        document.getElementById('quickMealDate').value = getLocalLogicalDateStr(new Date());
+        mealModal.style.display = 'flex';
+    });
+    
     document.getElementById('btnMealCancel').addEventListener('click', () => mealModal.style.display = 'none');
 
     // 画像圧縮関数（長辺800pxに自動リサイズ）
@@ -172,10 +178,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('btnMealSave').addEventListener('click', async () => {
         const btn = document.getElementById('btnMealSave');
+        const mealDate = document.getElementById('quickMealDate').value;
         const type = document.getElementById('quickMealType').value;
         const memo = document.getElementById('quickMealMemo').value;
         const fileInput = document.getElementById('quickMealImage');
         
+        if (!mealDate) {
+            alert("日付を選択してください。");
+            return;
+        }
+
         btn.disabled = true;
         btn.innerText = "保存中...";
 
@@ -197,10 +209,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 imageUrl = publicUrlData.publicUrl;
             }
 
-            // 3. DBに記録
-            const logicalDateStr = getLocalLogicalDateStr(new Date());
+            // 3. DBに記録（選択された日付を使用）
             const { error } = await supabaseClient.from('meal_logs').insert({
-                user_id: user.id, meal_date: logicalDateStr, meal_type: type, content: memo, image_url: imageUrl
+                user_id: user.id, meal_date: mealDate, meal_type: type, content: memo, image_url: imageUrl
             });
 
             if (error) throw error;

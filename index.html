@@ -94,7 +94,10 @@
 <div class="modal-overlay" id="mealModal">
   <div class="modal-content">
     <div class="modal-title">食事の記録</div>
-    <select id="quickMealType" class="form-input">
+    
+    <input type="date" id="quickMealDate" class="form-input" style="margin-bottom: 20px;">
+
+    <select id="quickMealType" class="form-input" style="margin-bottom: 20px;">
       <option value="朝食">朝食</option>
       <option value="昼食">昼食</option>
       <option value="夕食">夕食</option>
@@ -103,7 +106,7 @@
     
     <input type="file" id="quickMealImage" accept="image/*" class="form-input" style="margin-bottom: 20px; background: #1e293b; padding: 10px; color: #94a3b8;">
     
-    <input type="text" id="quickMealMemo" class="form-input" placeholder="食べたもの・カロリーなど">
+    <input type="text" id="quickMealMemo" class="form-input" placeholder="食べたもの・カロリーなど" style="margin-bottom: 20px;">
     <div class="modal-actions">
       <button id="btnMealCancel" class="btn-secondary" style="margin-top:0;">キャンセル</button>
       <button id="btnMealSave" class="btn-primary" style="margin-top:0;">保存</button>
