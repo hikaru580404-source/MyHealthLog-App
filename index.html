@@ -5,53 +5,44 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ダッシュボード | 健康管理システム</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="form.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-    .btn-quick {
-      background: #111827; color: #fff; border: none; border-radius: 8px;
-      padding: 12px 0; font-size: 0.85rem; font-weight: 700; cursor: pointer;
-      display: flex; flex-direction: column; align-items: center; gap: 6px; transition: opacity 0.2s;
-    }
-    .btn-quick:hover { opacity: 0.85; }
-    .btn-quick i { font-size: 1.2rem; }
-    .btn-quick.meal { background: #fff; color: #111827; border: 1px solid #d1d5db; }
-    .btn-quick.bed { background: #374151; }
-  </style>
 </head>
 <body style="background: var(--clr-bg);">
-<header class="app-header" style="background: #fff; border-bottom: 1px solid #f3f4f6;">
+<header class="app-header" style="background: var(--clr-surface); border-bottom: 1px solid var(--clr-border);">
   <div class="header-inner" style="flex-direction: row; justify-content: space-between; align-items: center;">
-    <div style="font-weight: 800; color: #111827;">身体管理ダッシュボード</div>
-    <button id="logoutBtn" style="background:none; border:none; color:#4b5563; font-size:0.85rem; cursor:pointer; font-weight:700;">ログアウト</button>
+    <div style="font-weight: 800; color: var(--clr-text-accent); font-size: 1rem; font-family: var(--font-en); letter-spacing: 0.05em;">HEALTH LOG // DB</div>
+    <button id="logoutBtn" style="background:none; border:none; color: var(--clr-text-secondary); font-size:0.8rem; cursor:pointer; font-weight:700;">ログアウト</button>
   </div>
 </header>
 
 <main class="app-main">
   <div class="quick-actions">
-    <button class="btn-quick" id="btnWaketime"><i class="fas fa-sun"></i> 起床</button>
+    <button class="btn-quick wake" id="btnWaketime"><i class="fas fa-sun"></i> 起床</button>
     <button class="btn-quick meal" id="btnMealOpen"><i class="fas fa-utensils"></i> 食事</button>
     <button class="btn-quick bed" id="btnBedtime"><i class="fas fa-moon"></i> 就寝</button>
   </div>
 
   <section class="kpi-section">
-    <div class="kpi-card" style="background:#fff; border:1px solid #f3f4f6;"><div class="kpi-body"><div class="kpi-label">最新の体重</div><div class="kpi-value" id="latestWeight">-- kg</div></div></div>
-    <div class="kpi-card" style="background:#fff; border:1px solid #f3f4f6;"><div class="kpi-body"><div class="kpi-label">昨夜の睡眠</div><div class="kpi-value" id="latestSleep">-- h</div></div></div>
-    <div class="kpi-card" style="background:#fff; border:1px solid #f3f4f6;"><div class="kpi-body"><div class="kpi-label">メンタル</div><div class="kpi-value" id="latestMental">--</div></div></div>
-    <div class="kpi-card" style="background:#fff; border:1px solid #f3f4f6;"><div class="kpi-body"><div class="kpi-label">今月の記録</div><div class="kpi-value" id="monthCount">0 日</div></div></div>
+    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">最新の体重</div><div class="kpi-value" id="latestWeight">-- kg</div></div></div>
+    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">昨夜の睡眠</div><div class="kpi-value" id="latestSleep">-- h</div></div></div>
+    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">メンタル</div><div class="kpi-value" id="latestMental">--</div></div></div>
+    <div class="kpi-card"><div class="kpi-body"><div class="kpi-label">今月の記録</div><div class="kpi-value" id="monthCount">0 日</div></div></div>
   </section>
 
-  <nav class="tab-nav" style="border:1px solid #f3f4f6;">
-    <button class="tab-btn active">分析</button>
-    <button class="tab-btn" onclick="location.href='form.html'">日次記録</button>
-    <button class="tab-btn" onclick="location.href='summary.html'">履歴</button>
+  <nav class="tab-nav">
+    <button class="tab-btn active"><i class="fas fa-chart-line"></i> 分析</button>
+    <button class="tab-btn" onclick="location.href='form.html'"><i class="fas fa-pen"></i> 日次記録</button>
+    <button class="tab-btn" onclick="location.href='summary.html'"><i class="fas fa-history"></i> 履歴</button>
   </nav>
 
-  <div class="chart-card" style="border:1px solid #f3f4f6;">
-    <div class="chart-card-header" style="color:#111827;">直近7日間の推移</div>
+  <div class="chart-card">
+    <div class="chart-card-header">直近7日間の推移</div>
     <div style="height:250px;"><canvas id="healthCorrelationChart"></canvas></div>
   </div>
 </main>

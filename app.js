@@ -181,51 +181,61 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // 「**値が入っている最新のレコードを探すように修正**」
     async function loadDashboard() {
         const now = new Date();
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
         const firstDayStr = getLocalLogicalDateStr(firstDay);
         
-        // 体重の最新値を取得
         const { data: wData } = await supabaseClient.from('health_logs')
             .select('weight').eq('user_id', user.id).not('weight', 'is', null).order('measured_date', { ascending: false }).limit(1);
         if (wData && wData.length > 0) document.getElementById('latestWeight').innerText = wData[0].weight.toFixed(1) + " kg";
 
-        // 睡眠の最新値を取得
         const { data: sData } = await supabaseClient.from('health_logs')
             .select('sleep_hours').eq('user_id', user.id).not('sleep_hours', 'is', null).order('measured_date', { ascending: false }).limit(1);
         if (sData && sData.length > 0) document.getElementById('latestSleep').innerText = sData[0].sleep_hours.toFixed(1) + " h";
 
-        // メンタルの最新値を取得
         const { data: mData } = await supabaseClient.from('health_logs')
             .select('mental_condition').eq('user_id', user.id).not('mental_condition', 'is', null).order('measured_date', { ascending: false }).limit(1);
         if (mData && mData.length > 0) document.getElementById('latestMental').innerText = mentalLabels[mData[0].mental_condition - 1];
 
-        // 今月の計測日数
         const { count } = await supabaseClient.from('health_logs')
             .select('*', { count: 'exact', head: true }).eq('user_id', user.id).gte('measured_date', firstDayStr);
         document.getElementById('monthCount').innerText = (count || 0) + " 日";
 
-        // グラフデータの取得
         const { data: chartData } = await supabaseClient.from('health_logs')
             .select('measured_date, weight, sleep_hours').eq('user_id', user.id).order('measured_date', { ascending: true }).limit(7);
         if (chartData) renderChart(chartData);
     }
 
+    // チャートカラーをゴールド＆ダークモード対応に修正
     function renderChart(logs) {
         const ctx = document.getElementById('healthCorrelationChart').getContext('2d');
         if (window.dashChart) window.dashChart.destroy();
+        
+        // ゴールドのグラデーションを作成
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(245, 158, 11, 0.6)');
+        gradient.addColorStop(1, 'rgba(245, 158, 11, 0.0)');
+
         window.dashChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: logs.map(l => l.measured_date.split('-')[2]),
                 datasets: [
-                    { label: '睡眠', data: logs.map(l => l.sleep_hours), backgroundColor: 'rgba(99, 102, 241, 0.3)', yAxisID: 'ySleep' },
-                    { label: '体重', data: logs.map(l => l.weight), type: 'line', borderColor: '#111827', tension: 0.3, yAxisID: 'yWeight' }
+                    { label: '睡眠', data: logs.map(l => l.sleep_hours), backgroundColor: gradient, borderColor: '#f59e0b', borderWidth: 1, yAxisID: 'ySleep', barPercentage: 0.6 },
+                    { label: '体重', data: logs.map(l => l.weight), type: 'line', borderColor: '#f8fafc', borderWidth: 2, pointBackgroundColor: '#f59e0b', tension: 0.3, yAxisID: 'yWeight' }
                 ]
             },
-            options: { scales: { ySleep: { position: 'left', min: 0, max: 12 }, yWeight: { position: 'right', grid: { display: false } } } }
+            options: {
+                plugins: {
+                    legend: { labels: { color: '#94a3b8', font: { size: 11, family: 'Inter' } } }
+                },
+                scales: {
+                    x: { ticks: { color: '#94a3b8', font: { family: 'Inter' } }, grid: { display: false } },
+                    ySleep: { position: 'left', min: 0, max: 12, ticks: { color: '#94a3b8', font: { family: 'Inter' } }, grid: { color: '#334155' } },
+                    yWeight: { position: 'right', ticks: { color: '#94a3b8', font: { family: 'Inter' } }, grid: { display: false } }
+                }
+            }
         });
     }
 
