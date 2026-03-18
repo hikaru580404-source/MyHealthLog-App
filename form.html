@@ -17,7 +17,6 @@
       <div class="header-date" id="headerDate"></div>
     </div>
   </header>
-
   <main class="form-main">
     <div class="step-indicator">
       <div class="step active" id="step1Dot"><div class="step-dot"><span>1</span></div><div class="step-label">入力</div></div>
@@ -26,7 +25,6 @@
       <div class="step-line"></div>
       <div class="step" id="step3Dot"><div class="step-dot"><span>3</span></div><div class="step-label">完了</div></div>
     </div>
-
     <div class="step-panel active" id="panelInput">
       <div class="form-card">
         <form id="healthForm" novalidate>
@@ -34,7 +32,6 @@
             <label class="form-label" for="inputDate"><i class="fas fa-calendar-day"></i> 記録日</label>
             <input type="date" id="inputDate" class="form-input" required />
           </div>
-
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div class="form-group">
               <label class="form-label" for="inputWeight"><i class="fas fa-weight"></i> 体重(kg)</label>
@@ -45,7 +42,6 @@
               <input type="number" id="inputFat" class="form-input" step="0.1" placeholder="00.0" />
             </div>
           </div>
-
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div class="form-group">
               <label class="form-label" for="inputBedtime"><i class="fas fa-moon"></i> 就寝時刻</label>
@@ -56,19 +52,17 @@
               <input type="time" id="inputWaketime" class="form-input" required />
             </div>
           </div>
-
           <div class="form-group">
             <label class="form-label"><i class="fas fa-brain"></i> メンタルコンディション</label>
             <div class="cond-group" id="mentalGroup">
               <button type="button" class="cond-btn" data-level="1"><i class="fas fa-tired"></i><span>不調</span></button>
               <button type="button" class="cond-btn" data-level="2"><i class="fas fa-frown"></i><span>低調</span></button>
-              <button type="button" class="cond-btn" data-level="3" class="active"><i class="fas fa-meh"></i><span>普通</span></button>
+              <button type="button" class="cond-btn" data-level="3"><i class="fas fa-meh"></i><span>普通</span></button>
               <button type="button" class="cond-btn" data-level="4"><i class="fas fa-smile"></i><span>良好</span></button>
               <button type="button" class="cond-btn" data-level="5"><i class="fas fa-grin-beam"></i><span>最高</span></button>
             </div>
             <input type="hidden" id="inputMental" value="3" />
           </div>
-
           <div class="form-group">
             <label class="form-label"><i class="fas fa-utensils"></i> 食事の記録</label>
             <div style="display: flex; gap: 5px; margin-bottom: 8px;">
@@ -81,32 +75,27 @@
               <input type="text" id="inputMealMemo" class="form-input" placeholder="食べたもの、内容" />
             </div>
           </div>
-
           <div class="form-group">
             <label class="form-label" for="inputNotes"><i class="fas fa-sticky-note"></i> 総括メモ</label>
             <textarea id="inputNotes" class="form-input" rows="2" placeholder="気づきや今日の変化"></textarea>
           </div>
-
           <button type="submit" class="btn-next">内容を確認する <i class="fas fa-arrow-right"></i></button>
         </form>
       </div>
     </div>
-
     <div class="step-panel" id="panelConfirm">
       <div class="confirm-card">
         <div class="confirm-header">
           <div class="confirm-type-badge income">入力内容の確認</div>
           <div class="confirm-amount" id="confirmSummary"></div>
         </div>
-        <div class="confirm-table" id="confirmDataList">
-          </div>
+        <div class="confirm-table" id="confirmDataList"></div>
         <div class="confirm-actions">
           <button class="btn-back" id="backToInputBtn">修正する</button>
           <button class="btn-confirm" id="confirmSaveBtn">この内容で確定</button>
         </div>
       </div>
     </div>
-
     <div class="step-panel" id="panelDone">
       <div class="done-card">
         <div class="done-icon"><i class="fas fa-check-circle"></i></div>
@@ -118,7 +107,6 @@
       </div>
     </div>
   </main>
-
   <script src="supabase-client.js"></script>
   <script src="form.js"></script>
 </body>

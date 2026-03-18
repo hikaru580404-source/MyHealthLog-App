@@ -1,88 +1,25 @@
-/* =============================================
-   form.css - 健康管理入力画面・専用スタイル
-   ============================================= */
-
-/* --- ステップインジケーターの論理設計 --- */
-.step-indicator {
-  display: flex; align-items: center; justify-content: center;
-  margin-bottom: 24px; padding: 0 10px;
-}
-.step {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  position: relative; z-index: 1;
-}
-.step-dot {
-  width: 28px; height: 28px; border-radius: 50%;
-  background: var(--clr-surface); border: 2px solid var(--clr-border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: .75rem; font-weight: 800; color: var(--clr-text-muted);
-  transition: var(--tr);
-}
-.step.active .step-dot {
-  border-color: var(--clr-balance); background: var(--clr-balance); color: #fff;
-  box-shadow: 0 0 0 4px var(--clr-balance-light);
-}
-.step.done .step-dot {
-  border-color: var(--clr-income); background: var(--clr-income); color: #fff;
-}
+.step-indicator { display: flex; align-items: center; justify-content: center; margin-bottom: 25px; }
+.step { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.step-dot { width: 30px; height: 30px; border-radius: 50%; background: #fff; border: 2px solid var(--clr-border); display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 800; }
+.step.active .step-dot { border-color: var(--clr-balance); background: var(--clr-balance); color: #fff; }
+.step.done .step-dot { border-color: var(--clr-income); background: var(--clr-income); color: #fff; }
 .step-label { font-size: .65rem; font-weight: 700; color: var(--clr-text-secondary); }
-.step-line {
-  flex: 1; height: 2px; background: var(--clr-border);
-  margin: -15px 8px 0; max-width: 40px;
-}
+.step-line { flex: 1; height: 2px; background: var(--clr-border); margin: -15px 10px 0; max-width: 40px; }
 
-/* --- 入力パネルの制御 --- */
 .step-panel { display: none; }
-.step-panel.active { display: block; animation: fadeIn .3s ease; }
+.step-panel.active { display: block; }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* --- フォームコンポーネント --- */
-.form-card {
-  background: var(--clr-surface); border-radius: var(--radius-lg);
-  padding: 20px; box-shadow: var(--shadow-md);
-}
+.form-card { background: #fff; border-radius: var(--radius-lg); padding: 20px; box-shadow: var(--shadow-md); }
 .form-group { margin-bottom: 18px; }
-.form-label {
-  display: block; font-size: .82rem; font-weight: 800;
-  color: var(--clr-text-secondary); margin-bottom: 8px;
-}
-.form-input {
-  width: 100%; padding: 12px; border: 1.5px solid var(--clr-border);
-  border-radius: var(--radius-md); font-family: var(--font);
-  font-size: 1rem; transition: var(--tr);
-}
-.form-input:focus {
-  outline: none; border-color: var(--clr-balance); background: var(--clr-surface2);
-}
+.form-label { display: block; font-size: .8rem; font-weight: 800; margin-bottom: 8px; }
+.form-input { width: 100%; padding: 12px; border: 1.5px solid var(--clr-border); border-radius: 10px; font-size: 1rem; }
 
-.btn-next, .btn-confirm {
-  width: 100%; padding: 15px; border-radius: var(--radius-md);
-  border: none; background: linear-gradient(135deg, var(--clr-balance) 0%, var(--clr-balance-dark) 100%);
-  color: #fff; font-size: .95rem; font-weight: 700; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  box-shadow: 0 4px 12px rgba(99,102,241,.3);
-}
+.cond-group { display: flex; gap: 8px; }
+.cond-btn { flex: 1; aspect-ratio: 1; border-radius: 12px; border: 2px solid var(--clr-border); background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+.cond-btn i { font-size: 1.2rem; margin-bottom: 4px; }
+.cond-btn span { font-size: .6rem; font-weight: 700; }
+.cond-btn.active { border-color: var(--clr-balance); color: var(--clr-balance); background: var(--clr-balance-light); }
 
-/* --- 確認画面・完了画面 --- */
-.confirm-header { text-align: center; margin-bottom: 20px; }
-.confirm-type-badge {
-  display: inline-block; padding: 4px 12px; border-radius: 99px;
-  font-size: .7rem; font-weight: 800; background: var(--clr-income-light); color: var(--clr-income-dark);
-}
-.confirm-amount { font-size: 1.5rem; font-weight: 800; margin-top: 8px; }
-.confirm-table { margin-bottom: 24px; border-top: 1px solid var(--clr-border); }
-.confirm-row {
-  display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--clr-border);
-}
-.confirm-key { font-size: .8rem; color: var(--clr-text-secondary); }
-.confirm-val { font-size: .85rem; font-weight: 700; }
-.confirm-actions { display: flex; gap: 10px; }
-.btn-back {
-  flex: 1; padding: 12px; border-radius: var(--radius-md);
-  background: var(--clr-surface2); border: 1px solid var(--clr-border);
-  font-weight: 700; cursor: pointer;
-}
+.btn-next, .btn-confirm { width: 100%; padding: 15px; border-radius: 10px; border: none; background: var(--clr-balance); color: #fff; font-weight: 800; cursor: pointer; }
+.confirm-table { border-top: 1px solid var(--clr-border); margin-bottom: 20px; }
+.confirm-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--clr-border); font-size: .85rem; }

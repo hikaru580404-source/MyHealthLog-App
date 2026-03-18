@@ -3,14 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ログイン・新規登録 | 健康管理システム</title>
+  <title>ログイン | 健康管理システム</title>
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body style="background: var(--clr-bg);">
   <div class="login-container">
     <h1 class="login-title" id="authTitle">システム ログイン</h1>
-    
     <form id="authForm">
       <div class="login-form-group">
         <label class="login-label" for="email">メールアドレス</label>
@@ -20,17 +19,13 @@
         <label class="login-label" for="password">パスワード</label>
         <input type="password" id="password" class="login-input" minlength="6" placeholder="6文字以上" required>
       </div>
-      
       <button type="submit" class="login-btn" id="authSubmitBtn">ログイン</button>
-      
       <div id="authMsg" class="login-msg"></div>
     </form>
-
     <div class="auth-toggle">
       <a href="#" id="toggleAuthMode">アカウントをお持ちでない方はこちら（新規登録）</a>
     </div>
   </div>
-
   <script src="supabase-client.js"></script>
   <script src="login.js"></script>
 </body>

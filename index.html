@@ -4,16 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ダッシュボード | 健康管理システム</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-
 <header class="app-header">
   <div class="header-inner">
     <div class="header-row1">
@@ -27,7 +23,6 @@
     </div>
   </div>
 </header>
-
 <main class="app-main">
   <section class="kpi-section">
     <div class="kpi-card income">
@@ -59,13 +54,11 @@
       </div>
     </div>
   </section>
-
   <nav class="tab-nav">
     <button class="tab-btn active"><i class="fas fa-chart-line"></i><span>分析</span></button>
     <button class="tab-btn" onclick="location.href='form.html'"><i class="fas fa-plus-circle"></i><span>記録</span></button>
     <button class="tab-btn" onclick="location.href='summary.html'"><i class="fas fa-history"></i><span>履歴</span></button>
   </nav>
-
   <section class="tab-content">
     <div class="chart-card">
       <div class="chart-card-header"><i class="fas fa-project-diagram"></i><span>身体・睡眠相関グラフ（直近7日間）</span></div>
@@ -73,16 +66,12 @@
         <canvas id="healthCorrelationChart"></canvas>
       </div>
     </div>
-    
     <div class="chart-card">
       <div class="chart-card-header"><i class="fas fa-sticky-note"></i><span>最新のメモ</span></div>
-      <div id="latestNote" style="font-size: .85rem; color: var(--clr-text-secondary); line-height: 1.5; padding: 5px;">
-        記録がありません。
-      </div>
+      <div id="latestNote" style="font-size: .85rem; color: var(--clr-text-secondary); line-height: 1.5; padding: 5px;">記録がありません。</div>
     </div>
   </section>
 </main>
-
 <script src="supabase-client.js"></script>
 <script src="app.js"></script>
 </body>
