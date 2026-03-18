@@ -1,30 +1,31 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>「**ログイン**」 | 健康管理システム</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ログイン | 健康管理システム</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="login-container">
-        <form id="login-form">
-            <h2>「**健康管理システムにログイン**」</h2>
-            <div class="input-group">
-                <label>「**メールアドレス**」</label>
-                <input type="email" id="email" required placeholder="example@mail.com">
-            </div>
-            <div class="input-group">
-                <label>Back end key</label>
-                <input type="password" id="password" required>
-            </div>
-            <button type="submit" class="btn-full">「**ログイン**」</button>
-            <p id="error-msg" class="text-danger"></p>
-        </form>
-    </div>
+<body style="background: #f0f2f7;">
+  <div class="login-container">
+    <h1 class="login-title">健康管理システム ログイン</h1>
+    
+    <form id="loginForm">
+      <div class="login-form-group">
+        <label class="login-label" for="email">メールアドレス</label>
+        <input type="email" id="email" class="login-input" required placeholder="example@mail.com">
+      </div>
+      <div class="login-form-group">
+        <label class="login-label" for="password">パスワード</label>
+        <input type="password" id="password" class="login-input" minlength="6" required>
+      </div>
+      
+      <button type="submit" class="login-btn">ログイン</button>
+      <div id="loginMsg" class="login-msg"></div>
+    </form>
+  </div>
 
-    <script src="supabase-client.js"></script>
-    <script src="login.js"></script>
+  <script src="supabase-client.js"></script>
+  <script src="login.js"></script>
 </body>
 </html>
