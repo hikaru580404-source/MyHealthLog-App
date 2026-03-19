@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="form.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* 追加実装: トーストアニメーションと打刻軌跡（記録済み状態） */
+    /* トーストアニメーション */
     #toastMsg {
       position: fixed; bottom: -50px; left: 50%; transform: translateX(-50%);
       background: var(--clr-accent); color: #111827; padding: 14px 24px;
@@ -35,6 +35,18 @@
         border-color: var(--clr-accent) !important;
         box-shadow: 0 4px 15px rgba(251,191,36,0.3) !important;
         opacity: 0.8; cursor: not-allowed;
+    }
+
+    /* レスポンシブ6カード・最適化グリッド */
+    .kpi-section {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(2, 1fr); /* スマホ環境: 2列×3段 */
+    }
+    @media (min-width: 640px) {
+        .kpi-section {
+            grid-template-columns: repeat(3, 1fr); /* PC・タブレット環境: 3列×2段 */
+        }
     }
   </style>
 </head>
@@ -81,21 +93,20 @@
       <div class="kpi-value"><span id="latestSleep">-- h</span></div>
       <div id="deltaSleep" class="kpi-delta"></div>
     </div>
-    
     <div class="kpi-card">
       <div class="kpi-label" data-i18n="mental">Mental Condition</div>
       <div class="kpi-value" style="font-size: 1.2rem;"><span id="latestMental">--</span></div>
       <div id="deltaMental" class="kpi-delta" style="color:var(--clr-text-secondary);">--</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label" data-i18n="month_count">Month Count</div>
-      <div class="kpi-value"><span id="monthCount">0</span> <span style="font-size: 0.9rem; margin-left:4px;" data-i18n="days">Days</span></div>
-      <div class="kpi-delta delta-good" data-i18n="logging">Logging</div>
+      <div class="kpi-label" data-i18n="streak">Streak</div>
+      <div class="kpi-value"><span id="streakDays">0</span> <span style="font-size: 0.9rem; margin-left:4px;" data-i18n="days">Days</span></div>
+      <div class="kpi-delta delta-good" data-i18n="consecutive">Consecutive</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label" data-i18n="goal_progress">Goal Progress</div>
-      <div class="kpi-value"><span id="goalProgress">-- kg</span></div>
-      <div class="kpi-delta delta-neutral" data-i18n="to_target">To Target</div>
+      <div class="kpi-label" data-i18n="completion">Completion</div>
+      <div class="kpi-value"><span id="completionRate">0</span> <span style="font-size: 0.9rem; margin-left:4px;">%</span></div>
+      <div class="kpi-delta delta-neutral" data-i18n="last30days">Last 30 Days</div>
     </div>
   </section>
 

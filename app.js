@@ -8,20 +8,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         en: {
             quick_action: "Quick Action", wake: "Wake Up", meal: "Meal", sleep: "Sleep",
             kpi_title: "KPI", weight: "Weight", sleep_h: "Sleep", mental: "Mental Condition",
-            month_count: "Month Count", logging: "Logging", // 復活
-            streak: "Streak", days: "Days", consecutive: "Consecutive",
+            nav_meals: "Meals", nav_log: "Daily Log", nav_history: "History", chart_title: "Recent 7-Day Trend",
+            analysis: "Analysis", trend: "7-Day Trend",
+            recorded: "Logged",
+            fat_p: "Fat", streak: "Streak", days: "Days", consecutive: "Consecutive",
             completion: "Completion", last30days: "Last 30 Days",
-            trend: "7-Day Trend", analysis: "Analysis", nav_meals: "Meals", nav_log: "Daily Log", nav_history: "History", chart_title: "Recent 7-Day Trend",
             msg_wake: "Good morning! Have a great day! ☀️",
             msg_sleep: "Good work today. Have a good night! 🌙"
         },
         ja: {
             quick_action: "クイックアクション", wake: "起床", meal: "食事", sleep: "就寝",
             kpi_title: "主要指標", weight: "体重", sleep_h: "睡眠時間", mental: "メンタル状態",
-            month_count: "月間記録日数", logging: "記録済み", // 復活
-            streak: "継続日数", days: "日", consecutive: "連続記録中",
+            nav_meals: "食事録", nav_log: "日次記録", nav_history: "履歴", chart_title: "直近7日間の推移",
+            analysis: "分析", trend: "7日間の推移",
+            recorded: "記録済み",
+            fat_p: "体脂肪率", streak: "継続日数", days: "日", consecutive: "連続記録中",
             completion: "完了率", last30days: "過去30日間",
-            trend: "7日間の推移", analysis: "分析", nav_meals: "食事録", nav_log: "日次記録", nav_history: "履歴", chart_title: "直近7日間の推移",
             msg_wake: "おはようございます！今日も一日頑張りましょう☀️",
             msg_sleep: "お疲れ様でした。ゆっくり休んでくださいね🌙"
         }
@@ -38,9 +40,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentLang = currentLang === 'en' ? 'ja' : 'en';
         localStorage.setItem('appLang_' + user.id, currentLang);
         updateLanguage();
+        loadDashboard(); // テキスト切り替えのためロード
     });
     updateLanguage(); 
 
+    // --- トースト通知機能 ---
     function showToast(msg) {
         const toast = document.getElementById('toastMsg');
         toast.innerText = msg;
@@ -59,14 +63,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentChartMode = 'weight';
     let globalChartLogs = [];
     
+    // 設定値の読み込み
     let TARGET_WEIGHT = parseFloat(localStorage.getItem('targetWeight_' + user.id)) || 65.0;
     let TARGET_FAT = parseFloat(localStorage.getItem('targetFat_' + user.id)) || 13.0;
 
+    // --- 認証系 ---
     document.getElementById('logoutBtn').addEventListener('click', async () => {
         await supabaseClient.auth.signOut();
         window.location.href = "login.html";
     });
 
+    // --- 設定モーダル ---
     const settingsModal = document.getElementById('settingsModal');
     document.getElementById('settingsBtn').addEventListener('click', () => {
         document.getElementById('settingTargetWeight').value = TARGET_WEIGHT;
@@ -84,11 +91,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem('targetFat_' + user.id, tFat);
         TARGET_WEIGHT = tWeight; TARGET_FAT = tFat;
         settingsModal.style.display = 'none';
-        renderDynamicChart();
+        loadDashboard(); // ダッシュボードをリロードしてKPI更新
     });
 
+    // --- ユーティリティ ---
     function getLocalLogicalDateStr(dateObj) {
         const d = new Date(dateObj.getTime());
+        // AM 4:00 までは前日扱いとするロジック
         if (d.getHours() < 4) d.setDate(d.getDate() - 1);
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -103,15 +112,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         return new Date(y, m - 1, d, h, min);
     }
 
+    // --- 初期セットアップチェック ---
     async function checkInitialSetup() {
         const localFlag = localStorage.getItem('initSetup_' + user.id);
         if (localFlag === 'true') { loadDashboard(); return; }
+        
+        // DBにデータがあるか最終確認
         const { data } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).limit(1);
-        if (!data || data.length === 0) { document.getElementById('initialSetupModal').style.display = 'flex'; } 
-        else { localStorage.setItem('initSetup_' + user.id, 'true'); loadDashboard(); }
+        if (!data || data.length === 0) {
+            document.getElementById('initialSetupModal').style.display = 'flex';
+        } else {
+            localStorage.setItem('initSetup_' + user.id, 'true');
+            loadDashboard();
+        }
     }
 
-    let initMVal = 3;
     document.querySelectorAll('#initMGrp .cond-btn').forEach(b => {
         b.addEventListener('click', () => {
             document.querySelectorAll('#initMGrp .cond-btn').forEach(x => x.classList.remove('active'));
@@ -119,50 +134,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    document.getElementById('initialSetupForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = document.getElementById('initSaveBtn');
-        btn.disabled = true; btn.innerText = "Processing...";
-        const tWeight = document.getElementById('initTargetWeight').value;
-        const tFat = document.getElementById('initTargetFat').value;
-        localStorage.setItem('targetWeight_' + user.id, tWeight);
-        localStorage.setItem('targetFat_' + user.id, tFat);
-        TARGET_WEIGHT = parseFloat(tWeight); TARGET_FAT = parseFloat(tFat);
+    // --- クイックアクションロジック（打刻軌跡実装） ---
+    function setButtonRecorded(type) {
+        let btn, icon, textSpan;
+        if (type === 'wake') {
+            btn = document.getElementById('btnWaketime');
+            icon = document.getElementById('wakeIcon');
+            textSpan = document.getElementById('wakeText');
+        } else {
+            btn = document.getElementById('btnBedtime');
+            icon = document.getElementById('bedIcon');
+            textSpan = document.getElementById('bedText');
+        }
+        if(!btn) return;
 
-        try {
-            const now = new Date();
-            const todayStr = getLocalLogicalDateStr(now);
-            const yesterday = new Date(now.getTime()); yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = getLocalLogicalDateStr(yesterday);
-
-            const btVal = document.getElementById('initBedtime').value;
-            const wtVal = document.getElementById('initWaketime').value;
-            const wVal = document.getElementById('initWeight').value;
-            const fVal = document.getElementById('initFat').value;
-
-            let bDate = createSafeDate(yesterdayStr, btVal);
-            let wDate = createSafeDate(todayStr, wtVal);
-            if (wDate <= bDate) wDate.setDate(wDate.getDate() + 1);
-            let sleepHours = parseFloat(((wDate - bDate) / 3600000).toFixed(1));
-
-            const yestPayload = { user_id: user.id, measured_date: yesterdayStr, bedtime: bDate.toISOString() };
-            const { data: yData } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', yesterdayStr).maybeSingle();
-            if (yData) await supabaseClient.from('health_logs').update(yestPayload).eq('id', yData.id);
-            else await supabaseClient.from('health_logs').insert(yestPayload);
-
-            const todayPayload = { user_id: user.id, measured_date: todayStr, waketime: wDate.toISOString(), sleep_hours: sleepHours, mental_condition: parseInt(initMVal) };
-            if (wVal) todayPayload.weight = parseFloat(wVal);
-            if (fVal) todayPayload.body_fat = parseFloat(fVal);
-
-            const { data: tData } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', todayStr).maybeSingle();
-            if (tData) await supabaseClient.from('health_logs').update(todayPayload).eq('id', tData.id);
-            else await supabaseClient.from('health_logs').insert(todayPayload);
-
-            localStorage.setItem('initSetup_' + user.id, 'true');
-            document.getElementById('initialSetupModal').style.display = 'none';
-            loadDashboard();
-        } catch (err) { alert("Error: " + err.message); btn.disabled = false; }
-    });
+        btn.classList.add('recorded');
+        btn.disabled = true; // 再打刻防止
+        icon.className = 'fas fa-check-circle'; 
+        textSpan.innerText = dict[currentLang].recorded; 
+    }
 
     async function recordTime(type) {
         try {
@@ -170,56 +160,238 @@ document.addEventListener('DOMContentLoaded', async () => {
             const logicalDateStr = getLocalLogicalDateStr(now);
             const timeISO = now.toISOString();
 
-            const { data: existing } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).eq('measured_date', logicalDateStr).maybeSingle();
+            const { data: existing } = await supabaseClient.from('health_logs')
+                .select('*').eq('user_id', user.id).eq('measured_date', logicalDateStr).maybeSingle();
+
+            if (existing && ((type === 'wake' && existing.waketime) || (type === 'bed' && existing.bedtime))) {
+                setButtonRecorded(type); 
+                return;
+            }
+
             const payload = existing ? { ...existing } : { user_id: user.id, measured_date: logicalDateStr };
 
             if (type === 'wake') {
                 payload.waketime = timeISO;
-                const yesterday = new Date(now.getTime()); yesterday.setDate(yesterday.getDate() - 1);
-                const { data: prevDay } = await supabaseClient.from('health_logs').select('bedtime').eq('user_id', user.id).eq('measured_date', getLocalLogicalDateStr(yesterday)).maybeSingle();
+                const yesterday = new Date(now.getTime());
+                yesterday.setDate(yesterday.getDate() - 1);
+                
+                const { data: prevDay } = await supabaseClient.from('health_logs')
+                    .select('bedtime').eq('user_id', user.id).eq('measured_date', getLocalLogicalDateStr(yesterday)).maybeSingle();
+                
                 if (prevDay && prevDay.bedtime) {
-                    let diff = (new Date(timeISO) - new Date(prevDay.bedtime)) / 3600000;
-                    if (diff < 0) diff += 24; payload.sleep_hours = parseFloat(diff.toFixed(1));
+                    let diff = (new Date(timeISO) - new Date(prevDay.bedtime)) / (1000 * 60 * 60);
+                    if (diff < 0) diff += 24; 
+                    payload.sleep_hours = parseFloat(diff.toFixed(1));
                 }
                 showToast(dict[currentLang].msg_wake);
-            } else if (type === 'bed') { 
-                payload.bedtime = timeISO; 
+            } else if (type === 'bed') {
+                payload.bedtime = timeISO;
                 showToast(dict[currentLang].msg_sleep);
             }
 
-            if (existing && existing.id) await supabaseClient.from('health_logs').update(payload).eq('id', existing.id);
-            else await supabaseClient.from('health_logs').insert(payload);
-            
+            if (existing && existing.id) {
+                await supabaseClient.from('health_logs').update(payload).eq('id', existing.id);
+            } else {
+                await supabaseClient.from('health_logs').insert(payload);
+            }
+
+            setButtonRecorded(type);
             loadDashboard();
-        } catch (e) { alert("Error: " + e.message); }
+
+        } catch (e) {
+            console.error(e);
+            alert("Error: " + e.message);
+        }
     }
 
     document.getElementById('btnBedtime').addEventListener('click', () => recordTime('bed'));
     document.getElementById('btnWaketime').addEventListener('click', () => recordTime('wake'));
 
-    const mealModal = document.getElementById('mealModal');
-    document.getElementById('btnMealOpen').addEventListener('click', () => { document.getElementById('quickMealDate').value = getLocalLogicalDateStr(new Date()); mealModal.style.display = 'flex'; });
-    document.getElementById('btnMealCancel').addEventListener('click', () => mealModal.style.display = 'none');
+    // --- ダッシュボード表示ロジック ---
+    async function loadDashboard() {
+        try {
+            const now = new Date();
+            const logicalDateStr = getLocalLogicalDateStr(now);
 
-    async function compressImage(file, maxWidth = 800) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader(); reader.readAsDataURL(file);
-            reader.onload = event => {
-                const img = new Image(); img.src = event.target.result;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width; let height = img.height;
-                    if (width > height && width > maxWidth) { height *= maxWidth / width; width = maxWidth; } 
-                    else if (height > maxWidth) { width *= maxWidth / height; height = maxWidth; }
-                    canvas.width = width; canvas.height = height;
-                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
-                    canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.8);
-                };
-            };
-            reader.onerror = error => reject(error);
+            // クイックアクションの打刻軌跡
+            const { data: todayLog } = await supabaseClient.from('health_logs')
+                .select('waketime, bedtime').eq('user_id', user.id).eq('measured_date', logicalDateStr).maybeSingle();
+            
+            if (todayLog) {
+                if (todayLog.waketime) setButtonRecorded('wake');
+                if (todayLog.bedtime) setButtonRecorded('bed');
+            }
+
+            // 1. KPI データの取得 (SQL関数実行: 継続日数と完了率)
+            const { data: kpiData, error: kpiErr } = await supabaseClient.rpc('get_user_performance', { target_user_id: user.id });
+            if (!kpiErr && kpiData && kpiData.length > 0) {
+                // エラー回避のためのDOM存在確認（nullチェック）を徹底
+                const streakEl = document.getElementById('streakDays');
+                const compEl = document.getElementById('completionRate');
+                if (streakEl) streakEl.innerText = kpiData[0].streak_days;
+                if (compEl) compEl.innerText = Math.round(kpiData[0].log_completion_rate);
+            }
+
+            // 2. 直近のヘルスログ取得
+            const { data: recentLogs, error: logErr } = await supabaseClient.from('health_logs')
+                .select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(2);
+            
+            if (logErr) throw logErr;
+
+            if (recentLogs && recentLogs.length > 0) {
+                const current = recentLogs[0];
+                const previous = recentLogs.length > 1 ? recentLogs[1] : null;
+
+                // Weight
+                const weightEl = document.getElementById('latestWeight');
+                if (weightEl) weightEl.innerText = current.weight ? current.weight.toFixed(1) + " kg" : "-- kg";
+                
+                const deltaWEl = document.getElementById('deltaWeight');
+                if (deltaWEl && current.weight && previous && previous.weight) {
+                    const diff = current.weight - previous.weight;
+                    if (diff > 0) {
+                        deltaWEl.innerHTML = `Δ +${diff.toFixed(1)} kg`; deltaWEl.className = "kpi-delta delta-bad";
+                    } else if (diff < 0) {
+                        deltaWEl.innerHTML = `Δ ${diff.toFixed(1)} kg`; deltaWEl.className = "kpi-delta delta-good";
+                    } else {
+                        deltaWEl.innerText = "Δ 0.0 kg"; deltaWEl.className = "kpi-delta delta-neutral";
+                    }
+                }
+
+                // Fat %
+                const fatEl = document.getElementById('latestFat');
+                if (fatEl) fatEl.innerText = current.body_fat ? current.body_fat.toFixed(1) + " %" : "-- %";
+                
+                const deltaFEl = document.getElementById('deltaFat');
+                if (deltaFEl && current.body_fat && previous && previous.body_fat) {
+                    const diff = current.body_fat - previous.body_fat;
+                    if (diff > 0) {
+                        deltaFEl.innerHTML = `Δ +${diff.toFixed(1)} %`; deltaFEl.className = "kpi-delta delta-bad";
+                    } else if (diff < 0) {
+                        deltaFEl.innerHTML = `Δ ${diff.toFixed(1)} %`; deltaFEl.className = "kpi-delta delta-good";
+                    } else {
+                        deltaFEl.innerText = "Δ 0.0 %"; deltaFEl.className = "kpi-delta delta-neutral";
+                    }
+                }
+
+                // Sleep
+                const sleepEl = document.getElementById('latestSleep');
+                if (sleepEl) sleepEl.innerText = current.sleep_hours ? current.sleep_hours.toFixed(1) + " h" : "-- h";
+                
+                const deltaSEl = document.getElementById('deltaSleep');
+                if (deltaSEl && current.sleep_hours && previous && previous.sleep_hours) {
+                    const diff = current.sleep_hours - previous.sleep_hours;
+                    if (diff > 0) {
+                        deltaSEl.innerHTML = `Δ +${diff.toFixed(1)} h`; deltaSEl.className = "kpi-delta delta-good";
+                    } else if (diff < 0) {
+                        deltaSEl.innerHTML = `Δ ${diff.toFixed(1)} h`; deltaSEl.className = "kpi-delta delta-bad";
+                    } else {
+                        deltaSEl.innerText = "Δ 0.0 h"; deltaSEl.className = "kpi-delta delta-neutral";
+                    }
+                }
+
+                // Mental
+                const mentalEl = document.getElementById('latestMental');
+                if (mentalEl) mentalEl.innerHTML = current.mental_condition ? mentalIcons[current.mental_condition - 1] : "--";
+            }
+
+            // 3. チャートデータ取得
+            const { data: chartData, error: chartErr } = await supabaseClient.from('health_logs')
+                .select('measured_date, weight, body_fat, sleep_hours, mental_condition')
+                .eq('user_id', user.id)
+                .order('measured_date', { ascending: true })
+                .limit(7);
+            
+            if (chartErr) throw chartErr;
+            if (chartData) {
+                globalChartLogs = chartData;
+                renderDynamicChart();
+            }
+
+        } catch (e) {
+            console.error("Dashboard Load Error:", e);
+        }
+    }
+
+    // --- チャート描画ロジック ---
+    function renderDynamicChart() {
+        if (globalChartLogs.length === 0) return;
+        const ctx = document.getElementById('healthCorrelationChart').getContext('2d');
+        if (window.dashChart) window.dashChart.destroy();
+
+        const labels = globalChartLogs.map(l => l.measured_date.split('-')[2]); 
+        let datasets = [];
+        let scales = {
+            x: { ticks: { color: '#8b9bb4', font: { family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+        };
+
+        if (currentChartMode === 'weight') {
+            datasets = [
+                {
+                    label: 'Weight (kg)', data: globalChartLogs.map(l => l.weight),
+                    type: 'line', borderColor: '#f8fafc', borderWidth: 2, pointBackgroundColor: '#f8fafc',
+                    pointBorderColor: '#fbbf24', pointBorderWidth: 2, pointRadius: 4, tension: 0.3, yAxisID: 'y1'
+                },
+                {
+                    label: `TARGET ${TARGET_WEIGHT.toFixed(1)}kg`, data: globalChartLogs.map(() => TARGET_WEIGHT),
+                    type: 'line', borderColor: 'rgba(251, 191, 36, 0.5)', borderDash: [4, 4], pointRadius: 0, borderWidth: 1, yAxisID: 'y1'
+                },
+                {
+                    label: 'Fat (%)', data: globalChartLogs.map(l => l.body_fat),
+                    type: 'line', borderColor: '#38bdf8', borderWidth: 2, pointBackgroundColor: '#38bdf8', tension: 0.3, yAxisID: 'y2'
+                }
+            ];
+            scales.y1 = { position: 'right', ticks: { color: '#8b9bb4', font: { family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.05)' } };
+            scales.y2 = { position: 'left', ticks: { color: '#38bdf8', font: { family: 'Inter' } }, grid: { display: false } };
+        } else {
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(251, 191, 36, 0.8)');gradient.addColorStop(1, 'rgba(251, 191, 36, 0.0)');
+            datasets = [
+                {
+                    label: 'Sleep (h)', data: globalChartLogs.map(l => l.sleep_hours),
+                    type: 'bar', backgroundColor: gradient, borderColor: 'rgba(251, 191, 36, 0.5)', borderWidth: 1, barPercentage: 0.5, yAxisID: 'y1'
+                },
+                {
+                    label: 'Mental', data: globalChartLogs.map(l => l.mental_condition),
+                    type: 'line', borderColor: '#10b981', pointBackgroundColor: '#10b981', borderWidth: 2, tension: 0.3, yAxisID: 'y2'
+                }
+            ];
+            scales.y1 = { position: 'left', min: 0, max: 12, ticks: { color: '#8b9bb4', font: { family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.05)' } };
+            scales.y2 = { position: 'right', min: 1, max: 5, ticks: { color: '#10b981', font: { family: 'Inter' } }, grid: { display: false } };
+        }
+
+        window.dashChart = new Chart(ctx, {
+            type: 'bar', 
+            data: { labels, datasets },
+            options: {
+                plugins: { legend: { display: false } },
+                layout: { padding: { top: 20 } },
+                scales
+            }
         });
     }
 
+    document.getElementById('modeWeight').addEventListener('click', (e) => {
+        currentChartMode = 'weight';
+        document.getElementById('modeWeight').classList.add('active');
+        document.getElementById('modeSleep').classList.remove('active');
+        renderDynamicChart();
+    });
+    document.getElementById('modeSleep').addEventListener('click', (e) => {
+        currentChartMode = 'sleep';
+        document.getElementById('modeSleep').classList.add('active');
+        document.getElementById('modeWeight').classList.remove('active');
+        renderDynamicChart();
+    });
+
+    const mealModal = document.getElementById('mealModal');
+    document.getElementById('btnMealOpen').addEventListener('click', () => {
+        document.getElementById('quickMealDate').value = getLocalLogicalDateStr(new Date());
+        mealModal.style.display = 'flex';
+    });
+    document.getElementById('btnMealCancel').addEventListener('click', () => {
+        mealModal.style.display = 'none';
+    });
     document.getElementById('btnMealSave').addEventListener('click', async () => {
         const btn = document.getElementById('btnMealSave');
         const mealDate = document.getElementById('quickMealDate').value;
@@ -234,128 +406,47 @@ document.addEventListener('DOMContentLoaded', async () => {
             let imageUrl = null;
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
-                const compressedBlob = await compressImage(file);
-                const fileName = `${user.id}/${Date.now()}.jpg`;
-                await supabaseClient.storage.from('meal_images').upload(fileName, compressedBlob, { contentType: 'image/jpeg' });
-                const { data: publicUrlData } = supabaseClient.storage.from('meal_images').getPublicUrl(fileName);
-                imageUrl = publicUrlData.publicUrl;
+                imageUrl = await uploadCompressedImage(file, user.id);
             }
-            await supabaseClient.from('meal_logs').insert({ user_id: user.id, meal_date: mealDate, meal_type: type, content: memo, image_url: imageUrl, created_at: new Date().toISOString() });
+            const { error } = await supabaseClient.from('meal_logs').insert({
+                user_id: user.id, meal_date: mealDate, meal_type: type, content: memo, image_url: imageUrl, created_at: new Date().toISOString()
+            });
+            if (error) throw error;
             mealModal.style.display = 'none';
-            document.getElementById('quickMealMemo').value = ''; document.getElementById('quickMealImage').value = '';
+            document.getElementById('quickMealMemo').value = '';
+            document.getElementById('quickMealImage').value = '';
         } catch (err) { alert("Error: " + err.message); } finally { btn.disabled = false; btn.innerText = "Save"; }
     });
 
-    async function loadDashboard() {
-        const now = new Date();
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-        const firstDayStr = getLocalLogicalDateStr(firstDay);
-        
-        // 1. 月間記録日数の取得 (復活)
-        const { count } = await supabaseClient.from('health_logs').select('*', { count: 'exact', head: true }).eq('user_id', user.id).gte('measured_date', firstDayStr);
-        document.getElementById('monthCount').innerText = count || 0;
-
-        // 2. KPIデータの取得 (SQL関数実行)
-        const { data: kpiData, error: kpiErr } = await supabaseClient.rpc('get_user_performance', { target_user_id: user.id });
-        if (!kpiErr && kpiData && kpiData.length > 0) {
-            document.getElementById('streakDays').innerText = kpiData[0].streak_days;
-            document.getElementById('completionRate').innerText = Math.round(kpiData[0].log_completion_rate);
-        }
-
-        // 3. 直近のヘルスログ取得
-        const { data: recentLogs } = await supabaseClient.from('health_logs')
-            .select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(2);
-            
-        if (recentLogs && recentLogs.length > 0) {
-            const current = recentLogs[0];
-            const previous = recentLogs.length > 1 ? recentLogs[1] : null;
-
-            // クイックアクションボタンのUI更新
-            if (current.measured_date === getLocalLogicalDateStr(new Date())) {
-                if (current.waketime) {
-                    const btn = document.getElementById('btnWaketime');
-                    btn.classList.add('recorded');
-                    document.getElementById('wakeIcon').className = 'fas fa-check-circle';
-                    const d = new Date(current.waketime);
-                    document.getElementById('wakeTimeDisplay').innerText = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                }
-                if (current.bedtime) {
-                    const btn = document.getElementById('btnBedtime');
-                    btn.classList.add('recorded');
-                    document.getElementById('bedIcon').className = 'fas fa-check-circle';
-                    const d = new Date(current.bedtime);
-                    document.getElementById('bedTimeDisplay').innerText = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                }
-            }
-
-            document.getElementById('latestWeight').innerText = current.weight ? current.weight.toFixed(1) + " kg" : "-- kg";
-            if (current.weight && previous && previous.weight) {
-                const diff = current.weight - previous.weight;
-                const deltaEl = document.getElementById('deltaWeight');
-                if (diff > 0) { deltaEl.innerHTML = `Δ +${diff.toFixed(1)} kg`; deltaEl.className = "kpi-delta delta-bad"; }
-                else if (diff < 0) { deltaEl.innerHTML = `Δ ${diff.toFixed(1)} kg`; deltaEl.className = "kpi-delta delta-good"; }
-                else { deltaEl.innerText = "Δ 0.0 kg"; deltaEl.className = "kpi-delta delta-neutral"; }
-            }
-
-            document.getElementById('latestSleep').innerText = current.sleep_hours ? current.sleep_hours.toFixed(1) + " h" : "-- h";
-            if (current.sleep_hours && previous && previous.sleep_hours) {
-                const diff = current.sleep_hours - previous.sleep_hours;
-                const deltaEl = document.getElementById('deltaSleep');
-                if (diff > 0) { deltaEl.innerHTML = `Δ +${diff.toFixed(1)} h`; deltaEl.className = "kpi-delta delta-good"; }
-                else if (diff < 0) { deltaEl.innerHTML = `Δ ${diff.toFixed(1)} h`; deltaEl.className = "kpi-delta delta-bad"; }
-                else { deltaEl.innerText = "Δ 0.0 h"; deltaEl.className = "kpi-delta delta-neutral"; }
-            }
-            document.getElementById('latestMental').innerHTML = current.mental_condition ? mentalIcons[current.mental_condition - 1] : "--";
-        }
-
-        const { data: chartData } = await supabaseClient.from('health_logs').select('measured_date, weight, body_fat, sleep_hours, mental_condition').eq('user_id', user.id).order('measured_date', { ascending: true }).limit(7);
-        if (chartData) { globalChartLogs = chartData; renderDynamicChart(); }
-    }
-
-    document.getElementById('modeWeight').addEventListener('click', (e) => {
-        currentChartMode = 'weight';
-        document.getElementById('modeWeight').classList.add('active'); document.getElementById('modeSleep').classList.remove('active');
-        renderDynamicChart();
-    });
-    document.getElementById('modeSleep').addEventListener('click', (e) => {
-        currentChartMode = 'sleep';
-        document.getElementById('modeSleep').classList.add('active'); document.getElementById('modeWeight').classList.remove('active');
-        renderDynamicChart();
-    });
-
-    function renderDynamicChart() {
-        if (globalChartLogs.length === 0) return;
-        const ctx = document.getElementById('healthCorrelationChart').getContext('2d');
-        if (window.dashChart) window.dashChart.destroy();
-
-        const labels = globalChartLogs.map(l => l.measured_date.split('-')[2]);
-        let datasets = [];
-        let scales = { x: { ticks: { color: '#8b9bb4', font: { family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.05)' } } };
-
-        if (currentChartMode === 'weight') {
-            datasets = [
-                { label: 'Weight (kg)', data: globalChartLogs.map(l => l.weight), type: 'line', borderColor: '#f8fafc', borderWidth: 2, pointBackgroundColor: '#f8fafc', pointBorderColor: '#fbbf24', pointBorderWidth: 2, pointRadius: 4, tension: 0.3, yAxisID: 'y1' },
-                { label: `TARGET ${TARGET_WEIGHT.toFixed(1)}kg`, data: globalChartLogs.map(() => TARGET_WEIGHT), type: 'line', borderColor: 'rgba(251, 191, 36, 0.5)', borderDash: [4, 4], pointRadius: 0, borderWidth: 1, yAxisID: 'y1' },
-                { label: 'Fat (%)', data: globalChartLogs.map(l => l.body_fat), type: 'line', borderColor: '#38bdf8', borderWidth: 2, pointBackgroundColor: '#38bdf8', tension: 0.3, yAxisID: 'y2' }
-            ];
-            scales.y1 = { position: 'right', ticks: { color: '#8b9bb4', font: { family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.05)' } };
-            scales.y2 = { position: 'left', ticks: { color: '#38bdf8', font: { family: 'Inter' } }, grid: { display: false } };
-        } else {
-            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, 'rgba(251, 191, 36, 0.8)');
-            gradient.addColorStop(1, 'rgba(251, 191, 36, 0.0)');
-            datasets = [
-                { label: 'Sleep (h)', data: globalChartLogs.map(l => l.sleep_hours), type: 'bar', backgroundColor: gradient, borderColor: 'rgba(251, 191, 36, 0.5)', borderWidth: 1, barPercentage: 0.5, yAxisID: 'y1' },
-                { label: 'Mental', data: globalChartLogs.map(l => l.mental_condition), type: 'line', borderColor: '#10b981', pointBackgroundColor: '#10b981', borderWidth: 2, tension: 0.3, yAxisID: 'y2' }
-            ];
-            scales.y1 = { position: 'left', min: 0, max: 12, ticks: { color: '#8b9bb4', font: { family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.05)' } };
-            scales.y2 = { position: 'right', min: 1, max: 5, ticks: { color: '#10b981', font: { family: 'Inter' } }, grid: { display: false } };
-        }
-
-        window.dashChart = new Chart(ctx, {
-            type: 'bar',
-            data: { labels, datasets },
-            options: { plugins: { legend: { display: false } }, layout: { padding: { top: 20 } }, scales }
+    async function uploadCompressedImage(file, userId) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = event => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = async () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800;
+                    let width = img.width; let height = img.height;
+                    if (width > height) {
+                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    } else {
+                        if (height > MAX_WIDTH) { width *= MAX_WIDTH / height; height = MAX_WIDTH; }
+                    }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    canvas.toBlob(async blob => {
+                        const fileName = `${userId}/${Date.now()}.jpg`;
+                        const { data, error } = await supabaseClient.storage.from('meal_images').upload(fileName, blob, { contentType: 'image/jpeg' });
+                        if (error) reject(error);
+                        const { data: publicUrlData } = supabaseClient.storage.from('meal_images').getPublicUrl(fileName);
+                        resolve(publicUrlData.publicUrl);
+                    }, 'image/jpeg', 0.8);
+                };
+            };
+            reader.onerror = error => reject(error);
         });
     }
 
