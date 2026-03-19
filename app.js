@@ -200,13 +200,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // KPI取得と描画のサブ関数
     async function fetchAndRenderKPI() {
         try {
+            // .single() から .maybeSingle() に変更（0件でもエラーを吐かないプロ仕様）
             const { data: stats, error } = await supabaseClient
                 .from('user_kpi_stats')
                 .select('*')
                 .eq('user_id', user.id)
-                .single();
+                .maybeSingle();
 
-            if (error && error.code !== 'PGRST116') throw error;
+            if (error) throw error;
 
             if (stats) {
                 document.getElementById('currentStreak').innerText = stats.current_streak || 0;
