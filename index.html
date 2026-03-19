@@ -29,12 +29,12 @@
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center; gap: 8px; padding: 20px !important; transition: all 0.3s ease;
     }
-    /* 打刻の軌跡: 記録済み状態のスタイル */
+    /* 打刻の軌跡: 記録済み状態のスタイル（クリック可能にするため cursor: pointer に変更） */
     .btn-quick.recorded {
         background: var(--clr-accent) !important; color: #111827 !important;
         border-color: var(--clr-accent) !important;
         box-shadow: 0 4px 15px rgba(251,191,36,0.3) !important;
-        opacity: 0.8; cursor: not-allowed;
+        opacity: 0.9; cursor: pointer;
     }
 
     /* レスポンシブ6カード・最適化グリッド */
@@ -210,7 +210,9 @@
       </div>
     </div>
 
-    <button id="btnGuideOpen" class="btn-secondary" style="margin-bottom: 24px; font-size: 0.85rem; border-color: transparent; background: rgba(255,255,255,0.05);"><i class="fas fa-book" style="margin-right: 6px;"></i> 取扱説明・リリースノート</button>
+    <button id="btnGuideOpen" style="width: 100%; padding: 14px; margin-bottom: 24px; font-size: 0.9rem; font-weight: 700; background: rgba(56, 189, 248, 0.1); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+      <i class="fas fa-book" style="margin-right: 6px;"></i> 取扱説明・リリースノート (Guide)
+    </button>
 
     <div class="modal-actions" style="margin-top: 0;">
       <button id="btnSettingsCancel" class="btn-secondary" style="margin-top:0;">Cancel</button>
@@ -222,19 +224,19 @@
 <div class="modal-overlay" id="guideModal">
   <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
     <div class="modal-title">App Guide & Release Notes</div>
-    <div style="font-size: 0.85rem; color: var(--clr-text-secondary); line-height: 1.6; font-family: var(--font-jp);">
+    <div style="font-size: 0.85rem; color: var(--clr-text-primary); line-height: 1.6; font-family: var(--font-jp);">
       
-      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">v1.1 最新のアップデート</h4>
-      <ul style="padding-left: 20px; margin-bottom: 16px;">
-        <li>Settings画面から「昨晩の就寝時間」を修正した際、当日の「今夜の就寝ボタン」に干渉してしまう不具合を修正しました。</li>
-        <li>アプリ内に本マニュアル機能を追加しました。</li>
+      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">🎯 最新のアップデート (v1.2)</h4>
+      <ul style="padding-left: 20px; margin-bottom: 16px; color: var(--clr-text-secondary);">
+        <li><b>誤打刻の解除機能：</b> 「Wake Up」「Sleep」ボタンを間違えて押してしまった場合、<span style="color:#fbbf24;">黄色くなったボタンをもう一度タップ</span>することで「打刻のリセット」ができるようになりました。</li>
+        <li><b>運用ルールについて：</b> クライアント様からのご要望に基づく大規模な仕様変更は「月1回」を目安にまとめて実施し、日常的な軽微な修正やUI改善は随時シームレスに反映いたします。</li>
       </ul>
 
-      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">基本仕様・記録のルール</h4>
-      <ul style="padding-left: 20px; margin-bottom: 16px;">
-        <li><b>1日の区切り：</b> 毎朝4:00を論理的な1日の区切りとしています。深夜2時に就寝した場合でも「前日分の就寝」として正しく記録されます。</li>
-        <li><b>クイックアクション：</b> ダッシュボードの「Wake Up」「Sleep」ボタンは、その日のリアルタイムな打刻にのみ使用してください。</li>
-        <li><b>過去の修正：</b> 打刻を忘れたり、後から時間を修正したい場合は「Settings（歯車マーク）」または「Daily Log」タブから手動で時間を入力してください。</li>
+      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">📖 基本マニュアル</h4>
+      <ul style="padding-left: 20px; margin-bottom: 16px; color: var(--clr-text-secondary);">
+        <li><b>多言語対応（EN/JP）：</b> 画面右上の「EN/JP」ボタンで、いつでも日本語と英語の表示を切り替えることができます。</li>
+        <li><b>1日の区切り：</b> 毎朝4:00をシステムの1日の区切りとしています。深夜2時に就寝した場合は「前日分の就寝」として正しく計算されます。</li>
+        <li><b>過去の修正：</b> 過去の日付のデータを修正したい場合は、下のタブ「Daily Log」のカレンダーから日付を選択して入力してください。</li>
       </ul>
 
     </div>
