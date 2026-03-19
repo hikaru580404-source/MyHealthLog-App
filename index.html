@@ -210,10 +210,35 @@
       </div>
     </div>
 
-    <div class="modal-actions">
+    <button id="btnGuideOpen" class="btn-secondary" style="margin-bottom: 24px; font-size: 0.85rem; border-color: transparent; background: rgba(255,255,255,0.05);"><i class="fas fa-book" style="margin-right: 6px;"></i> 取扱説明・リリースノート</button>
+
+    <div class="modal-actions" style="margin-top: 0;">
       <button id="btnSettingsCancel" class="btn-secondary" style="margin-top:0;">Cancel</button>
       <button id="btnSettingsSave" class="btn-primary" style="margin-top:0;">Save Changes</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="guideModal">
+  <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+    <div class="modal-title">App Guide & Release Notes</div>
+    <div style="font-size: 0.85rem; color: var(--clr-text-secondary); line-height: 1.6; font-family: var(--font-jp);">
+      
+      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">v1.1 最新のアップデート</h4>
+      <ul style="padding-left: 20px; margin-bottom: 16px;">
+        <li>Settings画面から「昨晩の就寝時間」を修正した際、当日の「今夜の就寝ボタン」に干渉してしまう不具合を修正しました。</li>
+        <li>アプリ内に本マニュアル機能を追加しました。</li>
+      </ul>
+
+      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">基本仕様・記録のルール</h4>
+      <ul style="padding-left: 20px; margin-bottom: 16px;">
+        <li><b>1日の区切り：</b> 毎朝4:00を論理的な1日の区切りとしています。深夜2時に就寝した場合でも「前日分の就寝」として正しく記録されます。</li>
+        <li><b>クイックアクション：</b> ダッシュボードの「Wake Up」「Sleep」ボタンは、その日のリアルタイムな打刻にのみ使用してください。</li>
+        <li><b>過去の修正：</b> 打刻を忘れたり、後から時間を修正したい場合は「Settings（歯車マーク）」または「Daily Log」タブから手動で時間を入力してください。</li>
+      </ul>
+
+    </div>
+    <button id="btnGuideClose" class="btn-primary" style="margin-top:24px;">閉じる</button>
   </div>
 </div>
 
