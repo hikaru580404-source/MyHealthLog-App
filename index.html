@@ -41,11 +41,11 @@
     .kpi-section {
         display: grid;
         gap: 16px;
-        grid-template-columns: repeat(2, 1fr); /* スマホ環境: 2列×3段 */
+        grid-template-columns: repeat(2, 1fr);
     }
     @media (min-width: 640px) {
         .kpi-section {
-            grid-template-columns: repeat(3, 1fr); /* PC・タブレット環境: 3列×2段 */
+            grid-template-columns: repeat(3, 1fr);
         }
     }
   </style>
@@ -133,7 +133,7 @@
 </main>
 
 <div class="modal-overlay" id="initialSetupModal">
-  <div class="modal-content" id="initModalBlock">
+  <div class="modal-content" id="initModalBlock" style="max-height: 90vh; overflow-y: auto;">
     <div class="modal-title">Initial Setup</div>
     <div class="modal-desc">管理の基準となる最初のデータと、<br><span style="color: var(--clr-accent); font-weight:700;">あなたの目標値</span>を入力してください。</div>
     <form id="initialSetupForm">
@@ -171,18 +171,45 @@
 </div>
 
 <div class="modal-overlay" id="settingsModal">
-  <div class="modal-content">
+  <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
     <div class="modal-title">Settings</div>
-    <div class="form-row-grid" style="margin-bottom: 20px;">
-      <div class="form-group">
+    
+    <div style="font-size: 0.85rem; font-weight: 700; color: var(--clr-accent); margin-bottom: 12px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 6px;">
+      KPI TARGETS (目標数値)
+    </div>
+    <div class="form-row-grid" style="margin-bottom: 24px;">
+      <div class="form-group" style="margin-bottom: 0;">
         <label class="form-label" style="color: var(--clr-accent);">TARGET Weight (kg)</label>
         <input type="number" id="settingTargetWeight" class="form-input" step="0.1" required>
       </div>
-      <div class="form-group">
+      <div class="form-group" style="margin-bottom: 0;">
         <label class="form-label" style="color: var(--clr-accent);">TARGET Fat (%)</label>
         <input type="number" id="settingTargetFat" class="form-input" step="0.1" required>
       </div>
     </div>
+
+    <div style="font-size: 0.85rem; font-weight: 700; color: var(--clr-text-secondary); margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px;">
+      TODAY'S RECORD (今日の記録を修正)
+    </div>
+    <div class="form-row-grid">
+      <div class="form-group"><label class="form-label">昨晩の就寝</label><input type="time" id="settingBedtime" class="form-input"></div>
+      <div class="form-group"><label class="form-label">今朝の起床</label><input type="time" id="settingWaketime" class="form-input"></div>
+    </div>
+    <div class="form-row-grid">
+      <div class="form-group"><label class="form-label">現在の体重 (kg)</label><input type="number" id="settingWeight" class="form-input" step="0.1"></div>
+      <div class="form-group"><label class="form-label">現在の体脂肪 (%)</label><input type="number" id="settingFat" class="form-input" step="0.1"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">コンディション</label>
+      <div class="cond-group" id="settingMGrp">
+        <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
+        <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
+        <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
+        <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
+        <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
+      </div>
+    </div>
+
     <div class="modal-actions">
       <button id="btnSettingsCancel" class="btn-secondary" style="margin-top:0;">Cancel</button>
       <button id="btnSettingsSave" class="btn-primary" style="margin-top:0;">Save Changes</button>
