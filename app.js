@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         currentLang = currentLang === 'en' ? 'ja' : 'en';
         localStorage.setItem('appLang_' + user.id, currentLang);
         updateLanguage();
-        loadDashboard(); // テキスト切り替えのためロード
+        loadDashboard(); 
     });
     updateLanguage(); 
 
@@ -63,17 +63,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentChartMode = 'weight';
     let globalChartLogs = [];
     
-    // 設定値の読み込み
     let TARGET_WEIGHT = parseFloat(localStorage.getItem('targetWeight_' + user.id)) || 65.0;
     let TARGET_FAT = parseFloat(localStorage.getItem('targetFat_' + user.id)) || 13.0;
 
-    // --- 認証系 ---
     document.getElementById('logoutBtn').addEventListener('click', async () => {
         await supabaseClient.auth.signOut();
         window.location.href = "login.html";
     });
 
-    // --- 設定モーダル ---
     const settingsModal = document.getElementById('settingsModal');
     document.getElementById('settingsBtn').addEventListener('click', () => {
         document.getElementById('settingTargetWeight').value = TARGET_WEIGHT;
@@ -91,13 +88,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem('targetFat_' + user.id, tFat);
         TARGET_WEIGHT = tWeight; TARGET_FAT = tFat;
         settingsModal.style.display = 'none';
-        loadDashboard(); // ダッシュボードをリロードしてKPI更新
+        loadDashboard(); 
     });
 
-    // --- ユーティリティ ---
     function getLocalLogicalDateStr(dateObj) {
         const d = new Date(dateObj.getTime());
-        // AM 4:00 までは前日扱いとするロジック
         if (d.getHours() < 4) d.setDate(d.getDate() - 1);
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -112,12 +107,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         return new Date(y, m - 1, d, h, min);
     }
 
-    // --- 初期セットアップチェック ---
     async function checkInitialSetup() {
         const localFlag = localStorage.getItem('initSetup_' + user.id);
         if (localFlag === 'true') { loadDashboard(); return; }
         
-        // DBにデータがあるか最終確認
         const { data } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).limit(1);
         if (!data || data.length === 0) {
             document.getElementById('initialSetupModal').style.display = 'flex';
@@ -134,7 +127,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // --- クイックアクションロジック（打刻軌跡実装） ---
     function setButtonRecorded(type) {
         let btn, icon, textSpan;
         if (type === 'wake') {
@@ -149,29 +141,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(!btn) return;
 
         btn.classList.add('recorded');
-        btn.disabled = true; // 再打刻防止
+        btn.disabled = true; 
         icon.className = 'fas fa-check-circle'; 
         textSpan.innerText = dict[currentLang].recorded; 
     }
 
+    // ★ 404エラーを解消するための厳格な保存ロジック
     async function recordTime(type) {
         try {
             const now = new Date();
             const logicalDateStr = getLocalLogicalDateStr(now);
             const timeISO = now.toISOString();
 
-            const { data: existing } = await supabaseClient.from('health_logs')
-                .select('*').eq('user_id', user.id).eq('measured_date', logicalDateStr).maybeSingle();
+            const { data: existing, error: fetchErr } = await supabaseClient.from('health_logs')
+                .select('id, waketime, bedtime').eq('user_id', user.id).eq('measured_date', logicalDateStr).maybeSingle();
+
+            if (fetchErr) throw fetchErr;
 
             if (existing && ((type === 'wake' && existing.waketime) || (type === 'bed' && existing.bedtime))) {
                 setButtonRecorded(type); 
                 return;
             }
 
-            const payload = existing ? { ...existing } : { user_id: user.id, measured_date: logicalDateStr };
+            // 更新用ペイロードの構築（IDを含めないことでUPDATEエラーを回避）
+            let updatePayload = {};
 
             if (type === 'wake') {
-                payload.waketime = timeISO;
+                updatePayload.waketime = timeISO;
                 const yesterday = new Date(now.getTime());
                 yesterday.setDate(yesterday.getDate() - 1);
                 
@@ -181,39 +177,42 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (prevDay && prevDay.bedtime) {
                     let diff = (new Date(timeISO) - new Date(prevDay.bedtime)) / (1000 * 60 * 60);
                     if (diff < 0) diff += 24; 
-                    payload.sleep_hours = parseFloat(diff.toFixed(1));
+                    updatePayload.sleep_hours = parseFloat(diff.toFixed(1));
                 }
                 showToast(dict[currentLang].msg_wake);
             } else if (type === 'bed') {
-                payload.bedtime = timeISO;
+                updatePayload.bedtime = timeISO;
                 showToast(dict[currentLang].msg_sleep);
             }
 
             if (existing && existing.id) {
-                await supabaseClient.from('health_logs').update(payload).eq('id', existing.id);
+                const { error: updateErr } = await supabaseClient.from('health_logs').update(updatePayload).eq('id', existing.id);
+                if (updateErr) throw updateErr;
             } else {
-                await supabaseClient.from('health_logs').insert(payload);
+                updatePayload.user_id = user.id;
+                updatePayload.measured_date = logicalDateStr;
+                const { error: insertErr } = await supabaseClient.from('health_logs').insert(updatePayload);
+                if (insertErr) throw insertErr;
             }
 
             setButtonRecorded(type);
             loadDashboard();
 
         } catch (e) {
-            console.error(e);
-            alert("Error: " + e.message);
+            console.error("Record Time Error:", e);
+            alert("保存エラーが発生しました: " + e.message);
         }
     }
 
     document.getElementById('btnBedtime').addEventListener('click', () => recordTime('bed'));
     document.getElementById('btnWaketime').addEventListener('click', () => recordTime('wake'));
 
-    // --- ダッシュボード表示ロジック ---
     async function loadDashboard() {
         try {
             const now = new Date();
             const logicalDateStr = getLocalLogicalDateStr(now);
 
-            // クイックアクションの打刻軌跡
+            // リロード時にも完璧に打刻状態を復元
             const { data: todayLog } = await supabaseClient.from('health_logs')
                 .select('waketime, bedtime').eq('user_id', user.id).eq('measured_date', logicalDateStr).maybeSingle();
             
@@ -222,17 +221,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (todayLog.bedtime) setButtonRecorded('bed');
             }
 
-            // 1. KPI データの取得 (SQL関数実行: 継続日数と完了率)
             const { data: kpiData, error: kpiErr } = await supabaseClient.rpc('get_user_performance', { target_user_id: user.id });
             if (!kpiErr && kpiData && kpiData.length > 0) {
-                // エラー回避のためのDOM存在確認（nullチェック）を徹底
                 const streakEl = document.getElementById('streakDays');
                 const compEl = document.getElementById('completionRate');
                 if (streakEl) streakEl.innerText = kpiData[0].streak_days;
                 if (compEl) compEl.innerText = Math.round(kpiData[0].log_completion_rate);
             }
 
-            // 2. 直近のヘルスログ取得
             const { data: recentLogs, error: logErr } = await supabaseClient.from('health_logs')
                 .select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(2);
             
@@ -242,60 +238,43 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const current = recentLogs[0];
                 const previous = recentLogs.length > 1 ? recentLogs[1] : null;
 
-                // Weight
                 const weightEl = document.getElementById('latestWeight');
                 if (weightEl) weightEl.innerText = current.weight ? current.weight.toFixed(1) + " kg" : "-- kg";
                 
                 const deltaWEl = document.getElementById('deltaWeight');
                 if (deltaWEl && current.weight && previous && previous.weight) {
                     const diff = current.weight - previous.weight;
-                    if (diff > 0) {
-                        deltaWEl.innerHTML = `Δ +${diff.toFixed(1)} kg`; deltaWEl.className = "kpi-delta delta-bad";
-                    } else if (diff < 0) {
-                        deltaWEl.innerHTML = `Δ ${diff.toFixed(1)} kg`; deltaWEl.className = "kpi-delta delta-good";
-                    } else {
-                        deltaWEl.innerText = "Δ 0.0 kg"; deltaWEl.className = "kpi-delta delta-neutral";
-                    }
+                    if (diff > 0) { deltaWEl.innerHTML = `Δ +${diff.toFixed(1)} kg`; deltaWEl.className = "kpi-delta delta-bad"; } 
+                    else if (diff < 0) { deltaWEl.innerHTML = `Δ ${diff.toFixed(1)} kg`; deltaWEl.className = "kpi-delta delta-good"; } 
+                    else { deltaWEl.innerText = "Δ 0.0 kg"; deltaWEl.className = "kpi-delta delta-neutral"; }
                 }
 
-                // Fat %
                 const fatEl = document.getElementById('latestFat');
                 if (fatEl) fatEl.innerText = current.body_fat ? current.body_fat.toFixed(1) + " %" : "-- %";
                 
                 const deltaFEl = document.getElementById('deltaFat');
                 if (deltaFEl && current.body_fat && previous && previous.body_fat) {
                     const diff = current.body_fat - previous.body_fat;
-                    if (diff > 0) {
-                        deltaFEl.innerHTML = `Δ +${diff.toFixed(1)} %`; deltaFEl.className = "kpi-delta delta-bad";
-                    } else if (diff < 0) {
-                        deltaFEl.innerHTML = `Δ ${diff.toFixed(1)} %`; deltaFEl.className = "kpi-delta delta-good";
-                    } else {
-                        deltaFEl.innerText = "Δ 0.0 %"; deltaFEl.className = "kpi-delta delta-neutral";
-                    }
+                    if (diff > 0) { deltaFEl.innerHTML = `Δ +${diff.toFixed(1)} %`; deltaFEl.className = "kpi-delta delta-bad"; } 
+                    else if (diff < 0) { deltaFEl.innerHTML = `Δ ${diff.toFixed(1)} %`; deltaFEl.className = "kpi-delta delta-good"; } 
+                    else { deltaFEl.innerText = "Δ 0.0 %"; deltaFEl.className = "kpi-delta delta-neutral"; }
                 }
 
-                // Sleep
                 const sleepEl = document.getElementById('latestSleep');
                 if (sleepEl) sleepEl.innerText = current.sleep_hours ? current.sleep_hours.toFixed(1) + " h" : "-- h";
                 
                 const deltaSEl = document.getElementById('deltaSleep');
                 if (deltaSEl && current.sleep_hours && previous && previous.sleep_hours) {
                     const diff = current.sleep_hours - previous.sleep_hours;
-                    if (diff > 0) {
-                        deltaSEl.innerHTML = `Δ +${diff.toFixed(1)} h`; deltaSEl.className = "kpi-delta delta-good";
-                    } else if (diff < 0) {
-                        deltaSEl.innerHTML = `Δ ${diff.toFixed(1)} h`; deltaSEl.className = "kpi-delta delta-bad";
-                    } else {
-                        deltaSEl.innerText = "Δ 0.0 h"; deltaSEl.className = "kpi-delta delta-neutral";
-                    }
+                    if (diff > 0) { deltaSEl.innerHTML = `Δ +${diff.toFixed(1)} h`; deltaSEl.className = "kpi-delta delta-good"; } 
+                    else if (diff < 0) { deltaSEl.innerHTML = `Δ ${diff.toFixed(1)} h`; deltaSEl.className = "kpi-delta delta-bad"; } 
+                    else { deltaSEl.innerText = "Δ 0.0 h"; deltaSEl.className = "kpi-delta delta-neutral"; }
                 }
 
-                // Mental
                 const mentalEl = document.getElementById('latestMental');
                 if (mentalEl) mentalEl.innerHTML = current.mental_condition ? mentalIcons[current.mental_condition - 1] : "--";
             }
 
-            // 3. チャートデータ取得
             const { data: chartData, error: chartErr } = await supabaseClient.from('health_logs')
                 .select('measured_date, weight, body_fat, sleep_hours, mental_condition')
                 .eq('user_id', user.id)
@@ -313,7 +292,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- チャート描画ロジック ---
     function renderDynamicChart() {
         if (globalChartLogs.length === 0) return;
         const ctx = document.getElementById('healthCorrelationChart').getContext('2d');
