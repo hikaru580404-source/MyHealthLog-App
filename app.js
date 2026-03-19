@@ -15,7 +15,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             completion: "Completion", last30days: "Last 30 Days",
             msg_wake: "Good morning! Have a great day! ☀️",
             msg_sleep: "Good work today. Have a good night! 🌙",
-            msg_undo: "Record reset", confirm_undo: "Do you want to reset (undo) this record?"
+            msg_undo: "Record reset", confirm_undo: "Do you want to reset (undo) this record?",
+            msg_ai_analyzing: "AI Analyzing image..." // AI解析中のメッセージ
         },
         ja: {
             quick_action: "クイックアクション", wake: "起床", meal: "食事", sleep: "就寝",
@@ -27,7 +28,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             completion: "完了率", last30days: "過去30日間",
             msg_wake: "おはようございます！今日も一日頑張りましょう☀️",
             msg_sleep: "お疲れ様でした。ゆっくり休んでくださいね🌙",
-            msg_undo: "打刻をリセットしました", confirm_undo: "打刻をリセット（取り消し）しますか？"
+            msg_undo: "打刻をリセットしました", confirm_undo: "打刻をリセット（取り消し）しますか？",
+            msg_ai_analyzing: "AIが食事を解析中..." // AI解析中のメッセージ
         }
     };
 
@@ -226,7 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // --- クイックアクションロジック（Undo機能追加） ---
+    // --- クイックアクションロジック ---
 
     function resetButtonUI(type) {
         let btn, icon, textSpan;
@@ -393,16 +395,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (mentalEl) mentalEl.innerHTML = current.mental_condition ? mentalIcons[current.mental_condition - 1] : "--";
             }
 
-            // ★ バグ修正：チャートを「最新順（降順）」で取得してから左から右へ反転させる
             const { data: chartData, error: chartErr } = await supabaseClient.from('health_logs')
                 .select('measured_date, weight, body_fat, sleep_hours, mental_condition')
                 .eq('user_id', user.id)
-                .order('measured_date', { ascending: false }) // ここを false に修正して最新7件を取得
+                .order('measured_date', { ascending: false }) 
                 .limit(7);
             
             if (chartErr) throw chartErr;
             if (chartData) {
-                globalChartLogs = chartData.reverse(); // 配列を反転させて、グラフ上で左(古い)→右(新しい)にする
+                globalChartLogs = chartData.reverse(); 
                 renderDynamicChart();
             }
 
@@ -489,30 +490,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnMealCancel').addEventListener('click', () => {
         mealModal.style.display = 'none';
     });
+
+    // ★ AI解析ロジックの統合（Vercel Serverless Function 呼び出し） ★
     document.getElementById('btnMealSave').addEventListener('click', async () => {
         const btn = document.getElementById('btnMealSave');
         const mealDate = document.getElementById('quickMealDate').value;
         const type = document.getElementById('quickMealType').value;
-        const memo = document.getElementById('quickMealMemo').value;
+        let memo = document.getElementById('quickMealMemo').value;
         const fileInput = document.getElementById('quickMealImage');
         
         if (!mealDate) return;
-        btn.disabled = true; btn.innerText = "Saving...";
+        btn.disabled = true; 
+        btn.innerText = fileInput.files.length > 0 ? dict[currentLang].msg_ai_analyzing : "Saving...";
 
         try {
             let imageUrl = null;
+            let finalCalories = null;
+
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
+                // 1. 画像圧縮とSupabase Storageへのアップロード
                 imageUrl = await uploadCompressedImage(file, user.id);
+                
+                // 2. Vercel Serverless Function (/api/analyze-meal) を呼び出してGemini AIに解析させる
+                try {
+                    const response = await fetch('/api/analyze-meal', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ imageUrl: imageUrl, memo: memo })
+                    });
+                    
+                    if (response.ok) {
+                        const aiData = await response.json();
+                        finalCalories = aiData.calories;
+                        memo = memo ? `${memo}\n---\n[AI Analysis] ${aiData.analysis}` : `[AI Analysis] ${aiData.analysis}`;
+                    } else {
+                        console.warn("AI Analysis failed with status:", response.status);
+                    }
+                } catch (aiInvokeError) {
+                    console.warn("AI Analysis skipped or failed:", aiInvokeError);
+                }
             }
+
+            // 3. データベース(meal_logs)へ最終保存
             const { error } = await supabaseClient.from('meal_logs').insert({
-                user_id: user.id, meal_date: mealDate, meal_type: type, content: memo, image_url: imageUrl, created_at: new Date().toISOString()
+                user_id: user.id, 
+                meal_date: mealDate, 
+                meal_type: type, 
+                content: memo, 
+                image_url: imageUrl, 
+                calories: finalCalories,
+                created_at: new Date().toISOString()
             });
+
             if (error) throw error;
+            
             mealModal.style.display = 'none';
             document.getElementById('quickMealMemo').value = '';
             document.getElementById('quickMealImage').value = '';
-        } catch (err) { alert("Error: " + err.message); } finally { btn.disabled = false; btn.innerText = "Save"; }
+            showToast("Meal recorded!");
+
+        } catch (err) { 
+            alert("Error: " + err.message); 
+        } finally { 
+            btn.disabled = false; 
+            btn.innerText = "Save"; 
+        }
     });
 
     async function uploadCompressedImage(file, userId) {
