@@ -16,6 +16,49 @@
     /* モーダルが縦に長くなるためスクロール制御を追加 */
     .modal-content { max-height: 90vh; overflow-y: auto; padding-bottom: 40px; }
     .auto-calc-msg { font-size: 0.75rem; color: #10b981; margin-top: 4px; display: block; }
+    
+    /* KPIカードの均等配置とクリッカブルUIの最適化 */
+    .kpi-section {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr); /* PC向け 3列 */
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 640px) {
+      .kpi-section { grid-template-columns: repeat(2, 1fr); } /* スマホ向け 2列 */
+    }
+    .kpi-card {
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+    }
+    .kpi-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--clr-accent);
+      box-shadow: 0 8px 24px rgba(251, 191, 36, 0.15);
+    }
+    /* クリック可能であることを示すアイコン */
+    .kpi-card::after {
+      content: '\f105'; /* FontAwesome chevron-right */
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      color: var(--clr-text-secondary);
+      opacity: 0.3;
+      transition: opacity 0.2s;
+    }
+    .kpi-card:hover::after { opacity: 1; color: var(--clr-accent); }
+    
+    .kpi-detail-info {
+        background: rgba(0,0,0,0.2);
+        padding: 16px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.05);
+        margin-bottom: 12px;
+    }
+    .kpi-detail-info span.highlight { color: var(--clr-accent); font-weight: 700; font-size: 1.2rem; }
   </style>
 </head>
 <body>
@@ -37,31 +80,35 @@
     <button class="btn-quick bed" id="btnBedtime">Sleep 🌕</button>
   </div>
 
-  <div class="section-title">KPI</div>
+  <div class="section-title">KPI (Tap for details)</div>
   <section class="kpi-section">
-    <div class="kpi-card">
+    <div class="kpi-card" id="cardWeight">
       <div class="kpi-label">Weight</div>
       <div class="kpi-value"><span id="latestWeight">-- kg</span></div>
       <div id="deltaWeight" class="kpi-delta"></div>
     </div>
-    <div class="kpi-card">
+    <div class="kpi-card" id="cardFat">
+      <div class="kpi-label">Body Fat</div>
+      <div class="kpi-value"><span id="latestFat">-- %</span></div>
+      <div id="deltaFat" class="kpi-delta"></div>
+    </div>
+    <div class="kpi-card" id="cardSleep">
       <div class="kpi-label">Sleep</div>
       <div class="kpi-value"><span id="latestSleep">-- h</span></div>
       <div id="deltaSleep" class="kpi-delta"></div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Mental Condition</div>
+    <div class="kpi-card" id="cardMental">
+      <div class="kpi-label">Mental</div>
       <div class="kpi-value" style="font-size: 1.2rem;"><span id="latestMental">--</span></div>
       <div id="deltaMental" class="kpi-delta" style="color:var(--clr-text-secondary);">--</div>
     </div>
-    
-    <div class="kpi-card">
+    <div class="kpi-card" id="cardStreak">
       <div class="kpi-label">Current Streak</div>
       <div class="kpi-value"><span id="currentStreak">--</span> <span style="font-size: 0.9rem; margin-left:4px;">Days</span></div>
       <div id="maxStreak" class="kpi-delta delta-good">Max: -- Days</div>
     </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Completion Rate</div>
+    <div class="kpi-card" id="cardCompletion">
+      <div class="kpi-label">Completion</div>
       <div class="kpi-value"><span id="completionRate">--</span> <span style="font-size: 0.9rem; margin-left:4px;">%</span></div>
       <div class="kpi-delta delta-neutral">Total Log Rate</div>
     </div>
@@ -89,12 +136,20 @@
   </div>
 </main>
 
+<div class="modal-overlay" id="kpiDetailModal">
+  <div class="modal-content" style="max-width: 350px;">
+    <div class="modal-title" id="kpiDetailTitle" style="color: var(--clr-accent);">Detail</div>
+    <div id="kpiDetailBody" style="margin-bottom: 20px;">
+        </div>
+    <button id="btnKpiDetailClose" class="btn-secondary">閉じる</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="initialSetupModal">
   <div class="modal-content" id="initModalBlock">
     <div class="modal-title">Initial Setup</div>
     <div class="modal-desc">高度な分析を行うため、基本情報と目標を設定してください。</div>
     <form id="initialSetupForm">
-      
       <div class="section-title" style="margin-top:0;">1. 基本情報 (Baseline)</div>
       <div class="form-row-grid">
         <div class="form-group"><label class="form-label">生年月日</label><input type="date" id="initBirth" class="form-input" required></div>
@@ -127,13 +182,11 @@
         <div class="form-group"><label class="form-label">目標体脂肪 (%)</label><input type="number" id="initTargetFat" class="form-input" step="0.1" required></div>
         <div class="form-group"><label class="form-label">目標睡眠 (時間)</label><input type="number" id="initTargetSleep" class="form-input" step="0.1" value="7.0" required></div>
       </div>
-      
       <div class="form-group">
         <label class="form-label" style="color: #10b981;">推奨・目標摂取カロリー (kcal/日)</label>
         <input type="number" id="initTargetCal" class="form-input" required readonly style="border-color: #10b981; color:#10b981; font-weight:bold;">
         <span class="auto-calc-msg">※プロフィールと期日から自動計算されます</span>
       </div>
-
       <button type="submit" class="btn-primary" id="initSaveBtn" style="margin-top:20px;">Save Profile & Start</button>
     </form>
   </div>
@@ -142,7 +195,6 @@
 <div class="modal-overlay" id="settingsModal">
   <div class="modal-content">
     <div class="modal-title">Settings / Goals</div>
-    
     <div class="form-row-grid">
         <div class="form-group"><label class="form-label">生年月日</label><input type="date" id="setBirth" class="form-input" required></div>
         <div class="form-group"><label class="form-label">性別</label>
@@ -174,7 +226,6 @@
         <input type="number" id="setTargetCal" class="form-input" required>
         <span class="auto-calc-msg">※直接編集も可能です</span>
     </div>
-
     <div class="modal-actions">
       <button id="btnSettingsCancel" class="btn-secondary" style="margin-top:0;">Cancel</button>
       <button id="btnSettingsSave" class="btn-primary" style="margin-top:0;">Save Changes</button>
