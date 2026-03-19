@@ -71,26 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = "login.html";
     });
 
-    const settingsModal = document.getElementById('settingsModal');
-    document.getElementById('settingsBtn').addEventListener('click', () => {
-        document.getElementById('settingTargetWeight').value = TARGET_WEIGHT;
-        document.getElementById('settingTargetFat').value = TARGET_FAT;
-        settingsModal.style.display = 'flex';
-    });
-    document.getElementById('btnSettingsCancel').addEventListener('click', () => {
-        settingsModal.style.display = 'none';
-    });
-    document.getElementById('btnSettingsSave').addEventListener('click', () => {
-        const tWeight = parseFloat(document.getElementById('settingTargetWeight').value);
-        const tFat = parseFloat(document.getElementById('settingTargetFat').value);
-        if (isNaN(tWeight) || isNaN(tFat)) { alert("数値を正しく入力してください。"); return; }
-        localStorage.setItem('targetWeight_' + user.id, tWeight);
-        localStorage.setItem('targetFat_' + user.id, tFat);
-        TARGET_WEIGHT = tWeight; TARGET_FAT = tFat;
-        settingsModal.style.display = 'none';
-        loadDashboard(); 
-    });
-
+    // --- ユーティリティ ---
     function getLocalLogicalDateStr(dateObj) {
         const d = new Date(dateObj.getTime());
         if (d.getHours() < 4) d.setDate(d.getDate() - 1);
@@ -107,6 +88,126 @@ document.addEventListener('DOMContentLoaded', async () => {
         return new Date(y, m - 1, d, h, min);
     }
 
+    // --- セッティング画面のロジック拡張 ---
+    const settingsModal = document.getElementById('settingsModal');
+    let settingMVal = 3;
+
+    // コンディションボタンの選択状態管理（Settings用）
+    document.querySelectorAll('#settingMGrp .cond-btn').forEach(b => {
+        b.addEventListener('click', () => {
+            document.querySelectorAll('#settingMGrp .cond-btn').forEach(x => x.classList.remove('active'));
+            b.classList.add('active'); 
+            settingMVal = b.dataset.v;
+        });
+    });
+
+    // Settingsボタン押下時：目標値と今日の記録をDBから読み込んで表示する
+    document.getElementById('settingsBtn').addEventListener('click', async () => {
+        document.getElementById('settingTargetWeight').value = TARGET_WEIGHT;
+        document.getElementById('settingTargetFat').value = TARGET_FAT;
+
+        const todayStr = getLocalLogicalDateStr(new Date());
+        const { data } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).eq('measured_date', todayStr).maybeSingle();
+
+        if (data) {
+            document.getElementById('settingWeight').value = data.weight || "";
+            document.getElementById('settingFat').value = data.body_fat || "";
+            
+            if (data.waketime) {
+                const d = new Date(data.waketime);
+                document.getElementById('settingWaketime').value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            } else { document.getElementById('settingWaketime').value = ""; }
+
+            if (data.bedtime) {
+                const d = new Date(data.bedtime);
+                document.getElementById('settingBedtime').value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            } else { document.getElementById('settingBedtime').value = ""; }
+
+            if (data.mental_condition) {
+                document.querySelectorAll('#settingMGrp .cond-btn').forEach(b => b.classList.remove('active'));
+                const targetBtn = document.querySelector(`#settingMGrp .cond-btn[data-v="${data.mental_condition}"]`);
+                if(targetBtn) targetBtn.classList.add('active');
+                settingMVal = data.mental_condition;
+            }
+        } else {
+            document.getElementById('settingWeight').value = "";
+            document.getElementById('settingFat').value = "";
+            document.getElementById('settingWaketime').value = "";
+            document.getElementById('settingBedtime').value = "";
+            document.querySelectorAll('#settingMGrp .cond-btn').forEach(b => b.classList.remove('active'));
+            const defaultBtn = document.querySelector(`#settingMGrp .cond-btn[data-v="3"]`);
+            if(defaultBtn) defaultBtn.classList.add('active');
+            settingMVal = 3;
+        }
+
+        settingsModal.style.display = 'flex';
+    });
+
+    document.getElementById('btnSettingsCancel').addEventListener('click', () => {
+        settingsModal.style.display = 'none';
+    });
+
+    // Settings保存処理（目標値保存＋今日の日次データのDB更新）
+    document.getElementById('btnSettingsSave').addEventListener('click', async () => {
+        const btn = document.getElementById('btnSettingsSave');
+        btn.disabled = true; btn.innerText = "Saving...";
+
+        try {
+            // 1. KPI TARGETSの保存（LocalStorage）
+            const tWeight = parseFloat(document.getElementById('settingTargetWeight').value);
+            const tFat = parseFloat(document.getElementById('settingTargetFat').value);
+            if (isNaN(tWeight) || isNaN(tFat)) { alert("目標数値を正しく入力してください。"); btn.disabled = false; btn.innerText = "Save Changes"; return; }
+            
+            localStorage.setItem('targetWeight_' + user.id, tWeight);
+            localStorage.setItem('targetFat_' + user.id, tFat);
+            TARGET_WEIGHT = tWeight; TARGET_FAT = tFat;
+
+            // 2. TODAY'S RECORDの保存（Supabase）
+            const todayStr = getLocalLogicalDateStr(new Date());
+            const wt = document.getElementById('settingWaketime').value;
+            const bt = document.getElementById('settingBedtime').value;
+            const wVal = document.getElementById('settingWeight').value;
+            const fVal = document.getElementById('settingFat').value;
+
+            let payload = { user_id: user.id, measured_date: todayStr, mental_condition: parseInt(settingMVal) };
+            if (wVal) payload.weight = parseFloat(wVal);
+            if (fVal) payload.body_fat = parseFloat(fVal);
+
+            if (wt) {
+                payload.waketime = createSafeDate(todayStr, wt).toISOString();
+                const dDate = new Date(); dDate.setDate(dDate.getDate() - 1);
+                const { data: prevDay } = await supabaseClient.from('health_logs').select('bedtime').eq('user_id', user.id).eq('measured_date', getLocalLogicalDateStr(dDate)).maybeSingle();
+                if (prevDay && prevDay.bedtime) {
+                    let hours = (new Date(payload.waketime) - new Date(prevDay.bedtime)) / 3600000;
+                    if (hours < 0) hours += 24;
+                    payload.sleep_hours = parseFloat(hours.toFixed(1));
+                }
+            }
+            if (bt) {
+                let bDate = createSafeDate(todayStr, bt);
+                if (bDate.getHours() < 4) bDate.setDate(bDate.getDate() + 1);
+                payload.bedtime = bDate.toISOString();
+            }
+
+            const { data: existing } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', todayStr).maybeSingle();
+            let dbErr;
+            if (existing && existing.id) {
+                dbErr = (await supabaseClient.from('health_logs').update(payload).eq('id', existing.id)).error;
+            } else {
+                dbErr = (await supabaseClient.from('health_logs').insert(payload)).error;
+            }
+            if (dbErr) throw dbErr;
+
+            settingsModal.style.display = 'none';
+            loadDashboard(); // ダッシュボードを最新状態に更新
+        } catch (err) {
+            alert("エラーが発生しました: " + err.message);
+        } finally {
+            btn.disabled = false; btn.innerText = "Save Changes";
+        }
+    });
+
+    // --- 初期セットアップチェック ---
     async function checkInitialSetup() {
         const localFlag = localStorage.getItem('initSetup_' + user.id);
         if (localFlag === 'true') { loadDashboard(); return; }
@@ -120,11 +221,57 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    let initMVal = 3;
     document.querySelectorAll('#initMGrp .cond-btn').forEach(b => {
         b.addEventListener('click', () => {
             document.querySelectorAll('#initMGrp .cond-btn').forEach(x => x.classList.remove('active'));
             b.classList.add('active'); initMVal = b.dataset.v;
         });
+    });
+
+    document.getElementById('initialSetupForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('initSaveBtn');
+        btn.disabled = true; btn.innerText = "Processing...";
+        const tWeight = document.getElementById('initTargetWeight').value;
+        const tFat = document.getElementById('initTargetFat').value;
+        localStorage.setItem('targetWeight_' + user.id, tWeight);
+        localStorage.setItem('targetFat_' + user.id, tFat);
+        TARGET_WEIGHT = parseFloat(tWeight); TARGET_FAT = parseFloat(tFat);
+
+        try {
+            const now = new Date();
+            const todayStr = getLocalLogicalDateStr(now);
+            const yesterday = new Date(now.getTime()); yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = getLocalLogicalDateStr(yesterday);
+
+            const btVal = document.getElementById('initBedtime').value;
+            const wtVal = document.getElementById('initWaketime').value;
+            const wVal = document.getElementById('initWeight').value;
+            const fVal = document.getElementById('initFat').value;
+
+            let bDate = createSafeDate(yesterdayStr, btVal);
+            let wDate = createSafeDate(todayStr, wtVal);
+            if (wDate <= bDate) wDate.setDate(wDate.getDate() + 1);
+            let sleepHours = parseFloat(((wDate - bDate) / 3600000).toFixed(1));
+
+            const yestPayload = { user_id: user.id, measured_date: yesterdayStr, bedtime: bDate.toISOString() };
+            const { data: yData } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', yesterdayStr).maybeSingle();
+            if (yData) await supabaseClient.from('health_logs').update(yestPayload).eq('id', yData.id);
+            else await supabaseClient.from('health_logs').insert(yestPayload);
+
+            const todayPayload = { user_id: user.id, measured_date: todayStr, waketime: wDate.toISOString(), sleep_hours: sleepHours, mental_condition: parseInt(initMVal) };
+            if (wVal) todayPayload.weight = parseFloat(wVal);
+            if (fVal) todayPayload.body_fat = parseFloat(fVal);
+
+            const { data: tData } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', todayStr).maybeSingle();
+            if (tData) await supabaseClient.from('health_logs').update(todayPayload).eq('id', tData.id);
+            else await supabaseClient.from('health_logs').insert(todayPayload);
+
+            localStorage.setItem('initSetup_' + user.id, 'true');
+            document.getElementById('initialSetupModal').style.display = 'none';
+            loadDashboard();
+        } catch (err) { alert("Error: " + err.message); btn.disabled = false; }
     });
 
     function setButtonRecorded(type) {
@@ -146,7 +293,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         textSpan.innerText = dict[currentLang].recorded; 
     }
 
-    // ★ 404エラーを解消するための厳格な保存ロジック
     async function recordTime(type) {
         try {
             const now = new Date();
@@ -163,7 +309,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // 更新用ペイロードの構築（IDを含めないことでUPDATEエラーを回避）
             let updatePayload = {};
 
             if (type === 'wake') {
@@ -212,7 +357,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const now = new Date();
             const logicalDateStr = getLocalLogicalDateStr(now);
 
-            // リロード時にも完璧に打刻状態を復元
             const { data: todayLog } = await supabaseClient.from('health_logs')
                 .select('waketime, bedtime').eq('user_id', user.id).eq('measured_date', logicalDateStr).maybeSingle();
             
