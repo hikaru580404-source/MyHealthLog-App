@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // 認証チェック (supabase-client.js側の関数)
+    // 認証チェック
     const user = await checkAuth();
     if (!user) return;
     
@@ -14,35 +14,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentChartMode = 'weight';
     let globalChartLogs = [];
     
-    let TARGET_WEIGHT = parseFloat(localStorage.getItem('targetWeight_' + user.id)) || 65.0;
-    let TARGET_FAT = parseFloat(localStorage.getItem('targetFat_' + user.id)) || 13.0;
+    // DBから取得する目標値（グローバル保持）
+    let TARGET_WEIGHT = 65.0;
+    let TARGET_FAT = 13.0;
+    let CURRENT_WEIGHT = 65.0; // カロリー計算用
 
-    // ログアウト処理 (supabaseClientを使用)
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-        await supabaseClient.auth.signOut();
-        window.location.href = "login.html";
-    });
-
-    const settingsModal = document.getElementById('settingsModal');
-    document.getElementById('settingsBtn').addEventListener('click', () => {
-        document.getElementById('settingTargetWeight').value = TARGET_WEIGHT;
-        document.getElementById('settingTargetFat').value = TARGET_FAT;
-        settingsModal.style.display = 'flex';
-    });
-    document.getElementById('btnSettingsCancel').addEventListener('click', () => {
-        settingsModal.style.display = 'none';
-    });
-    document.getElementById('btnSettingsSave').addEventListener('click', () => {
-        const tWeight = parseFloat(document.getElementById('settingTargetWeight').value);
-        const tFat = parseFloat(document.getElementById('settingTargetFat').value);
-        if (isNaN(tWeight) || isNaN(tFat)) { alert("数値を正しく入力してください。"); return; }
-        localStorage.setItem('targetWeight_' + user.id, tWeight);
-        localStorage.setItem('targetFat_' + user.id, tFat);
-        TARGET_WEIGHT = tWeight; TARGET_FAT = tFat;
-        settingsModal.style.display = 'none';
-        renderDynamicChart();
-    });
-
+    // ユーティリティ関数
     function getLocalLogicalDateStr(dateObj) {
         const d = new Date(dateObj.getTime());
         if (d.getHours() < 4) d.setDate(d.getDate() - 1);
@@ -52,74 +29,183 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `${y}-${m}-${day}`;
     }
 
-    function createSafeDate(dateStr, timeStr) {
-        if (!timeStr) return null;
-        const [y, m, d] = dateStr.split('-').map(Number);
-        const [h, min] = timeStr.split(':').map(Number);
-        return new Date(y, m - 1, d, h, min);
+    function calculateAge(birthDateStr) {
+        const today = new Date();
+        const birthDate = new Date(birthDateStr);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+        return age;
     }
 
-    async function checkInitialSetup() {
-        const localFlag = localStorage.getItem('initSetup_' + user.id);
-        if (localFlag === 'true') { loadDashboard(); return; }
-        const { data } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).limit(1);
-        if (!data || data.length === 0) { document.getElementById('initialSetupModal').style.display = 'flex'; } 
-        else { localStorage.setItem('initSetup_' + user.id, 'true'); loadDashboard(); }
+    // ★推奨摂取カロリー自動計算ロジック (Mifflin-St Jeorの式)
+    function calcRecommendedCalories(weight, height, age, gender, activityLevel, targetWeight, targetDateStr) {
+        if(!weight || !height || !age || !gender || !targetWeight || !targetDateStr) return "";
+        
+        // 基礎代謝(BMR)計算
+        let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+        bmr = gender === 'male' ? bmr + 5 : bmr - 161;
+
+        // 総消費カロリー(TDEE)計算
+        const activityMultipliers = { 1: 1.2, 2: 1.375, 3: 1.55, 4: 1.725 };
+        const tdee = bmr * (activityMultipliers[activityLevel] || 1.375);
+
+        // 期日までの必要減量カロリーを日割り計算
+        const days = Math.max(1, Math.floor((new Date(targetDateStr) - new Date()) / (1000 * 60 * 60 * 24)));
+        const weightDiff = weight - targetWeight; 
+        const dailyDeficit = (weightDiff > 0) ? ((weightDiff * 7200) / days) : 0; // 1kg=7200kcalで計算
+
+        let targetCal = Math.round(tdee - dailyDeficit);
+
+        // セーフティガード (極端なカロリー制限を防ぐ)
+        const minCal = gender === 'male' ? 1500 : 1200;
+        if(targetCal < minCal) targetCal = minCal;
+
+        return targetCal;
     }
 
-    let initMVal = 3;
-    document.querySelectorAll('#initMGrp .cond-btn').forEach(b => {
-        b.addEventListener('click', () => {
-            document.querySelectorAll('#initMGrp .cond-btn').forEach(x => x.classList.remove('active'));
-            b.classList.add('active'); initMVal = b.dataset.v;
+    // 初期セットアップ入力時のリアルタイムカロリー計算イベント
+    const initInputs = ['initBirth', 'initGender', 'initHeight', 'initActivity', 'initWeight', 'initTargetWeight', 'initTargetDate'];
+    initInputs.forEach(id => {
+        document.getElementById(id).addEventListener('change', () => {
+            const w = parseFloat(document.getElementById('initWeight').value);
+            const h = parseFloat(document.getElementById('initHeight').value);
+            const b = document.getElementById('initBirth').value;
+            const g = document.getElementById('initGender').value;
+            const a = parseInt(document.getElementById('initActivity').value);
+            const tw = parseFloat(document.getElementById('initTargetWeight').value);
+            const td = document.getElementById('initTargetDate').value;
+            
+            if(b && w && h && tw && td) {
+                const age = calculateAge(b);
+                const cal = calcRecommendedCalories(w, h, age, g, a, tw, td);
+                document.getElementById('initTargetCal').value = cal;
+            }
         });
     });
 
+    // 設定画面入力時のリアルタイムカロリー計算イベント
+    const setInputs = ['setBirth', 'setGender', 'setHeight', 'setActivity', 'setTargetWeight', 'setTargetDate'];
+    setInputs.forEach(id => {
+        document.getElementById(id).addEventListener('change', () => {
+            const w = CURRENT_WEIGHT; // 計算時は最新の記録体重を使用
+            const h = parseFloat(document.getElementById('setHeight').value);
+            const b = document.getElementById('setBirth').value;
+            const g = document.getElementById('setGender').value;
+            const a = parseInt(document.getElementById('setActivity').value);
+            const tw = parseFloat(document.getElementById('setTargetWeight').value);
+            const td = document.getElementById('setTargetDate').value;
+            
+            if(b && w && h && tw && td) {
+                const age = calculateAge(b);
+                const cal = calcRecommendedCalories(w, h, age, g, a, tw, td);
+                document.getElementById('setTargetCal').value = cal;
+            }
+        });
+    });
+
+    // 初期化チェック (DBベースに完全移行)
+    async function checkInitialSetup() {
+        const { data: profile } = await supabaseClient.from('user_profiles').select('*').eq('user_id', user.id).maybeSingle();
+        
+        if (!profile) {
+            // プロフィールがなければ初期設定モーダルを表示
+            document.getElementById('initialSetupModal').style.display = 'flex';
+        } else {
+            TARGET_WEIGHT = profile.target_weight;
+            TARGET_FAT = profile.target_fat;
+            
+            // 最新体重の取得（カロリー再計算用）
+            const { data: latestLog } = await supabaseClient.from('health_logs').select('weight').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(1).maybeSingle();
+            CURRENT_WEIGHT = (latestLog && latestLog.weight) ? latestLog.weight : profile.baseline_weight;
+
+            // 設定モーダルに値を事前セット
+            document.getElementById('setBirth').value = profile.birth_date || "";
+            document.getElementById('setGender').value = profile.gender || "male";
+            document.getElementById('setHeight').value = profile.height || "";
+            document.getElementById('setActivity').value = profile.activity_level || 2;
+            document.getElementById('setTargetWeight').value = profile.target_weight || "";
+            document.getElementById('setTargetFat').value = profile.target_fat || "";
+            document.getElementById('setTargetSleep').value = profile.target_sleep_hours || 7.0;
+            document.getElementById('setTargetDate').value = profile.target_date || "";
+            document.getElementById('setTargetCal').value = profile.target_calories || "";
+
+            loadDashboard();
+        }
+    }
+
+    // 初期設定フォーム保存
     document.getElementById('initialSetupForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = document.getElementById('initSaveBtn');
-        btn.disabled = true; btn.innerText = "Processing...";
-        const tWeight = document.getElementById('initTargetWeight').value;
-        const tFat = document.getElementById('initTargetFat').value;
-        localStorage.setItem('targetWeight_' + user.id, tWeight);
-        localStorage.setItem('targetFat_' + user.id, tFat);
-        TARGET_WEIGHT = parseFloat(tWeight); TARGET_FAT = parseFloat(tFat);
+        btn.disabled = true; btn.innerText = "Saving...";
+
+        const payload = {
+            user_id: user.id,
+            birth_date: document.getElementById('initBirth').value,
+            gender: document.getElementById('initGender').value,
+            height: parseFloat(document.getElementById('initHeight').value),
+            activity_level: parseInt(document.getElementById('initActivity').value),
+            baseline_weight: parseFloat(document.getElementById('initWeight').value),
+            baseline_fat: parseFloat(document.getElementById('initFat').value),
+            target_weight: parseFloat(document.getElementById('initTargetWeight').value),
+            target_fat: parseFloat(document.getElementById('initTargetFat').value),
+            target_sleep_hours: parseFloat(document.getElementById('initTargetSleep').value),
+            target_date: document.getElementById('initTargetDate').value,
+            target_calories: parseInt(document.getElementById('initTargetCal').value)
+        };
 
         try {
-            const now = new Date();
-            const todayStr = getLocalLogicalDateStr(now);
-            const yesterday = new Date(now.getTime()); yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = getLocalLogicalDateStr(yesterday);
+            await supabaseClient.from('user_profiles').upsert(payload);
+            
+            // 最初のログとして health_logs にもベースラインを挿入
+            const todayStr = getLocalLogicalDateStr(new Date());
+            await supabaseClient.from('health_logs').upsert({
+                user_id: user.id, measured_date: todayStr, 
+                weight: payload.baseline_weight, body_fat: payload.baseline_fat, mental_condition: 3
+            }, { onConflict: 'user_id, measured_date' });
 
-            const btVal = document.getElementById('initBedtime').value;
-            const wtVal = document.getElementById('initWaketime').value;
-            const wVal = document.getElementById('initWeight').value;
-            const fVal = document.getElementById('initFat').value;
-
-            let bDate = createSafeDate(yesterdayStr, btVal);
-            let wDate = createSafeDate(todayStr, wtVal);
-            if (wDate <= bDate) wDate.setDate(wDate.getDate() + 1);
-            let sleepHours = parseFloat(((wDate - bDate) / 3600000).toFixed(1));
-
-            const yestPayload = { user_id: user.id, measured_date: yesterdayStr, bedtime: bDate.toISOString() };
-            const { data: yData } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', yesterdayStr).maybeSingle();
-            if (yData) await supabaseClient.from('health_logs').update(yestPayload).eq('id', yData.id);
-            else await supabaseClient.from('health_logs').insert(yestPayload);
-
-            const todayPayload = { user_id: user.id, measured_date: todayStr, waketime: wDate.toISOString(), sleep_hours: sleepHours, mental_condition: parseInt(initMVal) };
-            if (wVal) todayPayload.weight = parseFloat(wVal);
-            if (fVal) todayPayload.body_fat = parseFloat(fVal);
-
-            const { data: tData } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', todayStr).maybeSingle();
-            if (tData) await supabaseClient.from('health_logs').update(todayPayload).eq('id', tData.id);
-            else await supabaseClient.from('health_logs').insert(todayPayload);
-
-            localStorage.setItem('initSetup_' + user.id, 'true');
             document.getElementById('initialSetupModal').style.display = 'none';
-            loadDashboard();
+            await checkInitialSetup(); // 再読み込み
         } catch (err) { alert("Error: " + err.message); btn.disabled = false; }
     });
 
+    // ログアウト処理
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+        await supabaseClient.auth.signOut();
+        window.location.href = "login.html";
+    });
+
+    // 設定モーダル操作
+    const settingsModal = document.getElementById('settingsModal');
+    document.getElementById('settingsBtn').addEventListener('click', () => { settingsModal.style.display = 'flex'; });
+    document.getElementById('btnSettingsCancel').addEventListener('click', () => { settingsModal.style.display = 'none'; });
+    
+    // 設定保存
+    document.getElementById('btnSettingsSave').addEventListener('click', async () => {
+        const payload = {
+            user_id: user.id,
+            birth_date: document.getElementById('setBirth').value,
+            gender: document.getElementById('setGender').value,
+            height: parseFloat(document.getElementById('setHeight').value),
+            activity_level: parseInt(document.getElementById('setActivity').value),
+            target_weight: parseFloat(document.getElementById('setTargetWeight').value),
+            target_fat: parseFloat(document.getElementById('setTargetFat').value),
+            target_sleep_hours: parseFloat(document.getElementById('setTargetSleep').value),
+            target_date: document.getElementById('setTargetDate').value,
+            target_calories: parseInt(document.getElementById('setTargetCal').value)
+        };
+        
+        try {
+            await supabaseClient.from('user_profiles').upsert(payload);
+            TARGET_WEIGHT = payload.target_weight;
+            TARGET_FAT = payload.target_fat;
+            settingsModal.style.display = 'none';
+            renderDynamicChart();
+        } catch (err) { alert("Error: " + err.message); }
+    });
+
+    // Quick Actions (Wake / Bed)
     async function recordTime(type) {
         try {
             const now = new Date();
@@ -148,10 +234,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnBedtime').addEventListener('click', () => recordTime('bed'));
     document.getElementById('btnWaketime').addEventListener('click', () => recordTime('wake'));
 
+    // 食事モーダル
     const mealModal = document.getElementById('mealModal');
     document.getElementById('btnMealOpen').addEventListener('click', () => { document.getElementById('quickMealDate').value = getLocalLogicalDateStr(new Date()); mealModal.style.display = 'flex'; });
     document.getElementById('btnMealCancel').addEventListener('click', () => mealModal.style.display = 'none');
 
+    // 画像圧縮と食事保存
     async function compressImage(file, maxWidth = 800) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader(); reader.readAsDataURL(file);
@@ -197,23 +285,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (err) { alert("Error: " + err.message); } finally { btn.disabled = false; btn.innerText = "Save"; }
     });
 
-    // KPI取得と描画のサブ関数
+    // KPI取得サブ関数
     async function fetchAndRenderKPI() {
         try {
-            // .single() から .maybeSingle() に変更（0件でもエラーを吐かないプロ仕様）
-            const { data: stats, error } = await supabaseClient
-                .from('user_kpi_stats')
-                .select('*')
-                .eq('user_id', user.id)
-                .maybeSingle();
-
+            const { data: stats, error } = await supabaseClient.from('user_kpi_stats').select('*').eq('user_id', user.id).maybeSingle();
             if (error) throw error;
 
             if (stats) {
                 document.getElementById('currentStreak').innerText = stats.current_streak || 0;
                 document.getElementById('maxStreak').innerText = `Max: ${stats.max_streak || 0} Days`;
                 
-                // 登録日からの経過日数と累計記録数から達成率を算出
                 const joinedDate = user.created_at ? new Date(user.created_at) : new Date();
                 const today = new Date();
                 const diffDays = Math.max(1, Math.floor((today - joinedDate) / (1000 * 60 * 60 * 24)) + 1);
@@ -221,21 +302,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 document.getElementById('completionRate').innerText = rate;
             } else {
-                // データがまだない場合
                 document.getElementById('currentStreak').innerText = "0";
                 document.getElementById('maxStreak').innerText = `Max: 0 Days`;
                 document.getElementById('completionRate').innerText = "0";
             }
-        } catch (err) {
-            console.error('[KPI_FETCH_ERROR]:', err.message);
-        }
+        } catch (err) { console.error('[KPI_FETCH_ERROR]:', err.message); }
     }
 
+    // ダッシュボード描画
     async function loadDashboard() {
-        const now = new Date();
-        const firstDayStr = getLocalLogicalDateStr(new Date(now.getFullYear(), now.getMonth(), 1));
-        
-        // 直近の健康ログの取得
         const { data: recentLogs } = await supabaseClient.from('health_logs')
             .select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(2);
             
@@ -263,14 +338,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('latestMental').innerHTML = current.mental_condition ? mentalIcons[current.mental_condition - 1] : "--";
         }
 
-        // 新規追加した行動KPIの取得処理を呼び出す
         await fetchAndRenderKPI();
 
-        // チャートデータの取得と描画
+        // チャート生成
         const { data: chartData } = await supabaseClient.from('health_logs').select('measured_date, weight, body_fat, sleep_hours, mental_condition').eq('user_id', user.id).order('measured_date', { ascending: true }).limit(7);
         if (chartData) { globalChartLogs = chartData; renderDynamicChart(); }
     }
 
+    // チャートトグル
     document.getElementById('modeWeight').addEventListener('click', (e) => {
         currentChartMode = 'weight';
         document.getElementById('modeWeight').classList.add('active'); document.getElementById('modeSleep').classList.remove('active');
@@ -282,6 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderDynamicChart();
     });
 
+    // チャート描画ロジック
     function renderDynamicChart() {
         if (globalChartLogs.length === 0) return;
         const ctx = document.getElementById('healthCorrelationChart').getContext('2d');
@@ -318,5 +394,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    checkInitialSetup();
+    checkInitialSetup(); // 初期化をキック
 });
