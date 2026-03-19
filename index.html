@@ -48,6 +48,26 @@
             grid-template-columns: repeat(3, 1fr);
         }
     }
+
+    /* ★ プロフェッショナルUI最適化：form.cssの干渉を防ぎ、Saveを強調・Cancelを控えめにする */
+    .modal-content .btn-primary {
+        background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%) !important;
+        color: #111827 !important;
+        border: none !important;
+        box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3) !important;
+    }
+    .modal-content .btn-primary:hover {
+        opacity: 0.9;
+    }
+    .modal-content .btn-secondary {
+        background: transparent !important;
+        color: var(--clr-text-secondary) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+    .modal-content .btn-secondary:hover {
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: #fff !important;
+    }
   </style>
 </head>
 <body>
