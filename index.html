@@ -29,7 +29,7 @@
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center; gap: 8px; padding: 20px !important; transition: all 0.3s ease;
     }
-    /* 打刻の軌跡: 記録済み状態のスタイル（クリック可能にするため cursor: pointer に変更） */
+    /* 打刻の軌跡: 記録済み状態のスタイル */
     .btn-quick.recorded {
         background: var(--clr-accent) !important; color: #111827 !important;
         border-color: var(--clr-accent) !important;
@@ -226,17 +226,25 @@
     <div class="modal-title">App Guide & Release Notes</div>
     <div style="font-size: 0.85rem; color: var(--clr-text-primary); line-height: 1.6; font-family: var(--font-jp);">
       
-      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">🎯 最新のアップデート (v1.2)</h4>
+      <div style="margin-bottom: 16px; padding: 12px; background: rgba(251,191,36,0.05); border-left: 3px solid var(--clr-accent); border-radius: 4px;">
+        <div style="font-weight: 700; color: var(--clr-accent); margin-bottom: 4px;">🎯 システムの目的</div>
+        行動とコンディションを定量化し、感覚に頼らない軌道修正を行うためのインフラです。日々のデータ蓄積が確実な成果に直結します。
+      </div>
+
+      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">✨ 最新のアップデート (v1.2)</h4>
       <ul style="padding-left: 20px; margin-bottom: 16px; color: var(--clr-text-secondary);">
-        <li><b>誤打刻の解除機能：</b> 「Wake Up」「Sleep」ボタンを間違えて押してしまった場合、<span style="color:#fbbf24;">黄色くなったボタンをもう一度タップ</span>することで「打刻のリセット」ができるようになりました。</li>
-        <li><b>運用ルールについて：</b> クライアント様からのご要望に基づく大規模な仕様変更は「月1回」を目安にまとめて実施し、日常的な軽微な修正やUI改善は随時シームレスに反映いたします。</li>
+        <li><b>誤打刻の解除：</b> 黄色い「Logged」ボタンを再タップすると打刻をリセットできます。</li>
+        <li><b>多言語対応（EN/JP）：</b> 画面右上のボタンで日英切り替えが可能です。</li>
+        <li><b>運用方針：</b> 大規模な仕様変更は「月1回」、軽微なUI改善は随時反映します。</li>
       </ul>
 
-      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">📖 基本マニュアル</h4>
+      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">📖 基本オペレーション</h4>
       <ul style="padding-left: 20px; margin-bottom: 16px; color: var(--clr-text-secondary);">
-        <li><b>多言語対応（EN/JP）：</b> 画面右上の「EN/JP」ボタンで、いつでも日本語と英語の表示を切り替えることができます。</li>
-        <li><b>1日の区切り：</b> 毎朝4:00をシステムの1日の区切りとしています。深夜2時に就寝した場合は「前日分の就寝」として正しく計算されます。</li>
-        <li><b>過去の修正：</b> 過去の日付のデータを修正したい場合は、下のタブ「Daily Log」のカレンダーから日付を選択して入力してください。</li>
+        <li><b>目標の設定：</b> 初回のSetup、または右上の「歯車」から目標(KGI)を設定・調整します。</li>
+        <li><b>1日の区切り：</b> 毎朝4:00が基準です。深夜2時の就寝も「前日分」として記録されます。</li>
+        <li><b>日々の打刻：</b> 上部の「Wake Up」「Sleep」で睡眠サイクル、「Meal」で食事を記録します。</li>
+        <li><b>詳細記録と修正：</b> 「Daily Log」から体重やメンタル詳細を記録。過去日の修正もここから行います。</li>
+        <li><b>分析：</b> ダッシュボードのKPI（前日比）やグラフを活用し、日々の行動へフィードバックしてください。</li>
       </ul>
 
     </div>
