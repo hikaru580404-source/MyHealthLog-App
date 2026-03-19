@@ -13,120 +13,103 @@
   <link rel="stylesheet" href="form.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* モーダルが縦に長くなるためスクロール制御を追加 */
-    .modal-content { max-height: 90vh; overflow-y: auto; padding-bottom: 40px; }
-    .auto-calc-msg { font-size: 0.75rem; color: #10b981; margin-top: 4px; display: block; }
+    /* 追加実装: トーストアニメーションとボタンの内部レイアウト調整用 */
+    #toastMsg {
+      position: fixed; bottom: -50px; left: 50%; transform: translateX(-50%);
+      background: var(--clr-accent); color: #111827; padding: 14px 24px;
+      border-radius: 8px; font-weight: 700; z-index: 9999;
+      box-shadow: 0 4px 15px rgba(251,191,36,0.4); opacity: 0;
+      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      font-family: var(--font-jp); font-size: 0.95rem; white-space: nowrap;
+    }
+    #toastMsg.show { bottom: 30px; opacity: 1; }
     
-    /* KPIカードの均等配置とクリッカブルUIの最適化 */
-    .kpi-section {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr); /* PC向け 3列 */
-      gap: 16px;
-      margin-bottom: 32px;
+    .btn-quick-inner { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .recorded-time { font-size: 0.75rem; font-weight: 600; font-family: var(--font-en); opacity: 0; transition: opacity 0.3s; }
+    .btn-quick.recorded {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+      color: #fff !important; border-color: transparent !important;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4) !important;
     }
-    @media (max-width: 640px) {
-      .kpi-section { grid-template-columns: repeat(2, 1fr); } /* スマホ向け 2列 */
-    }
-    .kpi-card {
-      cursor: pointer;
-      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-      position: relative;
-    }
-    .kpi-card:hover {
-      transform: translateY(-4px);
-      border-color: var(--clr-accent);
-      box-shadow: 0 8px 24px rgba(251, 191, 36, 0.15);
-    }
-    /* クリック可能であることを示すアイコン */
-    .kpi-card::after {
-      content: '\f105'; /* FontAwesome chevron-right */
-      font-family: 'Font Awesome 6 Free';
-      font-weight: 900;
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      color: var(--clr-text-secondary);
-      opacity: 0.3;
-      transition: opacity 0.2s;
-    }
-    .kpi-card:hover::after { opacity: 1; color: var(--clr-accent); }
-    
-    .kpi-detail-info {
-        background: rgba(0,0,0,0.2);
-        padding: 16px;
-        border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.05);
-        margin-bottom: 12px;
-    }
-    .kpi-detail-info span.highlight { color: var(--clr-accent); font-weight: 700; font-size: 1.2rem; }
   </style>
 </head>
 <body>
 <header class="app-header">
   <div class="header-inner">
     <div class="logo">HEALTH LOG <span style="color:var(--clr-text-secondary); font-weight:400;">// DB</span></div>
-    <div style="display: flex; gap: 16px; align-items: center;">
+    <div style="display: flex; gap: 12px; align-items: center;">
+      <button id="langToggleBtn" class="header-icon-btn">EN/JP</button>
       <button id="settingsBtn" class="header-icon-btn"><i class="fas fa-cog"></i></button>
-      <button id="logoutBtn" class="header-logout-btn"><i class="fas fa-sign-out-alt"></i> Log Out</button>
+      <button id="logoutBtn" class="header-logout-btn"><i class="fas fa-sign-out-alt"></i></button>
     </div>
   </div>
 </header>
 
 <main class="app-main">
-  <div class="section-title">Quick Action</div>
+  <div class="section-title" data-i18n="quick_action">Quick Action</div>
   <div class="quick-actions">
-    <button class="btn-quick wake" id="btnWaketime"><i class="fas fa-sun"></i> Wake Up</button>
-    <button class="btn-quick meal" id="btnMealOpen"><i class="fas fa-utensils"></i> Meal</button>
-    <button class="btn-quick bed" id="btnBedtime">Sleep 🌕</button>
+    <button class="btn-quick wake" id="btnWaketime">
+      <div class="btn-quick-inner">
+        <div><i class="fas fa-sun" id="wakeIcon"></i> <span data-i18n="wake">Wake Up</span></div>
+        <div class="recorded-time" id="wakeTimeDisplay">--:--</div>
+      </div>
+    </button>
+    <button class="btn-quick meal" id="btnMealOpen">
+      <div class="btn-quick-inner">
+        <div><i class="fas fa-utensils"></i> <span data-i18n="meal">Meal</span></div>
+        <div style="height: 14px;"></div>
+      </div>
+    </button>
+    <button class="btn-quick bed" id="btnBedtime">
+      <div class="btn-quick-inner">
+        <div><i class="fas fa-moon" id="bedIcon"></i> <span data-i18n="sleep">Sleep</span></div>
+        <div class="recorded-time" id="bedTimeDisplay">--:--</div>
+      </div>
+    </button>
   </div>
 
-  <div class="section-title">KPI (Tap for details)</div>
+  <div class="section-title" data-i18n="kpi_title">KPI</div>
   <section class="kpi-section">
-    <div class="kpi-card" id="cardWeight">
-      <div class="kpi-label">Weight</div>
+    <div class="kpi-card">
+      <div class="kpi-label" data-i18n="weight">Weight</div>
       <div class="kpi-value"><span id="latestWeight">-- kg</span></div>
       <div id="deltaWeight" class="kpi-delta"></div>
     </div>
-    <div class="kpi-card" id="cardFat">
-      <div class="kpi-label">Body Fat</div>
-      <div class="kpi-value"><span id="latestFat">-- %</span></div>
-      <div id="deltaFat" class="kpi-delta"></div>
-    </div>
-    <div class="kpi-card" id="cardSleep">
-      <div class="kpi-label">Sleep</div>
+    <div class="kpi-card">
+      <div class="kpi-label" data-i18n="sleep_h">Sleep</div>
       <div class="kpi-value"><span id="latestSleep">-- h</span></div>
       <div id="deltaSleep" class="kpi-delta"></div>
     </div>
-    <div class="kpi-card" id="cardMental">
-      <div class="kpi-label">Mental</div>
+    <div class="kpi-card">
+      <div class="kpi-label" data-i18n="mental">Mental Condition</div>
       <div class="kpi-value" style="font-size: 1.2rem;"><span id="latestMental">--</span></div>
       <div id="deltaMental" class="kpi-delta" style="color:var(--clr-text-secondary);">--</div>
     </div>
-    <div class="kpi-card" id="cardStreak">
-      <div class="kpi-label">Current Streak</div>
-      <div class="kpi-value"><span id="currentStreak">--</span> <span style="font-size: 0.9rem; margin-left:4px;">Days</span></div>
-      <div id="maxStreak" class="kpi-delta delta-good">Max: -- Days</div>
+    <div class="kpi-card">
+      <div class="kpi-label" data-i18n="streak">Streak</div>
+      <div class="kpi-value"><span id="streakDays">0</span> <span style="font-size: 0.9rem; margin-left:4px;" data-i18n="days">Days</span></div>
+      <div class="kpi-delta delta-good" data-i18n="consecutive">Consecutive</div>
     </div>
-    <div class="kpi-card" id="cardCompletion">
-      <div class="kpi-label">Completion</div>
-      <div class="kpi-value"><span id="completionRate">--</span> <span style="font-size: 0.9rem; margin-left:4px;">%</span></div>
-      <div class="kpi-delta delta-neutral">Total Log Rate</div>
+    <div class="kpi-card">
+      <div class="kpi-label" data-i18n="completion">Completion</div>
+      <div class="kpi-value"><span id="completionRate">0</span> <span style="font-size: 0.9rem; margin-left:4px;">%</span></div>
+      <div class="kpi-delta delta-neutral" data-i18n="last30days">Last 30 Days</div>
     </div>
   </section>
 
   <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
-    <div class="section-title" style="margin-bottom: 0;">7-Day Trend</div>
+    <div class="section-title" style="margin-bottom: 0;" data-i18n="trend">7-Day Trend</div>
     <nav class="tab-nav">
-      <button class="tab-btn active">Analysis</button>
-      <button class="tab-btn" onclick="location.href='meals.html'">Meals</button>
-      <button class="tab-btn" onclick="location.href='form.html'">Daily Log</button>
-      <button class="tab-btn" onclick="location.href='summary.html'">History</button>
+      <button class="tab-btn active" data-i18n="analysis">Analysis</button>
+      <button class="tab-btn" onclick="location.href='meals.html'" data-i18n="nav_meals">Meals</button>
+      <button class="tab-btn" onclick="location.href='form.html'" data-i18n="nav_log">Daily Log</button>
+      <button class="tab-btn" onclick="location.href='summary.html'" data-i18n="nav_history">History</button>
     </nav>
   </div>
 
   <div class="chart-card">
     <div class="chart-header-flex">
-      <div class="chart-card-title">Recent 7-Day Trend</div>
+      <div class="chart-card-title" data-i18n="chart_title">Recent 7-Day Trend</div>
       <div class="chart-toggle">
         <button class="btn-toggle active" id="modeWeight">Weight / Fat</button>
         <button class="btn-toggle" id="modeSleep">Sleep / Mental</button>
@@ -136,95 +119,56 @@
   </div>
 </main>
 
-<div class="modal-overlay" id="kpiDetailModal">
-  <div class="modal-content" style="max-width: 350px;">
-    <div class="modal-title" id="kpiDetailTitle" style="color: var(--clr-accent);">Detail</div>
-    <div id="kpiDetailBody" style="margin-bottom: 20px;">
-        </div>
-    <button id="btnKpiDetailClose" class="btn-secondary">閉じる</button>
-  </div>
-</div>
-
 <div class="modal-overlay" id="initialSetupModal">
   <div class="modal-content" id="initModalBlock">
     <div class="modal-title">Initial Setup</div>
-    <div class="modal-desc">高度な分析を行うため、基本情報と目標を設定してください。</div>
+    <div class="modal-desc">管理の基準となる最初のデータと、<br><span style="color: var(--clr-accent); font-weight:700;">あなたの目標値</span>を入力してください。</div>
     <form id="initialSetupForm">
-      <div class="section-title" style="margin-top:0;">1. 基本情報 (Baseline)</div>
-      <div class="form-row-grid">
-        <div class="form-group"><label class="form-label">生年月日</label><input type="date" id="initBirth" class="form-input" required></div>
-        <div class="form-group"><label class="form-label">性別</label>
-          <select id="initGender" class="form-input"><option value="male">男性</option><option value="female">女性</option></select>
+      <div class="form-row-grid" style="background: rgba(251, 191, 36, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(251, 191, 36, 0.2);">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="color: var(--clr-accent);">TARGET Weight (kg)</label>
+          <input type="number" id="initTargetWeight" class="form-input" step="0.1" value="65.0" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="color: var(--clr-accent);">TARGET Fat (%)</label>
+          <input type="number" id="initTargetFat" class="form-input" step="0.1" value="13.0" required>
         </div>
       </div>
       <div class="form-row-grid">
-        <div class="form-group"><label class="form-label">身長 (cm)</label><input type="number" id="initHeight" class="form-input" step="0.1" required></div>
-        <div class="form-group"><label class="form-label">現在の体重 (kg)</label><input type="number" id="initWeight" class="form-input" step="0.1" required></div>
+        <div class="form-group"><label class="form-label">昨晩の就寝</label><input type="time" id="initBedtime" class="form-input" required></div>
+        <div class="form-group"><label class="form-label">今朝の起床</label><input type="time" id="initWaketime" class="form-input" required></div>
       </div>
       <div class="form-row-grid">
-        <div class="form-group"><label class="form-label">現在の体脂肪 (%)</label><input type="number" id="initFat" class="form-input" step="0.1" required></div>
-        <div class="form-group"><label class="form-label">日常の活動レベル</label>
-          <select id="initActivity" class="form-input">
-            <option value="1">低 (デスクワーク中心)</option>
-            <option value="2" selected>普通 (立ち仕事・軽い運動)</option>
-            <option value="3">高 (日常的なスポーツ)</option>
-            <option value="4">極高 (激しい肉体労働等)</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="section-title" style="margin-top:20px;">2. 目標設定 (Targets)</div>
-      <div class="form-row-grid" style="background: rgba(251, 191, 36, 0.05); padding: 15px; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.2);">
-        <div class="form-group"><label class="form-label" style="color: var(--clr-accent);">目標体重 (kg)</label><input type="number" id="initTargetWeight" class="form-input" step="0.1" required></div>
-        <div class="form-group"><label class="form-label" style="color: var(--clr-accent);">ターゲット期日</label><input type="date" id="initTargetDate" class="form-input" required></div>
-      </div>
-      <div class="form-row-grid">
-        <div class="form-group"><label class="form-label">目標体脂肪 (%)</label><input type="number" id="initTargetFat" class="form-input" step="0.1" required></div>
-        <div class="form-group"><label class="form-label">目標睡眠 (時間)</label><input type="number" id="initTargetSleep" class="form-input" step="0.1" value="7.0" required></div>
+        <div class="form-group"><label class="form-label">現在の体重 (kg)</label><input type="number" id="initWeight" class="form-input" step="0.1"></div>
+        <div class="form-group"><label class="form-label">現在の体脂肪 (%)</label><input type="number" id="initFat" class="form-input" step="0.1"></div>
       </div>
       <div class="form-group">
-        <label class="form-label" style="color: #10b981;">推奨・目標摂取カロリー (kcal/日)</label>
-        <input type="number" id="initTargetCal" class="form-input" required readonly style="border-color: #10b981; color:#10b981; font-weight:bold;">
-        <span class="auto-calc-msg">※プロフィールと期日から自動計算されます</span>
+        <label class="form-label">コンディション</label>
+        <div class="cond-group" id="initMGrp">
+          <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
+          <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
+          <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
+          <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
+          <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
+        </div>
       </div>
-      <button type="submit" class="btn-primary" id="initSaveBtn" style="margin-top:20px;">Save Profile & Start</button>
+      <button type="submit" class="btn-primary" id="initSaveBtn">Set Targets & Start</button>
     </form>
   </div>
 </div>
 
 <div class="modal-overlay" id="settingsModal">
   <div class="modal-content">
-    <div class="modal-title">Settings / Goals</div>
-    <div class="form-row-grid">
-        <div class="form-group"><label class="form-label">生年月日</label><input type="date" id="setBirth" class="form-input" required></div>
-        <div class="form-group"><label class="form-label">性別</label>
-          <select id="setGender" class="form-input"><option value="male">男性</option><option value="female">女性</option></select>
-        </div>
-    </div>
-    <div class="form-row-grid">
-        <div class="form-group"><label class="form-label">身長 (cm)</label><input type="number" id="setHeight" class="form-input" step="0.1" required></div>
-        <div class="form-group"><label class="form-label">活動レベル</label>
-          <select id="setActivity" class="form-input">
-            <option value="1">低 (デスクワーク中心)</option>
-            <option value="2">普通 (立ち仕事・軽い運動)</option>
-            <option value="3">高 (日常的なスポーツ)</option>
-            <option value="4">極高 (激しい肉体労働等)</option>
-          </select>
-        </div>
-    </div>
-    <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin: 20px 0;">
-    <div class="form-row-grid">
-      <div class="form-group"><label class="form-label" style="color: var(--clr-accent);">目標体重 (kg)</label><input type="number" id="setTargetWeight" class="form-input" step="0.1" required></div>
-      <div class="form-group"><label class="form-label" style="color: var(--clr-accent);">ターゲット期日</label><input type="date" id="setTargetDate" class="form-input" required></div>
-    </div>
-    <div class="form-row-grid">
-      <div class="form-group"><label class="form-label">目標体脂肪 (%)</label><input type="number" id="setTargetFat" class="form-input" step="0.1" required></div>
-      <div class="form-group"><label class="form-label">目標睡眠 (時間)</label><input type="number" id="setTargetSleep" class="form-input" step="0.1" required></div>
-    </div>
-    <div class="form-group">
-        <label class="form-label" style="color: #10b981;">目標摂取カロリー (kcal/日)</label>
-        <input type="number" id="setTargetCal" class="form-input" required>
-        <span class="auto-calc-msg">※直接編集も可能です</span>
+    <div class="modal-title">Settings</div>
+    <div class="form-row-grid" style="margin-bottom: 20px;">
+      <div class="form-group">
+        <label class="form-label" style="color: var(--clr-accent);">TARGET Weight (kg)</label>
+        <input type="number" id="settingTargetWeight" class="form-input" step="0.1" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" style="color: var(--clr-accent);">TARGET Fat (%)</label>
+        <input type="number" id="settingTargetFat" class="form-input" step="0.1" required>
+      </div>
     </div>
     <div class="modal-actions">
       <button id="btnSettingsCancel" class="btn-secondary" style="margin-top:0;">Cancel</button>
@@ -251,6 +195,8 @@
     </div>
   </div>
 </div>
+
+<div id="toastMsg"></div>
 
 <script src="supabase-client.js"></script>
 <script src="app.js"></script>
