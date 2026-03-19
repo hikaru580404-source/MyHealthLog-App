@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const password = document.getElementById('password').value;
 
         if (!isLoginMode && !consentCheck.checked) {
-            authMsg.style.color = "var(--clr-expense)";
+            authMsg.style.color = "#ef4444"; // エラーの赤色
             authMsg.innerText = "エラー: 個人情報の取り扱いに同意してください。";
             return;
         }
@@ -39,23 +39,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isLoginMode) {
             const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
             if (error) {
-                authMsg.innerText = "エラー: " + error.message;
+                authMsg.style.color = "#ef4444";
+                authMsg.innerText = "ログインエラー: メールアドレスまたはパスワードが違います。";
                 authSubmitBtn.disabled = false;
             } else {
                 window.location.href = "index.html";
             }
         } else {
+            // 新規登録フロー（メール確認あり）
             const { error } = await supabaseClient.auth.signUp({
-                email, password,
-                options: { emailRedirectTo: window.location.origin + '/index.html' }
+                email, 
+                password,
+                options: { 
+                    // メール内のリンクを踏んだ後に遷移するURLを明示
+                    emailRedirectTo: window.location.origin + '/index.html' 
+                }
             });
+
             if (error) {
+                authMsg.style.color = "#ef4444";
                 authMsg.innerText = "登録エラー: " + error.message;
                 authSubmitBtn.disabled = false;
             } else {
-                authMsg.innerText = "確認メールを送信しました。";
+                // 成功時は緑色のテキストで次のアクションを明示
+                authMsg.style.color = "#10b981"; 
+                authMsg.innerText = "確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。";
                 authForm.reset();
                 consentCheck.checked = false;
+                authSubmitBtn.disabled = false;
             }
         }
     });
