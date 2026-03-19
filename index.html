@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="form.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* トーストアニメーション */
+    /* 追加実装: トーストアニメーションと打刻軌跡（記録済み状態） */
     #toastMsg {
       position: fixed; bottom: -50px; left: 50%; transform: translateX(-50%);
       background: var(--clr-accent); color: #111827; padding: 14px 24px;
@@ -24,22 +24,17 @@
     }
     #toastMsg.show { bottom: 30px; opacity: 1; }
     
-    /* ボタンの完全中央揃えと記録時間の表示制御 */
-    .btn-quick { padding: 0 !important; }
-    .btn-quick-inner { 
-      display: flex; flex-direction: column; align-items: center; justify-content: center; 
-      width: 100%; height: 100%; padding: 18px 0;
+    /* ボタンの完全中央揃え */
+    .btn-quick {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; gap: 8px; padding: 20px !important; transition: all 0.3s ease;
     }
-    .btn-quick-main { display: flex; align-items: center; gap: 8px; }
-    .recorded-time { 
-      font-size: 0.75rem; font-weight: 600; font-family: var(--font-en); 
-      margin-top: 4px; display: none; 
-    }
-    .btn-quick.recorded .recorded-time { display: block; }
+    /* 打刻の軌跡: 記録済み状態のスタイル */
     .btn-quick.recorded {
-      background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-      color: #fff !important; border-color: transparent !important;
-      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4) !important;
+        background: var(--clr-accent) !important; color: #111827 !important;
+        border-color: var(--clr-accent) !important;
+        box-shadow: 0 4px 15px rgba(251,191,36,0.3) !important;
+        opacity: 0.8; cursor: not-allowed;
     }
   </style>
 </head>
@@ -59,21 +54,13 @@
   <div class="section-title" data-i18n="quick_action">Quick Action</div>
   <div class="quick-actions">
     <button class="btn-quick wake" id="btnWaketime">
-      <div class="btn-quick-inner">
-        <div class="btn-quick-main"><i class="fas fa-sun" id="wakeIcon"></i> <span data-i18n="wake">Wake Up</span></div>
-        <div class="recorded-time" id="wakeTimeDisplay">--:--</div>
-      </div>
+      <i class="fas fa-sun" id="wakeIcon"></i> <span id="wakeText" data-i18n="wake">Wake Up</span>
     </button>
     <button class="btn-quick meal" id="btnMealOpen">
-      <div class="btn-quick-inner">
-        <div class="btn-quick-main"><i class="fas fa-utensils"></i> <span data-i18n="meal">Meal</span></div>
-      </div>
+      <i class="fas fa-utensils"></i> <span data-i18n="meal">Meal</span>
     </button>
     <button class="btn-quick bed" id="btnBedtime">
-      <div class="btn-quick-inner">
-        <div class="btn-quick-main"><i class="fas fa-moon" id="bedIcon"></i> <span data-i18n="sleep">Sleep</span></div>
-        <div class="recorded-time" id="bedTimeDisplay">--:--</div>
-      </div>
+      <i class="fas fa-moon" id="bedIcon"></i> <span id="bedText" data-i18n="sleep">Sleep</span>
     </button>
   </div>
 
@@ -85,10 +72,16 @@
       <div id="deltaWeight" class="kpi-delta"></div>
     </div>
     <div class="kpi-card">
+      <div class="kpi-label" data-i18n="fat_p">Fat</div>
+      <div class="kpi-value"><span id="latestFat">-- %</span></div>
+      <div id="deltaFat" class="kpi-delta" style="color:var(--clr-text-secondary);">--</div>
+    </div>
+    <div class="kpi-card">
       <div class="kpi-label" data-i18n="sleep_h">Sleep</div>
       <div class="kpi-value"><span id="latestSleep">-- h</span></div>
       <div id="deltaSleep" class="kpi-delta"></div>
     </div>
+    
     <div class="kpi-card">
       <div class="kpi-label" data-i18n="mental">Mental Condition</div>
       <div class="kpi-value" style="font-size: 1.2rem;"><span id="latestMental">--</span></div>
@@ -100,14 +93,9 @@
       <div class="kpi-delta delta-good" data-i18n="logging">Logging</div>
     </div>
     <div class="kpi-card">
-      <div class="kpi-label" data-i18n="streak">Streak</div>
-      <div class="kpi-value"><span id="streakDays">0</span> <span style="font-size: 0.9rem; margin-left:4px;" data-i18n="days">Days</span></div>
-      <div class="kpi-delta delta-good" data-i18n="consecutive">Consecutive</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label" data-i18n="completion">Completion</div>
-      <div class="kpi-value"><span id="completionRate">0</span> <span style="font-size: 0.9rem; margin-left:4px;">%</span></div>
-      <div class="kpi-delta delta-neutral" data-i18n="last30days">Last 30 Days</div>
+      <div class="kpi-label" data-i18n="goal_progress">Goal Progress</div>
+      <div class="kpi-value"><span id="goalProgress">-- kg</span></div>
+      <div class="kpi-delta delta-neutral" data-i18n="to_target">To Target</div>
     </div>
   </section>
 
