@@ -184,7 +184,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const wVal = document.getElementById('settingWeight').value;
             const fVal = document.getElementById('settingFat').value;
 
-            // 昨日のレコード更新（空欄にされた場合は null で上書き）
             let yPayload = { user_id: user.id, measured_date: yesterdayStr };
             if (bt) {
                 let bDate = createSafeDate(yesterdayStr, bt);
@@ -197,7 +196,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (yExisting && yExisting.id) await supabaseClient.from('health_logs').update(yPayload).eq('id', yExisting.id);
             else await supabaseClient.from('health_logs').insert(yPayload);
 
-            // 今日のレコード更新（空欄にされた場合は null で上書き）
             let tPayload = { user_id: user.id, measured_date: todayStr, mental_condition: parseInt(settingMVal) };
             if (wVal) tPayload.weight = parseFloat(wVal); else tPayload.weight = null;
             if (fVal) tPayload.body_fat = parseFloat(fVal); else tPayload.body_fat = null;
@@ -230,7 +228,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- クイックアクションロジック（Undo機能追加） ---
 
-    // UIを初期状態（打刻可能）に戻す関数
     function resetButtonUI(type) {
         let btn, icon, textSpan;
         if (type === 'wake') {
@@ -248,7 +245,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // UIを記録済み状態にする関数（disabled=trueを削除し再タップ可能にした）
     function setButtonRecorded(type) {
         let btn, icon, textSpan;
         if (type === 'wake') {
@@ -275,7 +271,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const isAlreadyRecorded = existing && ((type === 'wake' && existing.waketime) || (type === 'bed' && existing.bedtime));
 
-            // ★Undo（リセット）機能：すでに記録済みの場合は取り消すか聞く
             if (isAlreadyRecorded) {
                 if (confirm(dict[currentLang].confirm_undo)) {
                     let undoPayload = {};
@@ -290,7 +285,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            // 以下、通常の打刻ロジック
             let updatePayload = {};
             if (type === 'wake') {
                 updatePayload.waketime = timeISO;
@@ -334,7 +328,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const now = new Date();
             const logicalDateStr = getLocalLogicalDateStr(now);
 
-            // 一旦ボタンUIを未記録状態にリセットしてからDBの判定を入れる（Settingsからの空欄反映のため）
             resetButtonUI('wake');
             resetButtonUI('bed');
 
@@ -400,15 +393,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (mentalEl) mentalEl.innerHTML = current.mental_condition ? mentalIcons[current.mental_condition - 1] : "--";
             }
 
+            // ★ バグ修正：チャートを「最新順（降順）」で取得してから左から右へ反転させる
             const { data: chartData, error: chartErr } = await supabaseClient.from('health_logs')
                 .select('measured_date, weight, body_fat, sleep_hours, mental_condition')
                 .eq('user_id', user.id)
-                .order('measured_date', { ascending: true })
+                .order('measured_date', { ascending: false }) // ここを false に修正して最新7件を取得
                 .limit(7);
             
             if (chartErr) throw chartErr;
             if (chartData) {
-                globalChartLogs = chartData;
+                globalChartLogs = chartData.reverse(); // 配列を反転させて、グラフ上で左(古い)→右(新しい)にする
                 renderDynamicChart();
             }
 
@@ -553,7 +547,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // ★ 初回セットアップ処理の統合（Settingsで統合されているため、ここでの重複実行を削除し、純粋なチェックのみに変更）
     async function checkInitialSetup() {
         const localFlag = localStorage.getItem('initSetup_' + user.id);
         if (localFlag === 'true') { loadDashboard(); return; }

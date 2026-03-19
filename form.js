@@ -132,11 +132,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const bt = document.getElementById('bt').value;
                 const payload = { user_id: user.id, measured_date: date, mental_condition: parseInt(mVal) };
                 
+                // 空欄にされた場合は null としてDBを更新するよう修正
                 const noteEl = document.getElementById('note');
-                if(noteEl) payload.daily_notes = noteEl.value;
+                payload.daily_notes = (noteEl && noteEl.value) ? noteEl.value : null;
 
-                if (document.getElementById('w').value) payload.weight = parseFloat(document.getElementById('w').value);
-                if (document.getElementById('f').value) payload.body_fat = parseFloat(document.getElementById('f').value);
+                const wInput = document.getElementById('w').value;
+                payload.weight = wInput ? parseFloat(wInput) : null;
+                
+                const fInput = document.getElementById('f').value;
+                payload.body_fat = fInput ? parseFloat(fInput) : null;
 
                 if (wt) {
                     payload.waketime = createSafeDate(date, wt).toISOString();
@@ -148,11 +152,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                         if (hours < 0) hours += 24;
                         payload.sleep_hours = parseFloat(hours.toFixed(1));
                     }
+                } else {
+                    payload.waketime = null;
+                    payload.sleep_hours = null;
                 }
+                
                 if (bt) {
                     let bDate = createSafeDate(date, bt);
                     if (bDate.getHours() < 4) bDate.setDate(bDate.getDate() + 1);
                     payload.bedtime = bDate.toISOString();
+                } else {
+                    payload.bedtime = null;
                 }
 
                 const { data: existing } = await supabaseClient.from('health_logs')
@@ -166,6 +176,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 if (!dbErr) {
+                    // ★【追加機能】就寝時間を変更した場合、自動で「翌日の睡眠時間」を再計算して修正する
+                    const nextDateObj = new Date(date);
+                    nextDateObj.setDate(nextDateObj.getDate() + 1);
+                    const nextDateStr = getLocalLogicalDateStr(nextDateObj);
+
+                    const { data: nextDay } = await supabaseClient.from('health_logs')
+                        .select('id, waketime').eq('user_id', user.id).eq('measured_date', nextDateStr).maybeSingle();
+
+                    // 翌日に起床時間が既に記録されている場合のみ計算
+                    if (nextDay && nextDay.waketime) {
+                        if (bt) {
+                            let bDate = createSafeDate(date, bt);
+                            if (bDate.getHours() < 4) bDate.setDate(bDate.getDate() + 1);
+                            let hours = (new Date(nextDay.waketime) - bDate) / 3600000;
+                            if (hours < 0) hours += 24;
+                            await supabaseClient.from('health_logs').update({ sleep_hours: parseFloat(hours.toFixed(1)) }).eq('id', nextDay.id);
+                        } else {
+                            // 就寝時間を消した場合は、翌日の睡眠時間もリセット
+                            await supabaseClient.from('health_logs').update({ sleep_hours: null }).eq('id', nextDay.id);
+                        }
+                    }
+
                     document.getElementById('p2').classList.remove('active'); 
                     document.getElementById('p3').classList.add('active');
                     document.getElementById('s2').classList.add('done'); 
