@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         en: {
             quick_action: "Quick Action", wake: "Wake Up", meal: "Meal", sleep: "Sleep",
             kpi_title: "KPI", weight: "Weight", sleep_h: "Sleep", mental: "Mental Condition",
+            month_count: "Month Count", logging: "Logging", // 復活
             streak: "Streak", days: "Days", consecutive: "Consecutive",
             completion: "Completion", last30days: "Last 30 Days",
             trend: "7-Day Trend", analysis: "Analysis", nav_meals: "Meals", nav_log: "Daily Log", nav_history: "History", chart_title: "Recent 7-Day Trend",
@@ -17,6 +18,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         ja: {
             quick_action: "クイックアクション", wake: "起床", meal: "食事", sleep: "就寝",
             kpi_title: "主要指標", weight: "体重", sleep_h: "睡眠時間", mental: "メンタル状態",
+            month_count: "月間記録日数", logging: "記録済み", // 復活
             streak: "継続日数", days: "日", consecutive: "連続記録中",
             completion: "完了率", last30days: "過去30日間",
             trend: "7日間の推移", analysis: "分析", nav_meals: "食事録", nav_log: "日次記録", nav_history: "履歴", chart_title: "直近7日間の推移",
@@ -37,9 +39,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem('appLang_' + user.id, currentLang);
         updateLanguage();
     });
-    updateLanguage(); // 初期ロード時に適用
+    updateLanguage(); 
 
-    // --- トースト通知機能 ---
     function showToast(msg) {
         const toast = document.getElementById('toastMsg');
         toast.innerText = msg;
@@ -189,7 +190,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (existing && existing.id) await supabaseClient.from('health_logs').update(payload).eq('id', existing.id);
             else await supabaseClient.from('health_logs').insert(payload);
             
-            // 記録直後にダッシュボードをリロードしてUIを更新
             loadDashboard();
         } catch (e) { alert("Error: " + e.message); }
     }
@@ -251,14 +251,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
         const firstDayStr = getLocalLogicalDateStr(firstDay);
         
-        // --- 1. KPIデータの取得 (SQL関数実行) ---
+        // 1. 月間記録日数の取得 (復活)
+        const { count } = await supabaseClient.from('health_logs').select('*', { count: 'exact', head: true }).eq('user_id', user.id).gte('measured_date', firstDayStr);
+        document.getElementById('monthCount').innerText = count || 0;
+
+        // 2. KPIデータの取得 (SQL関数実行)
         const { data: kpiData, error: kpiErr } = await supabaseClient.rpc('get_user_performance', { target_user_id: user.id });
         if (!kpiErr && kpiData && kpiData.length > 0) {
             document.getElementById('streakDays').innerText = kpiData[0].streak_days;
             document.getElementById('completionRate').innerText = Math.round(kpiData[0].log_completion_rate);
         }
 
-        // --- 2. 直近のヘルスログ取得 ---
+        // 3. 直近のヘルスログ取得
         const { data: recentLogs } = await supabaseClient.from('health_logs')
             .select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(2);
             
@@ -273,18 +277,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     btn.classList.add('recorded');
                     document.getElementById('wakeIcon').className = 'fas fa-check-circle';
                     const d = new Date(current.waketime);
-                    const timeEl = document.getElementById('wakeTimeDisplay');
-                    timeEl.innerText = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                    timeEl.style.opacity = '1';
+                    document.getElementById('wakeTimeDisplay').innerText = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
                 }
                 if (current.bedtime) {
                     const btn = document.getElementById('btnBedtime');
                     btn.classList.add('recorded');
                     document.getElementById('bedIcon').className = 'fas fa-check-circle';
                     const d = new Date(current.bedtime);
-                    const timeEl = document.getElementById('bedTimeDisplay');
-                    timeEl.innerText = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                    timeEl.style.opacity = '1';
+                    document.getElementById('bedTimeDisplay').innerText = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
                 }
             }
 
