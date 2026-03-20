@@ -1,10 +1,8 @@
-// ★ Vercel Edge Runtime を明示的に指定することでエラーを防ぎ、超高速化します
 export const config = {
   runtime: 'edge',
 };
 
 export default async function handler(req) {
-  // CORS対策とPOSTメソッド以外のブロック
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
       status: 405,
@@ -16,18 +14,21 @@ export default async function handler(req) {
     const { imageUrl, memo } = await req.json();
     const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!imageUrl) {
-        return new Response(JSON.stringify({ error: 'Image URL is required' }), { status: 400 });
-    }
-    if (!apiKey) {
-        return new Response(JSON.stringify({ error: 'API Key not set' }), { status: 500 });
-    }
+    if (!imageUrl) return new Response(JSON.stringify({ error: 'Image URL is required' }), { status: 400 });
+    if (!apiKey) return new Response(JSON.stringify({ error: 'API Key not set' }), { status: 500 });
 
-    // 1. 画像の取得とBase64変換（Edge環境で絶対に動く書き方）
+    // 1. 画像の取得
     const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) throw new Error("Failed to fetch image from Supabase Storage");
     const arrayBuffer = await imageResponse.arrayBuffer();
-    // Bufferを使わず、標準のbtoa関数を使用
-    const base64Image = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+    // ★修正箇所：大きな画像でも絶対にクラッシュしない安全なBase64変換（ループ処理）
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    const base64Image = btoa(binary);
 
     // 2. プロンプトの構築
     const prompt = `この食事の画像から、以下の2点を推測して厳密なJSON形式のみで返してください。
@@ -55,7 +56,7 @@ export default async function handler(req) {
     
     if (geminiData.error) {
         console.error("Gemini Error:", geminiData.error);
-        return new Response(JSON.stringify({ error: 'AI API Error' }), { status: 500 });
+        return new Response(JSON.stringify({ error: 'AI API Error: ' + geminiData.error.message }), { status: 500 });
     }
 
     // 4. 解析と返却
@@ -69,7 +70,7 @@ export default async function handler(req) {
     });
 
   } catch (error) {
-    console.error("Server Error:", error);
+    console.error("Server Error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
