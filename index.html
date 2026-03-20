@@ -1,291 +1,172 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HEALTH LOG // DB</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Asir Labo | Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="form.css">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    #toastMsg {
-      position: fixed; bottom: -50px; left: 50%; transform: translateX(-50%);
-      background: var(--clr-accent); color: #111827; padding: 14px 24px;
-      border-radius: 8px; font-weight: 700; z-index: 9999;
-      box-shadow: 0 4px 15px rgba(251,191,36,0.4); opacity: 0;
-      transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-      font-family: var(--font-jp); font-size: 0.95rem; white-space: nowrap;
+    /* KPI Dashboard Styles */
+    .kpi-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
     }
-    #toastMsg.show { bottom: 30px; opacity: 1; }
-    
-    .btn-quick {
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        text-align: center; gap: 8px; padding: 20px !important; transition: all 0.3s ease;
+    .kpi-card {
+      background: #fff;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
-    .btn-quick.recorded {
-        background: var(--clr-accent) !important; color: #111827 !important;
-        border-color: var(--clr-accent) !important;
-        box-shadow: 0 4px 15px rgba(251,191,36,0.3) !important;
-        opacity: 0.9; cursor: pointer;
+    .kpi-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+      margin-bottom: 4px;
+      display: block;
+      font-weight: 600;
+    }
+    .kpi-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #111827;
+      font-family: 'Inter', sans-serif;
+    }
+    .kpi-unit {
+      font-size: 0.875rem;
+      margin-left: 2px;
+      font-weight: 500;
     }
 
-    .kpi-section {
-        display: grid;
-        gap: 16px;
-        grid-template-columns: repeat(2, 1fr);
+    /* ✨ Premium AI Teaser Card Styles ✨ */
+    .premium-teaser-card {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s;
     }
-    @media (min-width: 640px) {
-        .kpi-section { grid-template-columns: repeat(4, 1fr); }
+    .premium-teaser-card:active {
+      transform: scale(0.98);
     }
-    
-    .kpi-card { transition: all 0.2s; cursor: pointer; }
-    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.4); border-color: rgba(251, 191, 36, 0.4); }
-
-    .modal-content .btn-primary {
-        background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%) !important;
-        color: #111827 !important; border: none !important;
-        box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3) !important;
+    /* 光の反射アニメーション */
+    .premium-teaser-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%; width: 50%; height: 100%;
+      background: linear-gradient(to right, transparent, rgba(251, 191, 36, 0.15), transparent);
+      animation: shimmer 3s infinite;
     }
-    .modal-content .btn-primary:hover { opacity: 0.9; }
-    .modal-content .btn-secondary {
-        background: transparent !important; color: var(--clr-text-secondary) !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    @keyframes shimmer { 
+      0% { left: -100%; }
+      50% { left: 200%; }
+      100% { left: 200%; }
     }
-    .modal-content .btn-secondary:hover { background: rgba(255, 255, 255, 0.05) !important; color: #fff !important; }
+    .teaser-content { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; }
+    .teaser-icon {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(251, 191, 36, 0.15); color: #fbbf24;
+      display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+      box-shadow: 0 0 15px rgba(251, 191, 36, 0.2);
+    }
+    .teaser-text h4 { 
+      color: #f8fafc; font-size: 0.95rem; margin-bottom: 4px; 
+      display: flex; align-items: center; gap: 8px; font-weight: 700;
+    }
+    .teaser-text p { color: #94a3b8; font-size: 0.75rem; font-weight: 500; }
+    .badge-soon {
+      background: linear-gradient(90deg, #fbbf24, #f59e0b); color: #000; 
+      font-size: 0.6rem; font-weight: 800; padding: 2px 6px; 
+      border-radius: 4px; letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .teaser-arrow { color: #475569; position: relative; z-index: 1; }
   </style>
 </head>
 <body>
-<header class="app-header">
-  <div class="header-inner">
-    <div class="logo">HEALTH LOG <span style="color:var(--clr-text-secondary); font-weight:400;">// DB</span></div>
-    <div style="display: flex; gap: 12px; align-items: center;">
-      <button id="langToggleBtn" class="header-icon-btn">EN/JP</button>
-      <button id="settingsBtn" class="header-icon-btn"><i class="fas fa-cog"></i></button>
-      <button id="logoutBtn" class="header-logout-btn"><i class="fas fa-sign-out-alt"></i></button>
-    </div>
-  </div>
-</header>
+  <div class="app-container">
+    <header class="header">
+      <div class="logo">ASIR LABO</div>
+      <div class="user-profile" id="userBtn">
+        <i class="fa-solid fa-circle-user"></i>
+      </div>
+    </header>
 
-<main class="app-main">
-  <div class="section-title" data-i18n="quick_action">Quick Action</div>
-  <div class="quick-actions">
-    <button class="btn-quick wake" id="btnWaketime">
-      <i class="fas fa-sun" id="wakeIcon"></i> <span id="wakeText" data-i18n="wake">Wake Up</span>
-    </button>
-    <button class="btn-quick meal" id="btnMealOpen">
-      <i class="fas fa-utensils"></i> <span data-i18n="meal">Meal</span>
-    </button>
-    <button class="btn-quick bed" id="btnBedtime">
-      <i class="fas fa-moon" id="bedIcon"></i> <span id="bedText" data-i18n="sleep">Sleep</span>
-    </button>
-  </div>
+    <main class="content">
+      <section class="kpi-section">
+        <div class="kpi-container">
+          <div class="kpi-card">
+            <span class="kpi-label">継続日数</span>
+            <div class="kpi-value" id="streakValue">--<span class="kpi-unit">日</span></div>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">月間記録率</span>
+            <div class="kpi-value" id="completionValue">--<span class="kpi-unit">%</span></div>
+          </div>
+        </div>
+      </section>
 
-  <div class="section-title" data-i18n="kpi_title">KPI</div>
-  <section class="kpi-section">
-    <div class="kpi-card" data-kpi-key="weight">
-      <div class="kpi-label" data-i18n="weight">Weight</div>
-      <div class="kpi-value"><span id="latestWeight">-- kg</span></div>
-      <div id="deltaWeight" class="kpi-delta"></div>
-    </div>
-    <div class="kpi-card" data-kpi-key="fat_p">
-      <div class="kpi-label" data-i18n="fat_p">Fat</div>
-      <div class="kpi-value"><span id="latestFat">-- %</span></div>
-      <div id="deltaFat" class="kpi-delta" style="color:var(--clr-text-secondary);">--</div>
-    </div>
-    <div class="kpi-card" data-kpi-key="calories">
-      <div class="kpi-label" data-i18n="calories">Calories</div>
-      <div class="kpi-value"><span id="todayCalories">0</span> <span style="font-size: 0.9rem; margin-left:4px;">kcal</span></div>
-      <div class="kpi-delta delta-neutral" data-i18n="today_total">Today's Total</div>
-    </div>
-    <div class="kpi-card" data-kpi-key="sleep_h">
-      <div class="kpi-label" data-i18n="sleep_h">Sleep</div>
-      <div class="kpi-value"><span id="latestSleep">-- h</span></div>
-      <div id="deltaSleep" class="kpi-delta"></div>
-    </div>
-    <div class="kpi-card" data-kpi-key="mental">
-      <div class="kpi-label" data-i18n="mental">Mental Condition</div>
-      <div class="kpi-value" style="font-size: 1.2rem;"><span id="latestMental">--</span></div>
-      <div id="deltaMental" class="kpi-delta" style="color:var(--clr-text-secondary);">--</div>
-    </div>
-    <div class="kpi-card" data-kpi-key="streak">
-      <div class="kpi-label" data-i18n="streak">Streak</div>
-      <div class="kpi-value"><span id="streakDays">0</span> <span style="font-size: 0.9rem; margin-left:4px;" data-i18n="days">Days</span></div>
-      <div class="kpi-delta delta-good" data-i18n="consecutive">Consecutive</div>
-    </div>
-    <div class="kpi-card" data-kpi-key="completion">
-      <div class="kpi-label" data-i18n="completion">Completion</div>
-      <div class="kpi-value"><span id="completionRate">0</span> <span style="font-size: 0.9rem; margin-left:4px;">%</span></div>
-      <div class="kpi-delta delta-neutral" data-i18n="last30days">Last 30 Days</div>
-    </div>
-    <div class="kpi-card" data-kpi-key="month_count">
-      <div class="kpi-label" data-i18n="month_count">Month Count</div>
-      <div class="kpi-value"><span id="monthCount">0</span> <span style="font-size: 0.9rem; margin-left:4px;" data-i18n="days">Days</span></div>
-      <div class="kpi-delta delta-good" data-i18n="logging">Logging</div>
-    </div>
-  </section>
+      <div class="premium-teaser-card" onclick="alert('【AI食事解析・自動カロリー計算】\n現在、より高精度なAIモデルを用いたプレミアム機能を開発中です。\nリリースまで今しばらくお待ちください！')">
+        <div class="teaser-content">
+          <div class="teaser-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+          <div class="teaser-text">
+            <h4>AI食事自動解析 <span class="badge-soon">Coming Soon</span></h4>
+            <p>プレミアム機能解放に向けて準備中...</p>
+          </div>
+        </div>
+        <div class="teaser-arrow"><i class="fa-solid fa-chevron-right"></i></div>
+      </div>
+      <div class="action-grid">
+        <button class="action-card" onclick="location.href='log.html'">
+          <div class="icon-circle" style="background: #eff6ff; color: #3b82f6;">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </div>
+          <span>健康記録</span>
+        </button>
+        <button class="action-card" onclick="location.href='meal.html'">
+          <div class="icon-circle" style="background: #f0fdf4; color: #22c55e;">
+            <i class="fa-solid fa-camera"></i>
+          </div>
+          <span>食事記録</span>
+        </button>
+        <button class="action-card" onclick="location.href='summary.html'">
+          <div class="icon-circle" style="background: #fff7ed; color: #f97316;">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+          <span>データ履歴</span>
+        </button>
+        <button class="action-card" onclick="location.href='meals.html'">
+          <div class="icon-circle" style="background: #faf5ff; color: #a855f7;">
+            <i class="fa-solid fa-utensils"></i>
+          </div>
+          <span>食事一覧</span>
+        </button>
+      </div>
+    </main>
 
-  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
-    <div class="section-title" style="margin-bottom: 0;" data-i18n="trend">7-Day Trend</div>
-    <nav class="tab-nav">
-      <button class="tab-btn active" data-i18n="analysis">Analysis</button>
-      <button class="tab-btn" onclick="location.href='meals.html'" data-i18n="nav_meals">Meals</button>
-      <button class="tab-btn" onclick="location.href='form.html'" data-i18n="nav_log">Daily Log</button>
-      <button class="tab-btn" onclick="location.href='summary.html'" data-i18n="nav_history">History</button>
+    <nav class="bottom-nav">
+      <a href="index.html" class="nav-item active"><i class="fa-solid fa-house"></i><span>Home</span></a>
+      <a href="summary.html" class="nav-item"><i class="fa-solid fa-chart-simple"></i><span>Log</span></a>
+      <a href="meal.html" class="nav-item"><i class="fa-solid fa-plus-circle"></i><span>Post</span></a>
+      <a href="meals.html" class="nav-item"><i class="fa-solid fa-th-large"></i><span>Gallery</span></a>
     </nav>
   </div>
-
-  <div class="chart-card">
-    <div class="chart-header-flex">
-      <div class="chart-card-title" data-i18n="chart_title">Recent 7-Day Trend</div>
-      <div class="chart-toggle">
-        <button class="btn-toggle active" id="modeWeight">Weight / Fat</button>
-        <button class="btn-toggle" id="modeSleep">Sleep / Mental</button>
-      </div>
-    </div>
-    <div style="height:250px;"><canvas id="healthCorrelationChart"></canvas></div>
-  </div>
-</main>
-
-<div class="modal-overlay" id="kpiModal">
-  <div class="modal-content">
-    <div class="modal-title" id="kpiModalTitle" style="color: var(--clr-text-secondary); font-size: 0.9rem; text-transform: uppercase; margin-bottom: 8px;">Detail</div>
-    <div style="font-size: 2.2rem; font-weight: 800; color: var(--clr-accent); text-align: center; margin-bottom: 24px;" id="kpiModalValue">--</div>
-    <div style="font-size: 0.9rem; color: var(--clr-text-primary); line-height: 1.6; background: rgba(251, 191, 36, 0.05); border-left: 3px solid var(--clr-accent); padding: 16px; border-radius: 0 8px 8px 0; font-family: var(--font-jp);" id="kpiModalDesc"></div>
-    <button id="btnKpiClose" class="btn-primary" style="margin-top:24px;">閉じる</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="initialSetupModal">
-  <div class="modal-content" id="initModalBlock" style="max-height: 90vh; overflow-y: auto;">
-    <div class="modal-title">Initial Setup</div>
-    <div class="modal-desc">管理の基準となる最初のデータと、<br><span style="color: var(--clr-accent); font-weight:700;">あなたの目標値</span>を入力してください。</div>
-    <form id="initialSetupForm">
-      <div class="form-row-grid" style="background: rgba(251, 191, 36, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(251, 191, 36, 0.2);">
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label" style="color: var(--clr-accent);">TARGET Weight (kg)</label>
-          <input type="number" id="initTargetWeight" class="form-input" step="0.1" value="65.0" required>
-        </div>
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label" style="color: var(--clr-accent);">TARGET Fat (%)</label>
-          <input type="number" id="initTargetFat" class="form-input" step="0.1" value="13.0" required>
-        </div>
-      </div>
-      <div class="form-row-grid">
-        <div class="form-group"><label class="form-label">昨晩の就寝</label><input type="time" id="initBedtime" class="form-input" required></div>
-        <div class="form-group"><label class="form-label">今朝の起床</label><input type="time" id="initWaketime" class="form-input" required></div>
-      </div>
-      <div class="form-row-grid">
-        <div class="form-group"><label class="form-label">現在の体重 (kg)</label><input type="number" id="initWeight" class="form-input" step="0.1"></div>
-        <div class="form-group"><label class="form-label">現在の体脂肪 (%)</label><input type="number" id="initFat" class="form-input" step="0.1"></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">コンディション</label>
-        <div class="cond-group" id="initMGrp">
-          <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
-          <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
-          <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
-          <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
-          <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
-        </div>
-      </div>
-      <button type="submit" class="btn-primary" id="initSaveBtn">Set Targets & Start</button>
-    </form>
-  </div>
-</div>
-
-<div class="modal-overlay" id="settingsModal">
-  <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
-    <div class="modal-title">Settings</div>
-    <div style="font-size: 0.85rem; font-weight: 700; color: var(--clr-accent); margin-bottom: 12px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 6px;">KPI TARGETS</div>
-    <div class="form-row-grid" style="margin-bottom: 24px;">
-      <div class="form-group" style="margin-bottom: 0;">
-        <label class="form-label" style="color: var(--clr-accent);">TARGET Weight (kg)</label>
-        <input type="number" id="settingTargetWeight" class="form-input" step="0.1" required>
-      </div>
-      <div class="form-group" style="margin-bottom: 0;">
-        <label class="form-label" style="color: var(--clr-accent);">TARGET Fat (%)</label>
-        <input type="number" id="settingTargetFat" class="form-input" step="0.1" required>
-      </div>
-    </div>
-    <div style="font-size: 0.85rem; font-weight: 700; color: var(--clr-text-secondary); margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px;">TODAY'S RECORD</div>
-    <div class="form-row-grid">
-      <div class="form-group"><label class="form-label">昨晩の就寝</label><input type="time" id="settingBedtime" class="form-input"></div>
-      <div class="form-group"><label class="form-label">今朝の起床</label><input type="time" id="settingWaketime" class="form-input"></div>
-    </div>
-    <div class="form-row-grid">
-      <div class="form-group"><label class="form-label">現在の体重 (kg)</label><input type="number" id="settingWeight" class="form-input" step="0.1"></div>
-      <div class="form-group"><label class="form-label">現在の体脂肪 (%)</label><input type="number" id="settingFat" class="form-input" step="0.1"></div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">コンディション</label>
-      <div class="cond-group" id="settingMGrp">
-        <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
-        <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
-        <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
-        <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
-        <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
-      </div>
-    </div>
-    <button id="btnGuideOpen" style="width: 100%; padding: 14px; margin-bottom: 24px; font-size: 0.9rem; font-weight: 700; background: rgba(56, 189, 248, 0.1); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-      <i class="fas fa-book" style="margin-right: 6px;"></i> 取扱説明・リリースノート (Guide)
-    </button>
-    <div class="modal-actions" style="margin-top: 0;">
-      <button id="btnSettingsCancel" class="btn-secondary" style="margin-top:0;">Cancel</button>
-      <button id="btnSettingsSave" class="btn-primary" style="margin-top:0;">Save Changes</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="guideModal">
-  <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
-    <div class="modal-title">App Guide & Release Notes</div>
-    <div style="font-size: 0.85rem; color: var(--clr-text-primary); line-height: 1.6; font-family: var(--font-jp);">
-      <div style="margin-bottom: 16px; padding: 12px; background: rgba(251,191,36,0.05); border-left: 3px solid var(--clr-accent); border-radius: 4px;">
-        <div style="font-weight: 700; color: var(--clr-accent); margin-bottom: 4px;">🎯 システムの目的</div>
-        行動とコンディションを定量化し、感覚に頼らない軌道修正を行うためのインフラです。日々のデータ蓄積が確実な成果に直結します。
-      </div>
-      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">✨ 最新のアップデート</h4>
-      <ul style="padding-left: 20px; margin-bottom: 16px; color: var(--clr-text-secondary);">
-        <li><b>AIカロリー集計機能：</b> 写真から自動解析された本日の摂取カロリーが、ダッシュボードのKPIとしてリアルタイム表示されるようになりました。</li>
-        <li><b>KPI詳細解説の復活：</b> 各KPIカードをタップすることで、数値の意味と実務的なアドバイスを確認できるようになりました。</li>
-        <li><b>誤打刻の解除：</b> 黄色い「Logged」ボタンを再タップすると打刻をリセットできます。</li>
-      </ul>
-      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">📖 基本オペレーション</h4>
-      <ul style="padding-left: 20px; margin-bottom: 16px; color: var(--clr-text-secondary);">
-        <li><b>目標の設定：</b> 初回のSetup、または右上の「歯車」から目標(KGI)を設定・調整します。</li>
-        <li><b>日々の打刻：</b> 上部の「Wake Up」「Sleep」で睡眠サイクル、「Meal」で食事を記録します。</li>
-      </ul>
-    </div>
-    <button id="btnGuideClose" class="btn-primary" style="margin-top:24px;">閉じる</button>
-  </div>
-</div>
-
-<div class="modal-overlay" id="mealModal">
-  <div class="modal-content">
-    <div class="modal-title">Meal Log</div>
-    <input type="date" id="quickMealDate" class="form-input" style="margin-bottom: 20px;">
-    <select id="quickMealType" class="form-input" style="margin-bottom: 20px;">
-      <option value="Breakfast">Breakfast</option>
-      <option value="Lunch">Lunch</option>
-      <option value="Dinner">Dinner</option>
-      <option value="Snack">Snack</option>
-    </select>
-    <input type="file" id="quickMealImage" accept="image/*" class="form-input" style="margin-bottom: 20px;">
-    <input type="text" id="quickMealMemo" class="form-input" placeholder="Memo / Calories" style="margin-bottom: 20px;">
-    <div class="modal-actions">
-      <button id="btnMealCancel" class="btn-secondary" style="margin-top:0;">Cancel</button>
-      <button id="btnMealSave" class="btn-primary" style="margin-top:0;">Save</button>
-    </div>
-  </div>
-</div>
-
-<div id="toastMsg"></div>
-<script src="supabase-client.js?v=2.0"></script>
-<script src="app.js?v=2.0"></script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
