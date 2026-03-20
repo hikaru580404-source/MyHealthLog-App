@@ -10,70 +10,40 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <style>
-    /* Instagramライクな正方形グリッド */
     .gallery-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr); /* スマホ・PC共通で3列 */
-      gap: 3px; /* 画像の隙間を狭くして没入感を高める */
-      margin-bottom: 40px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin-bottom: 40px;
     }
-    
     .meal-item {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 1 / 1; /* 正方形を強制 */
-      cursor: pointer;
-      background: rgba(255, 255, 255, 0.05);
-      overflow: hidden;
-      transition: transform 0.2s;
+      position: relative; width: 100%; aspect-ratio: 1 / 1; cursor: pointer;
+      background: rgba(255, 255, 255, 0.05); overflow: hidden; transition: transform 0.2s;
     }
-    
-    .meal-item:hover img {
-      transform: scale(1.05); /* ホバー時の微小拡大エフェクト */
-    }
-    
+    .meal-item:hover img { transform: scale(1.05); }
     .meal-item img {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      object-fit: cover; /* 画像を正方形にトリミング */
-      transition: transform 0.3s ease;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      object-fit: cover; transition: transform 0.3s ease;
     }
-    
     .meal-placeholder {
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       display: flex; align-items: center; justify-content: center;
       font-size: 2rem; color: rgba(255,255,255,0.1);
     }
-
-    /* 画像下部のうっすらとした情報オーバーレイ */
     .meal-overlay {
-      position: absolute;
-      bottom: 0; left: 0; right: 0;
-      padding: 12px 6px 6px;
+      position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 6px 6px;
       background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-      display: flex; justify-content: space-between; align-items: flex-end;
-      pointer-events: none;
+      display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none;
     }
-
     .meal-badge {
       font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;
       background: var(--clr-accent); color: #000;
       font-family: var(--font-en); text-transform: uppercase; letter-spacing: 0.05em;
     }
-
-    .meal-date-small {
-      font-size: 0.65rem; color: #fff; font-family: var(--font-en); font-weight: 600;
-    }
-
-    /* モーダル内の画像と詳細デザイン */
+    .meal-date-small { font-size: 0.65rem; color: #fff; font-family: var(--font-en); font-weight: 600; }
+    
     .meal-detail-img {
-      width: 100%; max-height: 350px; object-fit: cover;
-      border-radius: var(--radius-sm); margin-bottom: 16px;
+      width: 100%; max-height: 350px; object-fit: cover; border-radius: var(--radius-sm); margin-bottom: 16px;
       background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);
     }
-    .meal-detail-header {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;
-    }
+    .meal-detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .meal-detail-content {
       font-size: 0.9rem; color: var(--clr-text-primary); line-height: 1.6;
       background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-sm);
@@ -94,24 +64,23 @@
       <span>Gallery</span>
       <span style="font-size:0.75rem; font-weight:normal; color:var(--clr-text-secondary);">Tap for details</span>
     </div>
-    
     <div class="gallery-grid" id="mealGallery"></div>
   </main>
 
   <div class="modal-overlay" id="mealDetailModal">
     <div class="modal-content">
       <div class="modal-title" style="color: var(--clr-accent);">Meal Detail</div>
-      
       <div id="mdImageContainer"></div>
-      
       <div class="meal-detail-header">
         <span id="mdBadge" class="meal-badge" style="font-size: 0.8rem; padding: 4px 8px;"></span>
         <span id="mdDate" style="color: var(--clr-text-secondary); font-size: 0.85rem; font-family: var(--font-en);"></span>
       </div>
-      
       <div id="mdMemo" class="meal-detail-content"></div>
       
-      <button id="btnMdClose" class="btn-secondary" style="margin-top: 24px;">閉じる</button>
+      <div style="display: flex; gap: 12px; margin-top: 24px;">
+        <button id="btnMdDelete" style="padding: 14px; border-radius: 8px; font-weight: bold; background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); cursor: pointer; transition: 0.2s;">削除</button>
+        <button id="btnMdClose" class="btn-primary" style="margin-top: 0; flex: 1;">閉じる</button>
+      </div>
     </div>
   </div>
 
