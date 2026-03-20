@@ -5,7 +5,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Vercel標準の機能でリクエストを受け取る
     const { imageUrl, memo } = req.body;
     const apiKey = process.env.GEMINI_API_KEY;
 
@@ -18,17 +17,18 @@ export default async function handler(req, res) {
        return res.status(500).json({ error: 'Failed to fetch image from Supabase' });
     }
     
-    // ★修正箇所：Vercel標準の「Buffer」機能を使った超高速データ変換（絶対にタイムアウトしません）
+    // 超高速かつ安定した標準の画像データ変換
     const arrayBuffer = await imageResponse.arrayBuffer();
     const base64Image = Buffer.from(arrayBuffer).toString('base64');
 
-    // 2. Gemini APIへのリクエスト構築
+    // 2. プロンプトの構築
     const prompt = `この食事の画像から、以下の2点を推測して厳密なJSON形式のみで返してください。
 1. calories: 推定される合計カロリー（数値のみ）
 2. analysis: 含まれる主要な栄養素（PFCバランスなど）や健康への影響に関するプロフェッショナルな一言コメント（日本語で100文字程度）。ユーザーが入力したメモ「${memo || ''}」がある場合は、それも考慮してください。
 出力フォーマット: {"calories": 500, "analysis": "..."}`;
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // ★唯一にして最大の修正箇所：シャットダウンされた1.5から、最新の「gemini-2.0-flash」へURLを変更
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
     
     // 3. Gemini APIへ送信
     const geminiRes = await fetch(geminiUrl, {
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
 
     const geminiData = await geminiRes.json();
     
-    // エラーが返ってきた場合の詳細なハンドリング
+    // エラーハンドリング
     if (!geminiRes.ok || geminiData.error) {
         return res.status(500).json({ 
             error: 'Gemini API Error', 
