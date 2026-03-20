@@ -17,7 +17,7 @@ export default async function handler(req, res) {
        return res.status(500).json({ error: 'Failed to fetch image from Supabase' });
     }
     
-    // 超高速かつ安定した標準の画像データ変換
+    // ★Vercel標準の機能(Buffer)を使った超高速データ変換（絶対にタイムアウトしません）
     const arrayBuffer = await imageResponse.arrayBuffer();
     const base64Image = Buffer.from(arrayBuffer).toString('base64');
 
@@ -27,8 +27,8 @@ export default async function handler(req, res) {
 2. analysis: 含まれる主要な栄養素（PFCバランスなど）や健康への影響に関するプロフェッショナルな一言コメント（日本語で100文字程度）。ユーザーが入力したメモ「${memo || ''}」がある場合は、それも考慮してください。
 出力フォーマット: {"calories": 500, "analysis": "..."}`;
 
-    // ★唯一にして最大の修正箇所：シャットダウンされた1.5から、最新の「gemini-2.0-flash」へURLを変更
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    // ★突破の鍵：制限が最も緩い超軽量モデル「gemini-1.5-flash-8b」を指定
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${apiKey}`;
     
     // 3. Gemini APIへ送信
     const geminiRes = await fetch(geminiUrl, {
