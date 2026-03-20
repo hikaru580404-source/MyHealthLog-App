@@ -2,84 +2,82 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HEALTH LOG // MEALS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>GALLERY // MEALS</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <style>
+    /* Instagram Style UI */
     .gallery-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin-bottom: 40px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px;
     }
     .meal-item {
       position: relative; width: 100%; aspect-ratio: 1 / 1; cursor: pointer;
-      background: rgba(255, 255, 255, 0.05); overflow: hidden; transition: transform 0.2s;
+      background: #111; overflow: hidden;
     }
-    .meal-item:hover img { transform: scale(1.05); }
     .meal-item img {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      object-fit: cover; transition: transform 0.3s ease;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;
     }
-    .meal-placeholder {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 2rem; color: rgba(255,255,255,0.1);
+    .meal-badge-overlay {
+      position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.5); 
+      color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.6rem; font-weight: 700;
     }
-    .meal-overlay {
-      position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 6px 6px;
-      background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
-      display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none;
+
+    /* Detail Modal Styles */
+    .modal-content.instagram-style {
+      padding: 0; overflow: hidden; background: #000; max-width: 500px;
     }
-    .meal-badge {
-      font-size: 0.6rem; font-weight: 700; padding: 2px 6px; border-radius: 4px;
-      background: var(--clr-accent); color: #000;
-      font-family: var(--font-en); text-transform: uppercase; letter-spacing: 0.05em;
-    }
-    .meal-date-small { font-size: 0.65rem; color: #fff; font-family: var(--font-en); font-weight: 600; }
+    .md-image-full { width: 100%; aspect-ratio: 1/1; object-fit: cover; background: #000; }
+    .md-body { padding: 20px; }
+    .md-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .md-badge { background: var(--clr-accent); color: #000; font-size: 0.7rem; font-weight: 800; padding: 3px 8px; border-radius: 4px; }
+    .md-date { color: var(--clr-text-secondary); font-size: 0.8rem; font-family: var(--font-en); }
+    .md-memo { color: #fff; font-size: 0.9rem; line-height: 1.6; margin-bottom: 24px; }
     
-    .meal-detail-img {
-      width: 100%; max-height: 350px; object-fit: cover; border-radius: var(--radius-sm); margin-bottom: 16px;
-      background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05);
+    .ai-pending-box {
+      background: rgba(251, 191, 36, 0.05); border: 1px dashed var(--clr-border);
+      border-radius: 8px; padding: 16px; margin-bottom: 20px; text-align: center;
     }
-    .meal-detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .meal-detail-content {
-      font-size: 0.9rem; color: var(--clr-text-primary); line-height: 1.6;
-      background: rgba(0,0,0,0.2); padding: 16px; border-radius: var(--radius-sm);
-      border: 1px solid rgba(255,255,255,0.05);
-    }
+    .skeleton-line { height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; margin: 8px 0; }
   </style>
 </head>
-<body>
-  <header class="app-header">
-    <div class="header-inner" style="justify-content: flex-start; gap: 16px;">
-      <a href="index.html" class="header-icon-btn" style="text-decoration: none;"><i class="fas fa-arrow-left"></i></a>
-      <div class="logo">MEAL LOGS</div>
+<body style="background: #000;">
+  <header class="app-header" style="background: #000; border-bottom: 1px solid rgba(255,255,255,0.1);">
+    <div class="header-inner" style="justify-content: flex-start; gap: 20px;">
+      <a href="index.html" style="color: #fff;"><i class="fas fa-chevron-left"></i></a>
+      <div class="logo">GALLERY</div>
     </div>
   </header>
 
-  <main class="app-main">
-    <div class="section-title" style="display:flex; justify-content:space-between; align-items:flex-end;">
-      <span>Gallery</span>
-      <span style="font-size:0.75rem; font-weight:normal; color:var(--clr-text-secondary);">Tap for details</span>
-    </div>
-    <div class="gallery-grid" id="mealGallery"></div>
+  <main>
+    <div class="gallery-grid" id="mealGallery">
+      </div>
   </main>
 
   <div class="modal-overlay" id="mealDetailModal">
-    <div class="modal-content">
-      <div class="modal-title" style="color: var(--clr-accent);">Meal Detail</div>
+    <div class="modal-content instagram-style">
       <div id="mdImageContainer"></div>
-      <div class="meal-detail-header">
-        <span id="mdBadge" class="meal-badge" style="font-size: 0.8rem; padding: 4px 8px;"></span>
-        <span id="mdDate" style="color: var(--clr-text-secondary); font-size: 0.85rem; font-family: var(--font-en);"></span>
-      </div>
-      <div id="mdMemo" class="meal-detail-content"></div>
-      
-      <div style="display: flex; gap: 12px; margin-top: 24px;">
-        <button id="btnMdDelete" style="padding: 14px; border-radius: 8px; font-weight: bold; background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); cursor: pointer; transition: 0.2s;">削除</button>
-        <button id="btnMdClose" class="btn-primary" style="margin-top: 0; flex: 1;">閉じる</button>
+      <div class="md-body">
+        <div class="md-meta">
+          <span id="mdBadge" class="md-badge"></span>
+          <span id="mdDate" class="md-date"></span>
+        </div>
+        
+        <div class="ai-pending-box">
+          <div style="font-size: 0.75rem; color: var(--clr-accent); margin-bottom: 12px; font-weight: 800;">
+            <i class="fas fa-microchip fa-spin"></i> AI ANALYZING STANDBY
+          </div>
+          <div class="skeleton-line" style="width: 80%;"></div>
+          <div class="skeleton-line" style="width: 60%;"></div>
+        </div>
+
+        <div id="mdMemo" class="md-memo"></div>
+        
+        <div style="display: flex; gap: 16px;">
+          <button id="btnMdDelete" style="background:none; border:none; color:#ff4d4d; font-weight:800; font-size:0.9rem; cursor:pointer;">Delete</button>
+          <button id="btnMdClose" class="btn-primary" style="flex:1; margin-top:0;">Close</button>
+        </div>
       </div>
     </div>
   </div>

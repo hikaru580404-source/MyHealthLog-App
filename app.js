@@ -1,23 +1,31 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // PWA Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(() => console.log('Service Worker Registered'));
+    }
+
     const user = await checkAuth();
     if (!user) return;
     
-    let currentLang = localStorage.getItem('appLang_' + user.id) || 'en';
-    const dict = {
+    // グローバル変数を定義して dict にアクセス可能にする
+    window.currentLang = localStorage.getItem('appLang_' + user.id) || 'en';
+    window.dict = {
         en: {
             quick_action: "Quick Action", wake: "Wake Up", meal: "Meal", sleep: "Sleep",
             kpi_title: "KPI", weight: "Weight", fat_p: "Fat", sleep_h: "Sleep", mental: "Mental Condition",
             streak: "Streak", days: "Days", consecutive: "Consecutive", completion: "Completion", last30days: "Last 30 Days",
             month_count: "Month Count", logging: "Logging", calories: "Calories", today_total: "Today's Total",
             nav_meals: "Meals", nav_history: "History", analysis: "Analysis", trend: "7-Day Trend", recorded: "Logged",
+            ai_analysis_title: "AI Analysis Engine", ai_analysis_wait: "Premium features standby...",
             msg_wake: "Good morning! ☀️", msg_sleep: "Good night! 🌙",
             adv_weight: "Weight fluctuates daily. Focus on the 7-day trend.",
             adv_fat: "Body fat is affected by hydration. Measure consistently.",
-            adv_calories: "Today's estimated calories analyzed by AI.",
-            adv_sleep: "Aiming for ~7 hours stabilizes mental and physical health.",
+            adv_calories: "Premium feature release is near. Wait for the AI precision analysis with excitement!",
+            adv_sleep: "Aiming for ~7 hours stabilizes health.",
             adv_mental: "Mental condition correlates with sleep and diet.",
-            adv_streak: "Shows habit consistency. Restart immediately if broken.",
-            adv_completion: "Maintaining 80%+ enables highly accurate analysis.",
+            adv_streak: "Shows habit consistency.",
+            adv_completion: "Maintaining 80%+ enables high accuracy.",
             adv_month: "Total days logged this month."
         },
         ja: {
@@ -26,14 +34,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             streak: "継続日数", days: "日", consecutive: "連続記録中", completion: "記録率", last30days: "過去30日",
             month_count: "月間記録数", logging: "記録済み", calories: "カロリー", today_total: "本日の合計",
             nav_meals: "食事録", nav_history: "履歴", analysis: "分析", trend: "推移", recorded: "済",
+            ai_analysis_title: "AI自動解析エンジン", ai_analysis_wait: "プレミアム機能解放までお待ちください...",
             msg_wake: "おはようございます！☀️", msg_sleep: "お疲れ様でした！🌙",
             adv_weight: "体重は日々変動します。7日間のトレンドに注目しましょう。",
             adv_fat: "体脂肪率は水分量に影響されます。一定の条件で測定しましょう。",
-            adv_calories: "AIによって解析された本日の推定摂取カロリーです。",
+            adv_calories: "プレミアム機能の解放は間近です。AIによる精密解析をお楽しみに！",
             adv_sleep: "約7時間の睡眠は心身の健康を安定させます。",
             adv_mental: "メンタル状態は睡眠や食事と密接に関係しています。",
-            adv_streak: "習慣の継続性を示します。途切れたら即座に再開しましょう。",
-            adv_completion: "80%以上の記録率を維持すると、分析の精度が向上します。",
+            adv_streak: "習慣の継続性を示します。",
+            adv_completion: "80%以上の記録率を維持すると精度が向上します。",
             adv_month: "今月の合計記録日数です。"
         }
     };
@@ -90,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('mdAdvice').innerText = dict[currentLang]['adv_' + kpi] || "";
             document.getElementById('kpiDetailModal').style.display = 'flex';
 
-            if (['streak', 'completion', 'month_count', 'calories'].includes(kpi)) {
+            if (['streak', 'completion', 'month_count', 'calories', 'mental'].includes(kpi)) {
                 if (detailChart) detailChart.destroy();
                 return;
             }
@@ -120,8 +129,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (kpiData?.[0]) {
             document.getElementById('streakDays').innerText = kpiData[0].streak_days || 0;
             document.getElementById('completionRate').innerText = Math.round(kpiData[0].log_completion_rate || 0);
-            // MONTH COUNT 修正: logs_count を優先的に参照
-            document.getElementById('monthLogs').innerText = kpiData[0].logs_count ?? kpiData[0].logs_this_month ?? 0;
+            document.getElementById('monthLogs').innerText = kpiData[0].logs_count || 0;
         }
 
         const { data: recent } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(1);
