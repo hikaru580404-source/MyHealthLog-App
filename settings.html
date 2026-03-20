@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>SETTINGS | HEALTH LOG</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .settings-container { max-width: 500px; margin: 0 auto; padding: 24px 16px; }
+    .settings-card { background: var(--clr-surface); border-radius: var(--radius-lg); padding: 32px; border: 1px solid var(--clr-border); backdrop-filter: blur(10px); }
+    .settings-item { margin-bottom: 24px; }
+    .settings-item label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--clr-text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .settings-input { width: 100%; padding: 14px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); color: var(--clr-text-primary); font-family: inherit; font-size: 1rem; }
+    .settings-input:focus { border-color: var(--clr-accent); outline: none; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner" style="justify-content: flex-start; gap: 16px;">
+      <a href="index.html" class="header-icon-btn" style="text-decoration: none;"><i class="fas fa-arrow-left"></i></a>
+      <div class="logo">SETTINGS</div>
+    </div>
+  </header>
+
+  <main class="app-main settings-container">
+    <div class="settings-card">
+      <form id="settingsForm">
+        <div class="settings-item">
+          <label>Goal Weight (kg)</label>
+          <input type="number" id="goalWeight" class="settings-input" step="0.1" placeholder="00.0">
+        </div>
+        <div class="settings-item">
+          <label>Goal Sleep Hours (h)</label>
+          <input type="number" id="goalSleep" class="settings-input" step="0.5" placeholder="0.0">
+        </div>
+        <div class="settings-item">
+          <label>Preferred Language</label>
+          <select id="appLang" class="settings-input">
+            <option value="ja">日本語 (JP)</option>
+            <option value="en">English (EN)</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-primary" style="margin-top: 16px;">SAVE SETTINGS</button>
+      </form>
+      <div id="saveMsg" style="margin-top: 16px; text-align: center; font-size: 0.85rem; font-weight: 600; color: #10b981; display: none;">Saved successfully!</div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+  <script src="settings.js"></script>
+</body>
+</html>
