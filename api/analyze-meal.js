@@ -33,82 +33,54 @@ export default async function handler(request) {
 2. analysis: 栄養素や健康への影響に関するコメント（日本語100文字程度）。メモ「${memo || ''}」も考慮してください。
 出力フォーマット: {"calories": 500, "analysis": "..."}`;
 
-    // ★修正1：OpenRouterで現在確実に動く「完全無料の画像認識AI」に厳選しました
-    const models = [
-      "google/gemini-2.0-flash:free",
-      "google/gemini-2.0-flash-lite-preview-02-05:free",
-      "qwen/qwen-2-vl-7b-instruct:free" 
-    ];
+    // ★原因究明のため「滝」を止め、最強のGemini 2.0 一本に絞ります
+    const model = "google/gemini-2.0-flash:free";
 
-    let finalResult = null;
-    let lastError = null;
-    let usedModel = null;
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://meal-ai-log.vercel.app",
+        "X-Title": "MyHealthLog"
+      },
+      body: JSON.stringify({
+        "model": model,
+        "messages": [{
+          "role": "user",
+          "content": [
+            { "type": "text", "text": prompt },
+            { "type": "image_url", "image_url": { "url": dataUrl } }
+          ]
+        }]
+      })
+    });
 
-    for (const model of models) {
-      try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://meal-ai-log.vercel.app",
-            "X-Title": "MyHealthLog"
-          },
-          body: JSON.stringify({
-            "model": model,
-            // ★修正2：一部の無料AIが嫌がる「JSON強制モード」を削除（プロンプトで制御します）
-            "messages": [{
-              "role": "user",
-              "content": [
-                { "type": "text", "text": prompt },
-                { "type": "image_url", "image_url": { "url": dataUrl } }
-              ]
-            }]
-          })
-        });
+    const data = await response.json();
+    
+    // ★通信成功時
+    if (response.ok && data.choices && data.choices.length > 0) {
+      let aiText = data.choices[0].message.content;
+      
+      aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) { aiText = jsonMatch[0]; }
+      
+      let parsed = JSON.parse(aiText);
 
-        const data = await response.json();
-        
-        if (response.ok && data.choices && data.choices.length > 0) {
-          let aiText = data.choices[0].message.content;
-          
-          // ★修正3：AIが余計な文字を混ぜてきても、{ から } までを強制的に抜き出してJSON化する最強のフィルター
-          aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
-          const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-              aiText = jsonMatch[0];
-          }
-          
-          let parsed = JSON.parse(aiText);
-
-          if (typeof parsed.calories === 'string') {
-            const match = parsed.calories.match(/\d+/);
-            parsed.calories = match ? parseInt(match[0], 10) : 0;
-          } else if (typeof parsed.calories === 'number') {
-            parsed.calories = Math.round(parsed.calories);
-          }
-
-          finalResult = parsed;
-          usedModel = model;
-          break; // 成功したらループ脱出
-        } else {
-          lastError = data.error ? data.error.message : 'Unknown AI Error';
-          continue; 
-        }
-      } catch (err) {
-        lastError = err.message;
-        continue; 
+      if (typeof parsed.calories === 'string') {
+        const match = parsed.calories.match(/\d+/);
+        parsed.calories = match ? parseInt(match[0], 10) : 0;
+      } else if (typeof parsed.calories === 'number') {
+        parsed.calories = Math.round(parsed.calories);
       }
-    }
 
-    if (finalResult) {
-      finalResult.debug_model = usedModel; 
-      return new Response(JSON.stringify(finalResult), { 
-        status: 200, 
-        headers: { 'Content-Type': 'application/json' } 
-      });
+      parsed.debug_model = model;
+      return new Response(JSON.stringify(parsed), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      
     } else {
-      return new Response(JSON.stringify({ error: 'All models failed', details: lastError }), { 
+      // ★エラーの真犯人（Geminiが嫌がった理由）をそのまま画面に表示させます
+      return new Response(JSON.stringify({ error: 'Gemini Failed', details: data }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
