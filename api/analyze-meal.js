@@ -1,35 +1,28 @@
-// ★ Vercel Edge Runtime を明示的に指定することでエラーを防ぎ、超高速化します
-export const config = {
-  runtime: 'edge',
-};
-
-export default async function handler(req) {
-  // CORS対策とPOSTメソッド以外のブロック
+export default async function handler(req, res) {
+  // POSTメソッド以外を弾く
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method Not Allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
-    const { imageUrl, memo } = await req.json();
+    // Vercel標準の機能でリクエストを受け取る
+    const { imageUrl, memo } = req.body;
     const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!imageUrl) {
-        return new Response(JSON.stringify({ error: 'Image URL is required' }), { status: 400 });
-    }
-    if (!apiKey) {
-        return new Response(JSON.stringify({ error: 'API Key not set' }), { status: 500 });
-    }
+    if (!imageUrl) return res.status(400).json({ error: 'Image URL is missing' });
+    if (!apiKey) return res.status(500).json({ error: 'Gemini API Key is not set in Vercel' });
 
-    // 1. 画像の取得とBase64変換（Edge環境で絶対に動く書き方）
+    // 1. Supabaseから画像を高速取得
     const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+       return res.status(500).json({ error: 'Failed to fetch image from Supabase' });
+    }
+    
+    // ★修正箇所：Vercel標準の「Buffer」機能を使った超高速データ変換（絶対にタイムアウトしません）
     const arrayBuffer = await imageResponse.arrayBuffer();
-    // Bufferを使わず、標準のbtoa関数を使用
-    const base64Image = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const base64Image = Buffer.from(arrayBuffer).toString('base64');
 
-    // 2. プロンプトの構築
+    // 2. Gemini APIへのリクエスト構築
     const prompt = `この食事の画像から、以下の2点を推測して厳密なJSON形式のみで返してください。
 1. calories: 推定される合計カロリー（数値のみ）
 2. analysis: 含まれる主要な栄養素（PFCバランスなど）や健康への影響に関するプロフェッショナルな一言コメント（日本語で100文字程度）。ユーザーが入力したメモ「${memo || ''}」がある場合は、それも考慮してください。
@@ -37,7 +30,7 @@ export default async function handler(req) {
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
-    // 3. Gemini API呼び出し
+    // 3. Gemini APIへ送信
     const geminiRes = await fetch(geminiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -53,26 +46,24 @@ export default async function handler(req) {
 
     const geminiData = await geminiRes.json();
     
-    if (geminiData.error) {
-        console.error("Gemini Error:", geminiData.error);
-        return new Response(JSON.stringify({ error: 'AI API Error' }), { status: 500 });
+    // エラーが返ってきた場合の詳細なハンドリング
+    if (!geminiRes.ok || geminiData.error) {
+        return res.status(500).json({ 
+            error: 'Gemini API Error', 
+            details: geminiData.error ? geminiData.error.message : 'Unknown Error' 
+        });
     }
 
-    // 4. 解析と返却
+    // 4. 解析結果の抽出
     let aiText = geminiData.candidates[0].content.parts[0].text;
     aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
     const result = JSON.parse(aiText);
 
-    return new Response(JSON.stringify(result), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-    });
+    // 成功としてフロントエンドに返す
+    return res.status(200).json(result);
 
   } catch (error) {
     console.error("Server Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: 'Internal Server Error', message: error.message });
   }
 }
