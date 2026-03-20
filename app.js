@@ -46,7 +46,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     updateLanguage();
 
-    // 言語切り替えボタン
     const langBtn = document.getElementById('langToggleBtn');
     if (langBtn) {
         langBtn.onclick = () => {
@@ -57,7 +56,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    // ログアウトボタン
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.onclick = async () => {
@@ -66,56 +64,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    // --- クイックアクション (即時DB更新) ---
     async function quickLog(field, message) {
-        const today = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
+        const today = new Date().toLocaleDateString('sv-SE');
         const payload = { user_id: user.id, measured_date: today };
         payload[field] = new Date().toISOString();
-        
         const { data: existing } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', today).maybeSingle();
         if (existing) await supabaseClient.from('health_logs').update(payload).eq('id', existing.id);
         else await supabaseClient.from('health_logs').insert(payload);
-        
         alert(message);
         loadDashboard();
     }
-
     const btnWake = document.getElementById('btnWaketime');
     const btnBed = document.getElementById('btnBedtime');
     if (btnWake) btnWake.onclick = () => quickLog('waketime', dict[currentLang].msg_wake);
     if (btnBed) btnBed.onclick = () => quickLog('bedtime', dict[currentLang].msg_sleep);
 
-    // --- KPI詳細・アドバイス・グラフ表示 ---
     let detailChart = null;
     document.querySelectorAll('.kpi-card').forEach(card => {
         card.addEventListener('click', async () => {
             const kpi = card.getAttribute('data-kpi');
             const title = card.querySelector('.kpi-label').innerText;
             const val = card.querySelector('.kpi-value').innerText;
-            
-            // 継続日数、記録率、月間記録数はグラフ表示対象外とする（必要に応じて追加可能）
-            if (kpi === 'streak' || kpi === 'completion' || kpi === 'month_count' || kpi === 'calories') {
-                document.getElementById('mdKpiTitle').innerText = title;
-                document.getElementById('mdKpiMainValue').innerText = val;
-                document.getElementById('mdAdvice').innerText = dict[currentLang]['adv_' + kpi] || "";
-                document.getElementById('kpiDetailModal').style.display = 'flex';
-                const ctx = document.getElementById('detailModalChart').getContext('2d');
-                if (detailChart) detailChart.destroy();
-                return;
-            }
-
             document.getElementById('mdKpiTitle').innerText = title;
             document.getElementById('mdKpiMainValue').innerText = val;
             document.getElementById('mdAdvice').innerText = dict[currentLang]['adv_' + kpi] || "";
             document.getElementById('kpiDetailModal').style.display = 'flex';
 
+            if (['streak', 'completion', 'month_count', 'calories'].includes(kpi)) {
+                if (detailChart) detailChart.destroy();
+                return;
+            }
+
             const { data } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(30);
             const logs = data.reverse();
-            
             if (detailChart) detailChart.destroy();
             const ctx = document.getElementById('detailModalChart').getContext('2d');
-            
-            // 睡眠時間の場合は sleep_hours カラム、それ以外は kpi 名と一致するカラムを使用
             const dbColumn = (kpi === 'sleep' ? 'sleep_hours' : (kpi === 'fat' ? 'body_fat' : kpi));
 
             detailChart = new Chart(ctx, {
@@ -123,8 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 data: {
                     labels: logs.map(l => l.measured_date.split('-')[2]),
                     datasets: [{
-                        label: title,
-                        data: logs.map(l => l[dbColumn]),
+                        label: title, data: logs.map(l => l[dbColumn]),
                         borderColor: '#fbbf24', tension: 0.4, fill: true, backgroundColor: 'rgba(251, 191, 36, 0.1)'
                     }]
                 },
@@ -133,18 +115,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // --- ダッシュボード更新・Activity Grid描画・メイングラフ描画 ---
     window.loadDashboard = async function() {
-        // 1. KPI取得 (RPC)
         const { data: kpiData } = await supabaseClient.rpc('get_user_performance', { target_user_id: user.id });
         if (kpiData?.[0]) {
             document.getElementById('streakDays').innerText = kpiData[0].streak_days || 0;
             document.getElementById('completionRate').innerText = Math.round(kpiData[0].log_completion_rate || 0);
-            // MONTH COUNTのバグ修正：複数の可能性のあるカラム名に対応
-            document.getElementById('monthLogs').innerText = kpiData[0].logs_this_month ?? kpiData[0].logs_count ?? 0;
+            // MONTH COUNT 修正: logs_count を優先的に参照
+            document.getElementById('monthLogs').innerText = kpiData[0].logs_count ?? kpiData[0].logs_this_month ?? 0;
         }
 
-        // 2. 最新の健康データ反映
         const { data: recent } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(1);
         if (recent?.[0]) {
             document.getElementById('latestWeight').innerText = recent[0].weight || "--";
@@ -154,19 +133,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('latestMental').innerText = mentalMap[recent[0].mental_condition] || "--";
         }
         
-        // 3. 今日のカロリー集計
         const todayStr = new Date().toLocaleDateString('sv-SE');
         const { data: meals } = await supabaseClient.from('meal_logs').select('calories').eq('user_id', user.id).eq('meal_date', todayStr);
         const totalCal = meals?.reduce((sum, m) => sum + (Number(m.calories) || 0), 0) || 0;
         document.getElementById('todayCalories').innerText = totalCal;
 
-        // 4. Activity Grid描画 (過去90日)
         const grid = document.getElementById('activityGrid');
         if (grid) {
             grid.innerHTML = '';
             const { data: history } = await supabaseClient.from('health_logs').select('measured_date').eq('user_id', user.id);
             const loggedDates = new Set(history?.map(h => h.measured_date));
-            
             for (let i = 89; i >= 0; i--) {
                 const d = new Date(); d.setDate(d.getDate() - i);
                 const dStr = d.toLocaleDateString('sv-SE');
@@ -176,48 +152,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // 5. メインの7-Day Trendグラフ描画
-        const { data: trendData } = await supabaseClient.from('health_logs')
-            .select('measured_date, weight, sleep_hours')
-            .eq('user_id', user.id)
-            .order('measured_date', { ascending: false })
-            .limit(7);
-
+        const { data: trendData } = await supabaseClient.from('health_logs').select('measured_date, weight, sleep_hours').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(7);
         const chartCanvas = document.getElementById('healthCorrelationChart');
         if (chartCanvas && trendData && trendData.length > 0) {
             const logs = trendData.reverse();
             const ctx = chartCanvas.getContext('2d');
-            
             if (window.mainChart) window.mainChart.destroy();
-            
             window.mainChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: logs.map(l => l.measured_date.split('-')[2]),
                     datasets: [
-                        {
-                            label: 'Sleep (h)',
-                            data: logs.map(l => l.sleep_hours),
-                            backgroundColor: '#fbbf24',
-                            borderRadius: 4,
-                            yAxisID: 'ySleep'
-                        },
-                        {
-                            label: 'Weight (kg)',
-                            data: logs.map(l => l.weight),
-                            type: 'line',
-                            borderColor: '#f8fafc',
-                            borderWidth: 2,
-                            pointBackgroundColor: '#f8fafc',
-                            tension: 0.4,
-                            yAxisID: 'yWeight'
-                        }
+                        { label: 'Sleep (h)', data: logs.map(l => l.sleep_hours), backgroundColor: '#fbbf24', borderRadius: 4, yAxisID: 'ySleep' },
+                        { label: 'Weight (kg)', data: logs.map(l => l.weight), type: 'line', borderColor: '#f8fafc', borderWidth: 2, pointBackgroundColor: '#f8fafc', tension: 0.4, yAxisID: 'yWeight' }
                     ]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
                     scales: {
                         ySleep: { type: 'linear', position: 'left', min: 0, max: 12, grid: { display: false }, ticks: { color: '#8b9bb4' } },
                         yWeight: { type: 'linear', position: 'right', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b9bb4' } }
@@ -226,6 +177,5 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
     };
-    
     loadDashboard();
 });

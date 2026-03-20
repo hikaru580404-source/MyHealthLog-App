@@ -16,6 +16,10 @@
     .settings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
     .settings-item label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--clr-text-secondary); margin-bottom: 6px; text-transform: uppercase; }
     .settings-input { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); color: var(--clr-text-primary); font-family: inherit; font-size: 1rem; }
+    .cond-group { display: flex; gap: 8px; justify-content: space-between; margin-bottom: 24px; }
+    .cond-btn { flex: 1; aspect-ratio: 1; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); color: var(--clr-text-secondary); font-size: 1.2rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+    .cond-btn.active { border-color: var(--clr-accent); color: var(--clr-accent); background: rgba(251, 191, 36, 0.1); }
+    .btn-guide { width: 100%; padding: 14px; background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; margin-bottom: 24px; }
   </style>
 </head>
 <body>
@@ -46,15 +50,24 @@
           <div class="settings-item"><label>現在の体重 (kg)</label><input type="number" id="nowWeight" class="settings-input" step="0.1"></div>
           <div class="settings-item"><label>現在の体脂肪 (%)</label><input type="number" id="nowFat" class="settings-input" step="0.1"></div>
         </div>
+        <label class="settings-item" style="color: var(--clr-text-secondary); font-size: 0.7rem; margin-bottom: 8px; display: block; text-transform: uppercase;">コンディション</label>
+        <div class="cond-group" id="mentalGrp">
+          <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
+          <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
+          <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
+          <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
+          <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
+        </div>
+        <button type="button" class="btn-guide" id="openGuideBtn"><i class="fas fa-book"></i> 取扱説明・リリースノート (Guide)</button>
       </div>
 
       <div style="display: flex; gap: 12px; margin-top: 32px;">
         <button type="button" class="btn-secondary" onclick="location.href='index.html'">Cancel</button>
-        <button type="submit" class="btn-primary">Save Changes</button>
+        <button type="submit" class="btn-primary" id="saveAllBtn">Save Changes</button>
       </div>
     </form>
+    <div id="saveMsg" style="margin-top: 16px; text-align: center; font-size: 0.85rem; color: #10b981; display: none;">Saved successfully!</div>
   </main>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase-client.js"></script>
   <script src="settings.js"></script>
 </body>

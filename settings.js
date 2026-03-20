@@ -4,29 +4,86 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const form = document.getElementById('settingsForm');
     const msg = document.getElementById('saveMsg');
+    let mVal = 3;
 
-    // 保存されている設定を読み込む
-    const savedWeight = localStorage.getItem('goalWeight_' + user.id) || "";
-    const savedSleep = localStorage.getItem('goalSleep_' + user.id) || "";
-    const savedLang = localStorage.getItem('appLang_' + user.id) || "en";
+    // メンタルボタンの切り替え
+    document.querySelectorAll('#mentalGrp .cond-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('#mentalGrp .cond-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            mVal = btn.dataset.v;
+        };
+    });
 
-    document.getElementById('goalWeight').value = savedWeight;
-    document.getElementById('goalSleep').value = savedSleep;
-    document.getElementById('appLang').value = savedLang;
+    // 初期値読み込み (localStorage & Supabase)
+    async function init() {
+        document.getElementById('goalWeight').value = localStorage.getItem('goalWeight_' + user.id) || "";
+        document.getElementById('goalFat').value = localStorage.getItem('goalFat_' + user.id) || "";
+
+        const today = new Date().toLocaleDateString('sv-SE');
+        const { data } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).eq('measured_date', today).maybeSingle();
+        if (data) {
+            document.getElementById('nowWeight').value = data.weight || "";
+            document.getElementById('nowFat').value = data.body_fat || "";
+            if (data.mental_condition) {
+                document.querySelectorAll('#mentalGrp .cond-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector(`.cond-btn[data-v="${data.mental_condition}"]`)?.classList.add('active');
+                mVal = data.mental_condition;
+            }
+        }
+    }
+    init();
+
+    // Guideボタンの動作 (index.htmlに戻って開くか、単にアラート)
+    document.getElementById('openGuideBtn').onclick = () => {
+        alert("メイン画面の取扱説明書モーダルを更新しました。メイン画面でご確認ください。");
+    };
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
-        const weight = document.getElementById('goalWeight').value;
-        const sleep = document.getElementById('goalSleep').value;
-        const lang = document.getElementById('appLang').value;
+        const btn = document.getElementById('saveAllBtn');
+        btn.disabled = true; btn.innerText = "Saving...";
 
-        // localStorageに保存
-        localStorage.setItem('goalWeight_' + user.id, weight);
-        localStorage.setItem('goalSleep_' + user.id, sleep);
-        localStorage.setItem('appLang_' + user.id, lang);
+        const goalW = document.getElementById('goalWeight').value;
+        const goalF = document.getElementById('goalFat').value;
+        localStorage.setItem('goalWeight_' + user.id, goalW);
+        localStorage.setItem('goalFat_' + user.id, goalF);
 
-        msg.style.display = 'block';
-        setTimeout(() => { msg.style.display = 'none'; }, 3000);
+        // Supabaseへの保存
+        const today = new Date().toLocaleDateString('sv-SE');
+        const nowW = document.getElementById('nowWeight').value;
+        const nowF = document.getElementById('nowFat').value;
+        const bt = document.getElementById('bedtime').value;
+        const wt = document.getElementById('waketime').value;
+
+        const payload = {
+            user_id: user.id,
+            measured_date: today,
+            weight: nowW ? parseFloat(nowW) : null,
+            body_fat: nowF ? parseFloat(nowF) : null,
+            mental_condition: parseInt(mVal)
+        };
+
+        // 時刻入力がある場合、ISO文字列に変換
+        if (bt) {
+            const d = new Date(); const [h, m] = bt.split(':');
+            d.setHours(h, m, 0, 0); payload.bedtime = d.toISOString();
+        }
+        if (wt) {
+            const d = new Date(); const [h, m] = wt.split(':');
+            d.setHours(h, m, 0, 0); payload.waketime = d.toISOString();
+        }
+
+        const { data: existing } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', today).maybeSingle();
+        let error;
+        if (existing) error = (await supabaseClient.from('health_logs').update(payload).eq('id', existing.id)).error;
+        else error = (await supabaseClient.from('health_logs').insert(payload)).error;
+
+        if (error) alert("Save Error: " + error.message);
+        else {
+            msg.style.display = 'block';
+            setTimeout(() => { msg.style.display = 'none'; location.href = 'index.html'; }, 1500);
+        }
+        btn.disabled = false; btn.innerText = "Save Changes";
     });
 });
