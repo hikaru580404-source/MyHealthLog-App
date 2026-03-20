@@ -1,27 +1,66 @@
 export default async function handler(req, res) {
+  // POSTメソッド以外を弾く
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
   try {
     const { imageUrl, memo } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
 
-    // ★Google AIへの接続を完全に遮断し、ダミーデータを生成します★
+    if (!imageUrl) return res.status(400).json({ error: 'Image URL is missing' });
+    if (!apiKey) return res.status(500).json({ error: 'Gemini API Key is not set in Vercel' });
+
+    // 1. Supabaseから画像を高速取得
+    const imageResponse = await fetch(imageUrl);
+    if (!imageResponse.ok) {
+       return res.status(500).json({ error: 'Failed to fetch image from Supabase' });
+    }
     
-    // 300〜800のランダムなカロリーを生成
-    const mockCalories = Math.floor(Math.random() * (800 - 300) + 300); 
+    // ★Vercel標準の機能(Buffer)を使った超高速データ変換（絶対にタイムアウトしません）
+    const arrayBuffer = await imageResponse.arrayBuffer();
+    const base64Image = Buffer.from(arrayBuffer).toString('base64');
+
+    // 2. プロンプトの構築
+    const prompt = `この食事の画像から、以下の2点を推測して厳密なJSON形式のみで返してください。
+1. calories: 推定される合計カロリー（数値のみ）
+2. analysis: 含まれる主要な栄養素（PFCバランスなど）や健康への影響に関するプロフェッショナルな一言コメント（日本語で100文字程度）。ユーザーが入力したメモ「${memo || ''}」がある場合は、それも考慮してください。
+出力フォーマット: {"calories": 500, "analysis": "..."}`;
+
+    // ★突破の鍵：制限が最も緩い超軽量モデル「gemini-1.5-flash-8b」を指定
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key=${apiKey}`;
     
-    // ダミーのプロフェッショナル解説を作成
-    const mockAnalysis = `[システムテスト稼働中] これはGoogle AIの代わりにシステムが自動生成したテスト用のテキストです。入力されたメモ「${memo || 'なし'}」を受け取りました。PFCバランスが取れた素晴らしい食事です。`;
-
-    // 意図的に1.5秒待機させ、AIが考えているようなローディングを再現する
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // フロントエンド（アプリ）にダミー結果を返す
-    return res.status(200).json({
-        calories: mockCalories,
-        analysis: mockAnalysis
+    // 3. Gemini APIへ送信
+    const geminiRes = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: "image/jpeg", data: base64Image } }
+          ]
+        }]
+      })
     });
+
+    const geminiData = await geminiRes.json();
+    
+    // エラーハンドリング
+    if (!geminiRes.ok || geminiData.error) {
+        return res.status(500).json({ 
+            error: 'Gemini API Error', 
+            details: geminiData.error ? geminiData.error.message : 'Unknown Error' 
+        });
+    }
+
+    // 4. 解析結果の抽出
+    let aiText = geminiData.candidates[0].content.parts[0].text;
+    aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+    const result = JSON.parse(aiText);
+
+    // 成功としてフロントエンドに返す
+    return res.status(200).json(result);
 
   } catch (error) {
     console.error("Server Error:", error);
