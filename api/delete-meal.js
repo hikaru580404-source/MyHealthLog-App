@@ -1,5 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
-
 export const config = {
   runtime: 'edge',
 }
@@ -15,18 +13,21 @@ export default async function handler(request) {
 
     if (!meal_id) return new Response(JSON.stringify({ error: 'Meal ID is missing' }), { status: 400 });
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    // ★修正：テーブル名を正しく meal_logs に変更しました
-    const { error } = await supabase
-      .from('meal_logs')
-      .delete()
-      .eq('id', meal_id);
+    // ★修正：専用ツール（ライブラリ）を使わず、標準の通信機能で直接削除命令を送る最強の書き方
+    const response = await fetch(`${supabaseUrl}/rest/v1/meal_logs?id=eq.${meal_id}`, {
+      method: 'DELETE',
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`
+      }
+    });
 
-    if (error) {
-        return new Response(JSON.stringify({ error: 'Supabase Delete Error', details: error.message }), { 
+    if (!response.ok) {
+        const errText = await response.text();
+        return new Response(JSON.stringify({ error: 'Supabase Delete Error', details: errText }), { 
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         });
