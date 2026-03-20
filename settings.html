@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     .settings-container { max-width: 500px; margin: 0 auto; padding: 24px 16px; }
     .settings-section-title { font-size: 0.75rem; font-weight: 800; color: var(--clr-accent); margin-bottom: 16px; letter-spacing: 0.1em; text-transform: uppercase; }
@@ -19,7 +20,7 @@
     .cond-group { display: flex; gap: 8px; justify-content: space-between; margin-bottom: 24px; }
     .cond-btn { flex: 1; aspect-ratio: 1; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); color: var(--clr-text-secondary); font-size: 1.2rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
     .cond-btn.active { border-color: var(--clr-accent); color: var(--clr-accent); background: rgba(251, 191, 36, 0.1); }
-    .btn-guide { width: 100%; padding: 14px; background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; margin-bottom: 24px; }
+    .btn-guide { width: 100%; padding: 14px; background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; margin-bottom: 24px; text-align: center; border: none; }
   </style>
 </head>
 <body>
@@ -58,7 +59,7 @@
           <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
           <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
         </div>
-        <button type="button" class="btn-guide" id="openGuideBtn"><i class="fas fa-book"></i> 取扱説明・リリースノート (Guide)</button>
+        <button type="button" class="btn-guide" id="openGuideBtn"><i class="fas fa-book"></i> リリースノート (Guide)</button>
       </div>
 
       <div style="display: flex; gap: 12px; margin-top: 32px;">
@@ -68,6 +69,23 @@
     </form>
     <div id="saveMsg" style="margin-top: 16px; text-align: center; font-size: 0.85rem; color: #10b981; display: none;">Saved successfully!</div>
   </main>
+
+  <div class="modal-overlay" id="guideModal">
+    <div class="modal-content" style="max-width: 500px; text-align: left;">
+      <div class="modal-title">Release Notes</div>
+      <div style="max-height: 400px; overflow-y: auto; padding-right: 8px;">
+        <h4 style="color: var(--clr-accent); margin-bottom: 8px;">Ver 2.0</h4>
+        <ul style="font-size: 0.85rem; padding-left: 18px; color: var(--clr-text-secondary); line-height: 1.6;">
+          <li><b>PWA化：</b> ホーム画面に追加でフルスクリーン起動可能。</li>
+          <li><b>Activity Grid：</b> GitHub風の継続グラフ搭載。</li>
+          <li><b>インスタ風UI：</b> 3列タイルの食事ギャラリー。</li>
+          <li><b>AIティザー：</b> 次世代AI解析エンジンの準備。</li>
+        </ul>
+      </div>
+      <button class="btn-secondary" style="margin-top:20px;" onclick="document.getElementById('guideModal').style.display='none'">Close</button>
+    </div>
+  </div>
+
   <script src="supabase-client.js"></script>
   <script src="settings.js"></script>
 </body>

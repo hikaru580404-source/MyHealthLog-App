@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     });
 
-    // 初期値読み込み (localStorage & Supabase)
+    // 初期値読み込み
     async function init() {
         document.getElementById('goalWeight').value = localStorage.getItem('goalWeight_' + user.id) || "";
         document.getElementById('goalFat').value = localStorage.getItem('goalFat_' + user.id) || "";
@@ -34,9 +34,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     init();
 
-    // Guideボタンの動作 (index.htmlに戻って開くか、単にアラート)
+    // ★修正：リリースノートモーダルを表示する
     document.getElementById('openGuideBtn').onclick = () => {
-        alert("メイン画面の取扱説明書モーダルを更新しました。メイン画面でご確認ください。");
+        document.getElementById('guideModal').style.display = 'flex';
     };
 
     form.addEventListener('submit', async (e) => {
@@ -49,22 +49,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         localStorage.setItem('goalWeight_' + user.id, goalW);
         localStorage.setItem('goalFat_' + user.id, goalF);
 
-        // Supabaseへの保存
         const today = new Date().toLocaleDateString('sv-SE');
-        const nowW = document.getElementById('nowWeight').value;
-        const nowF = document.getElementById('nowFat').value;
-        const bt = document.getElementById('bedtime').value;
-        const wt = document.getElementById('waketime').value;
-
         const payload = {
             user_id: user.id,
             measured_date: today,
-            weight: nowW ? parseFloat(nowW) : null,
-            body_fat: nowF ? parseFloat(nowF) : null,
+            weight: document.getElementById('nowWeight').value ? parseFloat(document.getElementById('nowWeight').value) : null,
+            body_fat: document.getElementById('nowFat').value ? parseFloat(document.getElementById('nowFat').value) : null,
             mental_condition: parseInt(mVal)
         };
 
-        // 時刻入力がある場合、ISO文字列に変換
+        const bt = document.getElementById('bedtime').value;
+        const wt = document.getElementById('waketime').value;
         if (bt) {
             const d = new Date(); const [h, m] = bt.split(':');
             d.setHours(h, m, 0, 0); payload.bedtime = d.toISOString();

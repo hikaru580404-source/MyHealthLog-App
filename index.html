@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="AsirLabo">
   <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="https://kaoyiuyiduoqlxhnfrvq.supabase.co/storage/v1/object/public/meal_images/assets/icon-192.png">
 
   <title>HEALTH LOG // DB</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -20,9 +19,8 @@
   <link rel="stylesheet" href="form.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* 追加：AIティザー（ワクワク感の演出） */
     .ai-teaser-premium {
-      background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%);
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%);
       border: 1px solid var(--clr-border); border-radius: var(--radius-md);
       padding: 20px; margin-bottom: 32px; cursor: pointer;
       display: flex; align-items: center; justify-content: space-between;
@@ -34,13 +32,11 @@
       animation: ai-shimmer 4s infinite;
     }
     @keyframes ai-shimmer { 0% { left: -100%; } 100% { left: 200%; } }
-    
     .ai-teaser-info { display: flex; align-items: center; gap: 16px; }
-    .ai-teaser-icon { font-size: 1.6rem; color: var(--clr-accent); }
+    .ai-teaser-icon { font-size: 1.5rem; color: var(--clr-accent); }
     .ai-teaser-text h4 { font-size: 0.95rem; color: #fff; margin-bottom: 2px; font-weight: 800; }
     .ai-teaser-text p { font-size: 0.75rem; color: var(--clr-text-secondary); }
 
-    /* 追加：GitHub風グリッドの装飾 */
     .streak-container { background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: 16px; margin-bottom: 32px; }
     .streak-grid { display: grid; grid-template-rows: repeat(7, 1fr); grid-auto-flow: column; gap: 4px; overflow-x: auto; padding-bottom: 4px; }
     .streak-cell { width: 11px; height: 11px; border-radius: 2px; background: rgba(255,255,255,0.05); }
@@ -85,25 +81,10 @@
       <div class="kpi-value"><span id="latestWeight">--</span> kg</div>
       <div id="deltaWeight" class="kpi-delta"></div>
     </div>
-    <div class="kpi-card" data-kpi="fat">
-      <div class="kpi-label" data-i18n="fat_p">Fat</div>
-      <div class="kpi-value"><span id="latestFat">--</span> %</div>
-      <div class="kpi-delta">--</div>
-    </div>
-    <div class="kpi-card" data-kpi="calories">
-      <div class="kpi-label" data-i18n="calories">Calories</div>
-      <div class="kpi-value"><span id="todayCalories">0</span> kcal</div>
-      <div class="kpi-delta" data-i18n="today_total">Today's Total</div>
-    </div>
     <div class="kpi-card" data-kpi="sleep">
       <div class="kpi-label" data-i18n="sleep_h">Sleep</div>
       <div class="kpi-value"><span id="latestSleep">--</span> h</div>
       <div id="deltaSleep" class="kpi-delta"></div>
-    </div>
-    <div class="kpi-card" data-kpi="mental">
-      <div class="kpi-label" data-i18n="mental">Mental</div>
-      <div class="kpi-value" id="latestMental">--</div>
-      <div class="kpi-delta">--</div>
     </div>
     <div class="kpi-card" data-kpi="streak">
       <div class="kpi-label" data-i18n="streak">Streak</div>
@@ -115,11 +96,6 @@
       <div class="kpi-value"><span id="completionRate">--</span>%</div>
       <div class="kpi-delta" data-i18n="last30days">Last 30 Days</div>
     </div>
-    <div class="kpi-card" data-kpi="month_count">
-      <div class="kpi-label" data-i18n="month_count">Month Count</div>
-      <div class="kpi-value"><span id="monthLogs">--</span> <span style="font-size:0.9rem;" data-i18n="days">Days</span></div>
-      <div class="kpi-delta delta-good" data-i18n="logging">Logging</div>
-    </div>
   </section>
 
   <div class="section-title">Activity Grid (Last 90 Days)</div>
@@ -127,27 +103,35 @@
     <div class="streak-grid" id="activityGrid"></div>
   </div>
 
-  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
-    <div class="section-title" style="margin-bottom: 0;" data-i18n="trend">7-Day Trend</div>
-    <nav class="tab-nav">
-      <button class="tab-btn active" data-i18n="analysis">Analysis</button>
-      <button class="tab-btn" onclick="location.href='meals.html'" data-i18n="nav_meals">Meals</button>
-      <button class="tab-btn" onclick="location.href='summary.html'" data-i18n="nav_history">History</button>
-    </nav>
-  </div>
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-i18n="analysis">Analysis</button>
+    <button class="tab-btn" onclick="location.href='meals.html'" data-i18n="nav_meals">Meals</button>
+    <button class="tab-btn" onclick="location.href='summary.html'" data-i18n="nav_history">History</button>
+  </nav>
 
   <div class="chart-card">
     <div style="height:250px;"><canvas id="healthCorrelationChart"></canvas></div>
   </div>
+
+  <button class="btn-secondary" style="width:100%; margin-top:32px; border-color:transparent; font-size:0.75rem;" onclick="document.getElementById('guideModal').style.display='flex'">
+    <i class="fas fa-info-circle"></i> Release Notes
+  </button>
 </main>
 
-<div class="modal-overlay" id="kpiDetailModal">
-  <div class="modal-content" style="max-width: 450px;">
-    <div class="modal-title" id="mdKpiTitle">Detail</div>
-    <div class="kpi-value" style="text-align:center; margin-bottom:20px;" id="mdKpiMainValue">--</div>
-    <div id="mdAdvice" class="md-advice-box" style="background: rgba(255,255,255,0.05); border-left: 3px solid var(--clr-accent); padding: 16px; margin-bottom: 24px; font-size: 0.9rem; line-height: 1.6; border-radius: 0 4px 4px 0;"></div>
-    <div style="height:180px; margin-bottom: 24px;"><canvas id="detailModalChart"></canvas></div>
-    <button class="btn-secondary" onclick="document.getElementById('kpiDetailModal').style.display='none'">閉じる</button>
+<div class="modal-overlay" id="guideModal">
+  <div class="modal-content" style="max-width: 500px; text-align: left;">
+    <div class="modal-title">Release Notes</div>
+    <div style="max-height: 400px; overflow-y: auto; padding-right: 8px;">
+      <h4 style="color: var(--clr-accent); margin-bottom: 8px;">Ver 2.0</h4>
+      <p style="font-size:0.85rem; color:var(--clr-text-secondary); margin-bottom:12px;">ブランディングと継続性を重視した大型アップデートです。</p>
+      <ul style="font-size: 0.85rem; padding-left: 18px; color: var(--clr-text-secondary); line-height: 1.6;">
+        <li><b>PWA化：</b> ホーム画面に追加するとアプリ化します。</li>
+        <li><b>Activity Grid：</b> 90日間の記録がGitHub風に可視化。</li>
+        <li><b>Instagram UI：</b> 食事録がスタイリッシュなグリッドに。</li>
+        <li><b>AI Teaser：</b> 近日公開のAI解析機能への期待感を演出。</li>
+      </ul>
+    </div>
+    <button class="btn-secondary" style="margin-top:20px;" onclick="document.getElementById('guideModal').style.display='none'">Close</button>
   </div>
 </div>
 
