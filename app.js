@@ -13,10 +13,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             recorded: "Logged",
             fat_p: "Fat", streak: "Streak", days: "Days", consecutive: "Consecutive",
             completion: "Completion", last30days: "Last 30 Days",
+            calories: "Calories", today_total: "Today's Total", month_count: "Month Count", logging: "Logging",
             msg_wake: "Good morning! Have a great day! ☀️",
             msg_sleep: "Good work today. Have a good night! 🌙",
             msg_undo: "Record reset", confirm_undo: "Do you want to reset (undo) this record?",
-            msg_ai_analyzing: "AI Analyzing image..." // AI解析中のメッセージ
+            msg_ai_analyzing: "AI Analyzing image..."
         },
         ja: {
             quick_action: "クイックアクション", wake: "起床", meal: "食事", sleep: "就寝",
@@ -26,10 +27,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             recorded: "記録済み",
             fat_p: "体脂肪率", streak: "継続日数", days: "日", consecutive: "連続記録中",
             completion: "完了率", last30days: "過去30日間",
+            calories: "摂取カロリー", today_total: "本日の合計", month_count: "月間記録日数", logging: "記録済み",
             msg_wake: "おはようございます！今日も一日頑張りましょう☀️",
             msg_sleep: "お疲れ様でした。ゆっくり休んでくださいね🌙",
             msg_undo: "打刻をリセットしました", confirm_undo: "打刻をリセット（取り消し）しますか？",
-            msg_ai_analyzing: "AIが食事を解析中..." // AI解析中のメッセージ
+            msg_ai_analyzing: "AIが食事を解析中..."
         }
     };
 
@@ -48,7 +50,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     updateLanguage(); 
 
-    // --- トースト通知機能 ---
     function showToast(msg) {
         const toast = document.getElementById('toastMsg');
         toast.innerText = msg;
@@ -75,7 +76,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = "login.html";
     });
 
-    // --- ユーティリティ ---
     function getLocalLogicalDateStr(dateObj) {
         const d = new Date(dateObj.getTime());
         if (d.getHours() < 4) d.setDate(d.getDate() - 1);
@@ -92,7 +92,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return new Date(y, m - 1, d, h, min);
     }
 
-    // --- マニュアル（Guide）モーダル制御 ---
     document.getElementById('btnGuideOpen').addEventListener('click', () => {
         document.getElementById('settingsModal').style.display = 'none';
         document.getElementById('guideModal').style.display = 'flex';
@@ -102,7 +101,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('settingsModal').style.display = 'flex';
     });
 
-    // --- セッティング画面のロジック ---
     const settingsModal = document.getElementById('settingsModal');
     let settingMVal = 3;
 
@@ -228,8 +226,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // --- クイックアクションロジック ---
-
     function resetButtonUI(type) {
         let btn, icon, textSpan;
         if (type === 'wake') {
@@ -341,13 +337,29 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (todayLog.bedtime) setButtonRecorded('bed');
             }
 
+            // ★KPIデータの反映（月間記録日数の復活を含む）
             const { data: kpiData, error: kpiErr } = await supabaseClient.rpc('get_user_performance', { target_user_id: user.id });
             if (!kpiErr && kpiData && kpiData.length > 0) {
                 const streakEl = document.getElementById('streakDays');
                 const compEl = document.getElementById('completionRate');
+                const monthEl = document.getElementById('monthCount');
                 if (streakEl) streakEl.innerText = kpiData[0].streak_days;
                 if (compEl) compEl.innerText = Math.round(kpiData[0].log_completion_rate);
+                if (monthEl) monthEl.innerText = kpiData[0].this_month_count || 0;
             }
+
+            // ★AIカロリー集計の反映（今日のデータを合算）
+            const { data: todayMeals } = await supabaseClient.from('meal_logs')
+                .select('calories')
+                .eq('user_id', user.id)
+                .eq('meal_date', logicalDateStr);
+            
+            let totalCal = 0;
+            if (todayMeals) {
+                totalCal = todayMeals.reduce((sum, meal) => sum + (Number(meal.calories) || 0), 0);
+            }
+            const calEl = document.getElementById('todayCalories');
+            if (calEl) calEl.innerText = totalCal;
 
             const { data: recentLogs, error: logErr } = await supabaseClient.from('health_logs')
                 .select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(2);
@@ -491,7 +503,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         mealModal.style.display = 'none';
     });
 
-    // ★ AI解析ロジックの統合（Vercel Serverless Function 呼び出し） ★
     document.getElementById('btnMealSave').addEventListener('click', async () => {
         const btn = document.getElementById('btnMealSave');
         const mealDate = document.getElementById('quickMealDate').value;
@@ -509,10 +520,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
-                // 1. 画像圧縮とSupabase Storageへのアップロード
                 imageUrl = await uploadCompressedImage(file, user.id);
                 
-                // 2. Vercel Serverless Function (/api/analyze-meal) を呼び出してGemini AIに解析させる
                 try {
                     const response = await fetch('/api/analyze-meal', {
                         method: 'POST',
@@ -532,7 +541,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // 3. データベース(meal_logs)へ最終保存
             const { error } = await supabaseClient.from('meal_logs').insert({
                 user_id: user.id, 
                 meal_date: mealDate, 
@@ -548,6 +556,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             mealModal.style.display = 'none';
             document.getElementById('quickMealMemo').value = '';
             document.getElementById('quickMealImage').value = '';
+            
+            // ★ 保存完了後にダッシュボードをリロードしてカロリーを即座にUIへ反映させる
+            loadDashboard();
             showToast("Meal recorded!");
 
         } catch (err) { 

@@ -37,7 +37,7 @@
         opacity: 0.9; cursor: pointer;
     }
 
-    /* レスポンシブ6カード・最適化グリッド */
+    /* ★ レスポンシブ8カード・最適化グリッド（2列×4段 or 4列×2段） */
     .kpi-section {
         display: grid;
         gap: 16px;
@@ -45,11 +45,11 @@
     }
     @media (min-width: 640px) {
         .kpi-section {
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(4, 1fr);
         }
     }
 
-    /* ★ プロフェッショナルUI最適化：form.cssの干渉を防ぎ、Saveを強調・Cancelを控えめにする */
+    /* プロフェッショナルUI最適化：Saveを強調・Cancelを控えめに */
     .modal-content .btn-primary {
         background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%) !important;
         color: #111827 !important;
@@ -109,6 +109,11 @@
       <div id="deltaFat" class="kpi-delta" style="color:var(--clr-text-secondary);">--</div>
     </div>
     <div class="kpi-card">
+      <div class="kpi-label" data-i18n="calories">Calories</div>
+      <div class="kpi-value"><span id="todayCalories">0</span> <span style="font-size: 0.9rem; margin-left:4px;">kcal</span></div>
+      <div class="kpi-delta delta-neutral" data-i18n="today_total">Today's Total</div>
+    </div>
+    <div class="kpi-card">
       <div class="kpi-label" data-i18n="sleep_h">Sleep</div>
       <div class="kpi-value"><span id="latestSleep">-- h</span></div>
       <div id="deltaSleep" class="kpi-delta"></div>
@@ -127,6 +132,11 @@
       <div class="kpi-label" data-i18n="completion">Completion</div>
       <div class="kpi-value"><span id="completionRate">0</span> <span style="font-size: 0.9rem; margin-left:4px;">%</span></div>
       <div class="kpi-delta delta-neutral" data-i18n="last30days">Last 30 Days</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label" data-i18n="month_count">Month Count</div>
+      <div class="kpi-value"><span id="monthCount">0</span> <span style="font-size: 0.9rem; margin-left:4px;" data-i18n="days">Days</span></div>
+      <div class="kpi-delta delta-good" data-i18n="logging">Logging</div>
     </div>
   </section>
 
@@ -251,11 +261,10 @@
         行動とコンディションを定量化し、感覚に頼らない軌道修正を行うためのインフラです。日々のデータ蓄積が確実な成果に直結します。
       </div>
 
-      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">✨ 最新のアップデート (v1.2)</h4>
+      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">✨ 最新のアップデート (v1.3)</h4>
       <ul style="padding-left: 20px; margin-bottom: 16px; color: var(--clr-text-secondary);">
+        <li><b>AIカロリー集計機能：</b> 写真から自動解析された本日の摂取カロリーが、ダッシュボードのKPIとしてリアルタイム表示されるようになりました。</li>
         <li><b>誤打刻の解除：</b> 黄色い「Logged」ボタンを再タップすると打刻をリセットできます。</li>
-        <li><b>多言語対応（EN/JP）：</b> 画面右上のボタンで日英切り替えが可能です。</li>
-        <li><b>運用方針：</b> 大規模な仕様変更は「月1回」、軽微なUI改善は随時反映します。</li>
       </ul>
 
       <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">📖 基本オペレーション</h4>
@@ -264,7 +273,6 @@
         <li><b>1日の区切り：</b> 毎朝4:00が基準です。深夜2時の就寝も「前日分」として記録されます。</li>
         <li><b>日々の打刻：</b> 上部の「Wake Up」「Sleep」で睡眠サイクル、「Meal」で食事を記録します。</li>
         <li><b>詳細記録と修正：</b> 「Daily Log」から体重やメンタル詳細を記録。過去日の修正もここから行います。</li>
-        <li><b>分析：</b> ダッシュボードのKPI（前日比）やグラフを活用し、日々の行動へフィードバックしてください。</li>
       </ul>
 
     </div>
