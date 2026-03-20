@@ -42,14 +42,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
     
-    // ★ Null回避の徹底：要素が存在する場合のみイベントを付与する
+    // ★ Null回避：要素が存在する場合のみイベントを付与する（全要素に徹底）
     const langToggleBtn = document.getElementById('langToggleBtn');
     if (langToggleBtn) {
         langToggleBtn.addEventListener('click', () => {
             currentLang = currentLang === 'en' ? 'ja' : 'en';
             localStorage.setItem('appLang_' + user.id, currentLang);
             updateLanguage();
-            loadDashboard(); 
+            if (typeof loadDashboard === 'function') loadDashboard(); 
         });
     }
     updateLanguage(); 
@@ -100,26 +100,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         return new Date(y, m - 1, d, h, min);
     }
 
-    // --- モーダル制御関連（Null回避） ---
+    // --- マニュアル（Guide）モーダル制御 ---
     const btnGuideOpen = document.getElementById('btnGuideOpen');
     const btnGuideClose = document.getElementById('btnGuideClose');
     const guideModal = document.getElementById('guideModal');
     const settingsModal = document.getElementById('settingsModal');
 
-    if (btnGuideOpen && settingsModal && guideModal) {
+    if (btnGuideOpen && guideModal && settingsModal) {
         btnGuideOpen.addEventListener('click', () => {
             settingsModal.style.display = 'none';
             guideModal.style.display = 'flex';
         });
     }
-    if (btnGuideClose && settingsModal && guideModal) {
+    if (btnGuideClose && guideModal && settingsModal) {
         btnGuideClose.addEventListener('click', () => {
             guideModal.style.display = 'none';
             settingsModal.style.display = 'flex';
         });
     }
 
-    // --- KPIカードの詳細解説ポップアップ機能（復旧＆強化） ---
+    // --- KPIカードの詳細解説ポップアップ機能 ---
     const kpiAdvice = {
         ja: {
             weight: "体重は日々の水分量で1〜2kg変動します。一喜一憂せず、7日間のトレンドラインで増減を確認してください。",
@@ -156,9 +156,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             const labelEl = card.querySelector('.kpi-label');
             const valueEl = card.querySelector('.kpi-value');
 
-            document.getElementById('kpiModalTitle').innerText = labelEl ? labelEl.innerText : 'Detail';
-            document.getElementById('kpiModalValue').innerHTML = valueEl ? valueEl.innerHTML : '--';
-            document.getElementById('kpiModalDesc').innerText = key && kpiAdvice[currentLang][key] ? kpiAdvice[currentLang][key] : "";
+            const titleEl = document.getElementById('kpiModalTitle');
+            const valEl = document.getElementById('kpiModalValue');
+            const descEl = document.getElementById('kpiModalDesc');
+
+            if(titleEl) titleEl.innerText = labelEl ? labelEl.innerText : 'Detail';
+            if(valEl) valEl.innerHTML = valueEl ? valueEl.innerHTML : '--';
+            if(descEl) descEl.innerText = key && kpiAdvice[currentLang][key] ? kpiAdvice[currentLang][key] : "";
             
             kpiModal.style.display = 'flex';
         });
@@ -177,8 +181,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const settingsBtn = document.getElementById('settingsBtn');
     if (settingsBtn) {
         settingsBtn.addEventListener('click', async () => {
-            document.getElementById('settingTargetWeight').value = TARGET_WEIGHT;
-            document.getElementById('settingTargetFat').value = TARGET_FAT;
+            const targetW = document.getElementById('settingTargetWeight');
+            const targetF = document.getElementById('settingTargetFat');
+            if(targetW) targetW.value = TARGET_WEIGHT;
+            if(targetF) targetF.value = TARGET_FAT;
 
             const todayStr = getLocalLogicalDateStr(new Date());
             const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
@@ -187,15 +193,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             const { data: tData } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).eq('measured_date', todayStr).maybeSingle();
             const { data: yData } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).eq('measured_date', yesterdayStr).maybeSingle();
 
-            if (tData) {
-                document.getElementById('settingWeight').value = tData.weight || "";
-                document.getElementById('settingFat').value = tData.body_fat || "";
-                
-                if (tData.waketime) {
-                    const d = new Date(tData.waketime);
-                    document.getElementById('settingWaketime').value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-                } else { document.getElementById('settingWaketime').value = ""; }
+            const sWeight = document.getElementById('settingWeight');
+            const sFat = document.getElementById('settingFat');
+            const sWake = document.getElementById('settingWaketime');
+            const sBed = document.getElementById('settingBedtime');
 
+            if (tData) {
+                if(sWeight) sWeight.value = tData.weight || "";
+                if(sFat) sFat.value = tData.body_fat || "";
+                if (sWake) {
+                    if(tData.waketime) {
+                        const d = new Date(tData.waketime);
+                        sWake.value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                    } else sWake.value = "";
+                }
                 if (tData.mental_condition) {
                     document.querySelectorAll('#settingMGrp .cond-btn').forEach(b => b.classList.remove('active'));
                     const targetBtn = document.querySelector(`#settingMGrp .cond-btn[data-v="${tData.mental_condition}"]`);
@@ -203,20 +214,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     settingMVal = tData.mental_condition;
                 }
             } else {
-                document.getElementById('settingWeight').value = "";
-                document.getElementById('settingFat').value = "";
-                document.getElementById('settingWaketime').value = "";
+                if(sWeight) sWeight.value = "";
+                if(sFat) sFat.value = "";
+                if(sWake) sWake.value = "";
                 document.querySelectorAll('#settingMGrp .cond-btn').forEach(b => b.classList.remove('active'));
                 const defaultBtn = document.querySelector(`#settingMGrp .cond-btn[data-v="3"]`);
                 if(defaultBtn) defaultBtn.classList.add('active');
                 settingMVal = 3;
             }
 
-            if (yData && yData.bedtime) {
-                const d = new Date(yData.bedtime);
-                document.getElementById('settingBedtime').value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-            } else { 
-                document.getElementById('settingBedtime').value = ""; 
+            if (sBed) {
+                if (yData && yData.bedtime) {
+                    const d = new Date(yData.bedtime);
+                    sBed.value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                } else sBed.value = "";
             }
 
             if (settingsModal) settingsModal.style.display = 'flex';
@@ -224,35 +235,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const btnSettingsCancel = document.getElementById('btnSettingsCancel');
-    if (btnSettingsCancel) {
-        btnSettingsCancel.addEventListener('click', () => {
-            if (settingsModal) settingsModal.style.display = 'none';
-        });
+    if (btnSettingsCancel && settingsModal) {
+        btnSettingsCancel.addEventListener('click', () => { settingsModal.style.display = 'none'; });
     }
 
     const btnSettingsSave = document.getElementById('btnSettingsSave');
     if (btnSettingsSave) {
         btnSettingsSave.addEventListener('click', async () => {
-            const btn = document.getElementById('btnSettingsSave');
-            btn.disabled = true; btn.innerText = "Saving...";
+            btnSettingsSave.disabled = true; btnSettingsSave.innerText = "Saving...";
 
             try {
-                const tWeight = parseFloat(document.getElementById('settingTargetWeight').value);
-                const tFat = parseFloat(document.getElementById('settingTargetFat').value);
-                if (isNaN(tWeight) || isNaN(tFat)) { alert("目標数値を正しく入力してください。"); btn.disabled = false; btn.innerText = "Save Changes"; return; }
+                const tWeightEl = document.getElementById('settingTargetWeight');
+                const tFatEl = document.getElementById('settingTargetFat');
                 
-                localStorage.setItem('targetWeight_' + user.id, tWeight);
-                localStorage.setItem('targetFat_' + user.id, tFat);
-                TARGET_WEIGHT = tWeight; TARGET_FAT = tFat;
+                if (tWeightEl && tFatEl) {
+                    const tWeight = parseFloat(tWeightEl.value);
+                    const tFat = parseFloat(tFatEl.value);
+                    if (isNaN(tWeight) || isNaN(tFat)) { 
+                        alert("目標数値を正しく入力してください。"); 
+                        btnSettingsSave.disabled = false; btnSettingsSave.innerText = "Save Changes"; 
+                        return; 
+                    }
+                    localStorage.setItem('targetWeight_' + user.id, tWeight);
+                    localStorage.setItem('targetFat_' + user.id, tFat);
+                    TARGET_WEIGHT = tWeight; TARGET_FAT = tFat;
+                }
 
                 const todayStr = getLocalLogicalDateStr(new Date());
                 const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
                 const yesterdayStr = getLocalLogicalDateStr(yesterday);
 
-                const wt = document.getElementById('settingWaketime').value;
-                const bt = document.getElementById('settingBedtime').value;
-                const wVal = document.getElementById('settingWeight').value;
-                const fVal = document.getElementById('settingFat').value;
+                const wt = document.getElementById('settingWaketime') ? document.getElementById('settingWaketime').value : null;
+                const bt = document.getElementById('settingBedtime') ? document.getElementById('settingBedtime').value : null;
+                const wVal = document.getElementById('settingWeight') ? document.getElementById('settingWeight').value : null;
+                const fVal = document.getElementById('settingFat') ? document.getElementById('settingFat').value : null;
 
                 let yPayload = { user_id: user.id, measured_date: yesterdayStr };
                 if (bt) {
@@ -292,7 +308,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (err) {
                 alert("エラーが発生しました: " + err.message);
             } finally {
-                btn.disabled = false; btn.innerText = "Save Changes";
+                btnSettingsSave.disabled = false; btnSettingsSave.innerText = "Save Changes";
             }
         });
     }
@@ -397,6 +413,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnWaketime = document.getElementById('btnWaketime');
     if (btnWaketime) btnWaketime.addEventListener('click', () => recordTime('wake'));
 
+    // ダッシュボード更新ロジック
     async function loadDashboard() {
         try {
             const now = new Date();
@@ -499,6 +516,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error("Dashboard Load Error:", e);
         }
     }
+
+    window.loadDashboard = loadDashboard; // グローバルに関数を公開（他のJSファイルやインラインイベントから呼べるようにする）
 
     function renderDynamicChart() {
         if (globalChartLogs.length === 0) return;
@@ -719,11 +738,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             const btn = document.getElementById('initSaveBtn');
             btn.disabled = true; btn.innerText = "Processing...";
-            const tWeight = document.getElementById('initTargetWeight').value;
-            const tFat = document.getElementById('initTargetFat').value;
-            localStorage.setItem('targetWeight_' + user.id, tWeight);
-            localStorage.setItem('targetFat_' + user.id, tFat);
-            TARGET_WEIGHT = parseFloat(tWeight); TARGET_FAT = parseFloat(tFat);
+            const tWeight = document.getElementById('initTargetWeight');
+            const tFat = document.getElementById('initTargetFat');
+            let tWeightVal = TARGET_WEIGHT, tFatVal = TARGET_FAT;
+            if(tWeight) tWeightVal = parseFloat(tWeight.value);
+            if(tFat) tFatVal = parseFloat(tFat.value);
+
+            localStorage.setItem('targetWeight_' + user.id, tWeightVal);
+            localStorage.setItem('targetFat_' + user.id, tFatVal);
+            TARGET_WEIGHT = tWeightVal; TARGET_FAT = tFatVal;
 
             try {
                 const now = new Date();
@@ -731,24 +754,36 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const yesterday = new Date(now.getTime()); yesterday.setDate(yesterday.getDate() - 1);
                 const yesterdayStr = getLocalLogicalDateStr(yesterday);
 
-                const btVal = document.getElementById('initBedtime').value;
-                const wtVal = document.getElementById('initWaketime').value;
-                const wVal = document.getElementById('initWeight').value;
-                const fVal = document.getElementById('initFat').value;
+                const btInput = document.getElementById('initBedtime');
+                const wtInput = document.getElementById('initWaketime');
+                const wInput = document.getElementById('initWeight');
+                const fInput = document.getElementById('initFat');
+
+                const btVal = btInput ? btInput.value : null;
+                const wtVal = wtInput ? wtInput.value : null;
+                const wVal = wInput ? wInput.value : null;
+                const fVal = fInput ? fInput.value : null;
 
                 let bDate = createSafeDate(yesterdayStr, btVal);
-                if (bDate.getHours() < 4) bDate.setDate(bDate.getDate() + 1);
+                if (bDate && bDate.getHours() < 4) bDate.setDate(bDate.getDate() + 1);
                 
                 let wDate = createSafeDate(todayStr, wtVal);
-                let sleepHours = parseFloat(((wDate - bDate) / 3600000).toFixed(1));
-                if (sleepHours < 0) sleepHours += 24;
+                let sleepHours = null;
+                if(wDate && bDate) {
+                    sleepHours = parseFloat(((wDate - bDate) / 3600000).toFixed(1));
+                    if (sleepHours < 0) sleepHours += 24;
+                }
 
-                const yestPayload = { user_id: user.id, measured_date: yesterdayStr, bedtime: bDate.toISOString() };
+                let yestPayload = { user_id: user.id, measured_date: yesterdayStr };
+                if (bDate) yestPayload.bedtime = bDate.toISOString();
+                
                 const { data: yData } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', yesterdayStr).maybeSingle();
                 if (yData) await supabaseClient.from('health_logs').update(yestPayload).eq('id', yData.id);
                 else await supabaseClient.from('health_logs').insert(yestPayload);
 
-                const todayPayload = { user_id: user.id, measured_date: todayStr, waketime: wDate.toISOString(), sleep_hours: sleepHours, mental_condition: parseInt(initMVal) };
+                let todayPayload = { user_id: user.id, measured_date: todayStr, mental_condition: parseInt(initMVal) };
+                if (wDate) todayPayload.waketime = wDate.toISOString();
+                if (sleepHours !== null) todayPayload.sleep_hours = sleepHours;
                 if (wVal) todayPayload.weight = parseFloat(wVal);
                 if (fVal) todayPayload.body_fat = parseFloat(fVal);
 
@@ -760,10 +795,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const initialSetupModal = document.getElementById('initialSetupModal');
                 if (initialSetupModal) initialSetupModal.style.display = 'none';
                 if (typeof loadDashboard === 'function') loadDashboard();
-            } catch (err) { alert("Error: " + err.message); btn.disabled = false; }
+            } catch (err) { alert("Error: " + err.message); if(btn) btn.disabled = false; }
         });
     }
 
+    // どのページにいても安全に実行するための分岐
     if (document.getElementById('latestWeight') || document.getElementById('btnMealOpen')) {
         checkInitialSetup();
     }
