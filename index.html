@@ -1,172 +1,138 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Asir Labo | Dashboard</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HEALTH LOG // DB</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="form.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* KPI Dashboard Styles */
-    .kpi-container {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 20px;
+    /* 追加：AI解析ティザーカード（既存のstyle.cssと調和） */
+    .ai-teaser-card {
+      background: var(--clr-surface); border: 1px solid var(--clr-border);
+      border-radius: var(--radius-md); padding: 20px; margin-bottom: 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; position: relative; overflow: hidden; backdrop-filter: blur(10px);
     }
-    .kpi-card {
-      background: #fff;
-      padding: 16px;
-      border-radius: 12px;
-      border: 1px solid #e5e7eb;
-      text-align: center;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    .ai-teaser-card::after {
+      content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+      background: linear-gradient(to right, transparent, rgba(251, 191, 36, 0.1), transparent);
+      animation: shimmer 4s infinite;
     }
-    .kpi-label {
-      font-size: 0.75rem;
-      color: #6b7280;
-      margin-bottom: 4px;
-      display: block;
-      font-weight: 600;
-    }
-    .kpi-value {
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: #111827;
-      font-family: 'Inter', sans-serif;
-    }
-    .kpi-unit {
-      font-size: 0.875rem;
-      margin-left: 2px;
-      font-weight: 500;
-    }
+    @keyframes shimmer { 0% { left: -100%; } 100% { left: 200%; } }
+    .ai-teaser-info { display: flex; align-items: center; gap: 16px; }
+    .ai-teaser-icon { font-size: 1.5rem; color: var(--clr-accent); }
+    .ai-teaser-text h4 { font-size: 0.9rem; color: var(--clr-text-primary); margin-bottom: 2px; }
+    .ai-teaser-text p { font-size: 0.7rem; color: var(--clr-text-secondary); }
 
-    /* ✨ Premium AI Teaser Card Styles ✨ */
-    .premium-teaser-card {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-      border: 1px solid rgba(251, 191, 36, 0.3);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      cursor: pointer;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-      position: relative;
-      overflow: hidden;
-      transition: transform 0.2s;
+    /* 追加：GitHub風継続グリッド */
+    .streak-container {
+      background: var(--clr-surface); border: 1px solid var(--clr-border);
+      border-radius: var(--radius-md); padding: 16px; margin-bottom: 32px;
     }
-    .premium-teaser-card:active {
-      transform: scale(0.98);
+    .streak-grid {
+      display: grid; grid-template-rows: repeat(7, 1fr); grid-auto-flow: column; gap: 4px;
+      overflow-x: auto; padding-bottom: 4px;
     }
-    /* 光の反射アニメーション */
-    .premium-teaser-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: -100%; width: 50%; height: 100%;
-      background: linear-gradient(to right, transparent, rgba(251, 191, 36, 0.15), transparent);
-      animation: shimmer 3s infinite;
+    .streak-cell {
+      width: 12px; height: 12px; border-radius: 2px; background: rgba(255,255,255,0.05);
     }
-    @keyframes shimmer { 
-      0% { left: -100%; }
-      50% { left: 200%; }
-      100% { left: 200%; }
-    }
-    .teaser-content { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; }
-    .teaser-icon {
-      width: 44px; height: 44px; border-radius: 50%;
-      background: rgba(251, 191, 36, 0.15); color: #fbbf24;
-      display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
-      box-shadow: 0 0 15px rgba(251, 191, 36, 0.2);
-    }
-    .teaser-text h4 { 
-      color: #f8fafc; font-size: 0.95rem; margin-bottom: 4px; 
-      display: flex; align-items: center; gap: 8px; font-weight: 700;
-    }
-    .teaser-text p { color: #94a3b8; font-size: 0.75rem; font-weight: 500; }
-    .badge-soon {
-      background: linear-gradient(90deg, #fbbf24, #f59e0b); color: #000; 
-      font-size: 0.6rem; font-weight: 800; padding: 2px 6px; 
-      border-radius: 4px; letter-spacing: 0.05em; text-transform: uppercase;
-    }
-    .teaser-arrow { color: #475569; position: relative; z-index: 1; }
+    /* 継続レベルに応じた色付け */
+    .streak-cell.lv-1 { background: #d9770644; } /* 記録あり */
+    .streak-cell.lv-2 { background: #fbbf24; box-shadow: 0 0 5px var(--clr-accent); } /* 絶好調 */
   </style>
 </head>
 <body>
-  <div class="app-container">
-    <header class="header">
-      <div class="logo">ASIR LABO</div>
-      <div class="user-profile" id="userBtn">
-        <i class="fa-solid fa-circle-user"></i>
-      </div>
-    </header>
+<header class="app-header">
+  <div class="header-inner">
+    <div class="logo">HEALTH LOG <span style="color:var(--clr-text-secondary); font-weight:400;">// DB</span></div>
+    <div style="display: flex; gap: 16px; align-items: center;">
+      <button id="langToggleBtn" class="header-icon-btn"><i class="fas fa-language"></i> EN/JA</button>
+      <button id="settingsBtn" class="header-icon-btn"><i class="fas fa-cog"></i></button>
+      <button id="logoutBtn" class="header-logout-btn"><i class="fas fa-sign-out-alt"></i> Log Out</button>
+    </div>
+  </div>
+</header>
 
-    <main class="content">
-      <section class="kpi-section">
-        <div class="kpi-container">
-          <div class="kpi-card">
-            <span class="kpi-label">継続日数</span>
-            <div class="kpi-value" id="streakValue">--<span class="kpi-unit">日</span></div>
-          </div>
-          <div class="kpi-card">
-            <span class="kpi-label">月間記録率</span>
-            <div class="kpi-value" id="completionValue">--<span class="kpi-unit">%</span></div>
-          </div>
-        </div>
-      </section>
+<main class="app-main">
+  <div class="section-title" data-i18n="quick_action">Quick Action</div>
+  <div class="quick-actions">
+    <button class="btn-quick wake" id="btnWaketime"><i class="fas fa-sun" id="wakeIcon"></i> <span id="wakeText" data-i18n="wake">Wake Up</span></button>
+    <button class="btn-quick meal" id="btnMealOpen"><i class="fas fa-utensils"></i> <span data-i18n="meal">Meal</span></button>
+    <button class="btn-quick bed" id="btnBedtime"><i class="fas fa-moon" id="bedIcon"></i> <span id="bedText" data-i18n="sleep">Sleep</span></button>
+  </div>
 
-      <div class="premium-teaser-card" onclick="alert('【AI食事解析・自動カロリー計算】\n現在、より高精度なAIモデルを用いたプレミアム機能を開発中です。\nリリースまで今しばらくお待ちください！')">
-        <div class="teaser-content">
-          <div class="teaser-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
-          <div class="teaser-text">
-            <h4>AI食事自動解析 <span class="badge-soon">Coming Soon</span></h4>
-            <p>プレミアム機能解放に向けて準備中...</p>
-          </div>
-        </div>
-        <div class="teaser-arrow"><i class="fa-solid fa-chevron-right"></i></div>
-      </div>
-      <div class="action-grid">
-        <button class="action-card" onclick="location.href='log.html'">
-          <div class="icon-circle" style="background: #eff6ff; color: #3b82f6;">
-            <i class="fa-solid fa-pen-to-square"></i>
-          </div>
-          <span>健康記録</span>
-        </button>
-        <button class="action-card" onclick="location.href='meal.html'">
-          <div class="icon-circle" style="background: #f0fdf4; color: #22c55e;">
-            <i class="fa-solid fa-camera"></i>
-          </div>
-          <span>食事記録</span>
-        </button>
-        <button class="action-card" onclick="location.href='summary.html'">
-          <div class="icon-circle" style="background: #fff7ed; color: #f97316;">
-            <i class="fa-solid fa-chart-line"></i>
-          </div>
-          <span>データ履歴</span>
-        </button>
-        <button class="action-card" onclick="location.href='meals.html'">
-          <div class="icon-circle" style="background: #faf5ff; color: #a855f7;">
-            <i class="fa-solid fa-utensils"></i>
-          </div>
-          <span>食事一覧</span>
-        </button>
-      </div>
-    </main>
+  <div class="section-title" data-i18n="kpi_title">KPI</div>
+  <section class="kpi-section">
+    <div class="kpi-card" data-kpi-key="weight">
+      <div class="kpi-label" data-i18n="weight">Weight</div>
+      <div class="kpi-value"><span id="latestWeight">-- kg</span></div>
+      <div id="deltaWeight" class="kpi-delta"></div>
+    </div>
+    <div class="kpi-card" data-kpi-key="sleep_h">
+      <div class="kpi-label" data-i18n="sleep_h">Sleep</div>
+      <div class="kpi-value"><span id="latestSleep">-- h</span></div>
+      <div id="deltaSleep" class="kpi-delta"></div>
+    </div>
+    <div class="kpi-card" data-kpi-key="streak">
+      <div class="kpi-label" data-i18n="streak">Streak</div>
+      <div class="kpi-value"><span id="streakDays">--</span> <span data-i18n="days" style="font-size: 0.9rem;">Days</span></div>
+      <div class="kpi-delta delta-good" data-i18n="consecutive">Consecutive</div>
+    </div>
+    <div class="kpi-card" data-kpi-key="completion">
+      <div class="kpi-label" data-i18n="completion">Completion</div>
+      <div class="kpi-value"><span id="completionRate">--</span><span style="font-size: 0.9rem;">%</span></div>
+      <div class="kpi-delta" data-i18n="last30days">Last 30 Days</div>
+    </div>
+  </section>
 
-    <nav class="bottom-nav">
-      <a href="index.html" class="nav-item active"><i class="fa-solid fa-house"></i><span>Home</span></a>
-      <a href="summary.html" class="nav-item"><i class="fa-solid fa-chart-simple"></i><span>Log</span></a>
-      <a href="meal.html" class="nav-item"><i class="fa-solid fa-plus-circle"></i><span>Post</span></a>
-      <a href="meals.html" class="nav-item"><i class="fa-solid fa-th-large"></i><span>Gallery</span></a>
+  <div class="ai-teaser-card" onclick="alert('AI解析機能を準備中です。高精度な食事アドバイスをお楽しみに！')">
+    <div class="ai-teaser-info">
+      <div class="ai-teaser-icon"><i class="fas fa-magic"></i></div>
+      <div class="ai-teaser-text">
+        <h4 data-i18n="ai_analysis_title">AI Meal Analysis</h4>
+        <p data-i18n="ai_analysis_wait">Coming soon... Waiting for AI Integration</p>
+      </div>
+    </div>
+    <div style="color: var(--clr-accent); font-size: 0.8rem;"><i class="fas fa-chevron-right"></i></div>
+  </div>
+
+  <div class="section-title">Activity Grid</div>
+  <div class="streak-container">
+    <div class="streak-grid" id="activityGrid"></div>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
+    <div class="section-title" style="margin-bottom: 0;" data-i18n="trend">7-Day Trend</div>
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-i18n="analysis">Analysis</button>
+      <button class="tab-btn" onclick="location.href='meals.html'" data-i18n="nav_meals">Meals</button>
+      <button class="tab-btn" onclick="location.href='form.html'" data-i18n="nav_log">Daily Log</button>
+      <button class="tab-btn" onclick="location.href='summary.html'" data-i18n="nav_history">History</button>
     </nav>
   </div>
-  
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase-client.js"></script>
-  <script src="app.js"></script>
+
+  <div class="chart-card">
+    <div class="chart-header-flex">
+      <div class="chart-card-title" data-i18n="chart_title">Recent 7-Day Trend</div>
+      <div class="chart-toggle">
+        <button class="btn-toggle active" id="modeWeight">Weight / Fat</button>
+        <button class="btn-toggle" id="modeSleep">Sleep / Mental</button>
+      </div>
+    </div>
+    <div style="height:250px;"><canvas id="healthCorrelationChart"></canvas></div>
+  </div>
+</main>
+
+<div id="toastMsg" class="toast"></div>
+
+<script src="supabase-client.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
