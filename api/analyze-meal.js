@@ -33,8 +33,8 @@ export default async function handler(request) {
 2. analysis: 栄養素や健康への影響に関するコメント（日本語100文字程度）。メモ「${memo || ''}」も考慮してください。
 出力フォーマット: {"calories": 500, "analysis": "..."}`;
 
-    // ★原因究明のため「滝」を止め、最強のGemini 2.0 一本に絞ります
-    const model = "google/gemini-2.0-flash:free";
+    // ★大反省！OpenRouterに確実に存在する「正式名称」に修正しました
+    const model = "google/gemini-2.0-flash-exp:free";
 
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -58,7 +58,6 @@ export default async function handler(request) {
 
     const data = await response.json();
     
-    // ★通信成功時
     if (response.ok && data.choices && data.choices.length > 0) {
       let aiText = data.choices[0].message.content;
       
@@ -79,8 +78,7 @@ export default async function handler(request) {
       return new Response(JSON.stringify(parsed), { status: 200, headers: { 'Content-Type': 'application/json' } });
       
     } else {
-      // ★エラーの真犯人（Geminiが嫌がった理由）をそのまま画面に表示させます
-      return new Response(JSON.stringify({ error: 'Gemini Failed', details: data }), { 
+      return new Response(JSON.stringify({ error: 'AI API Error', details: data }), { 
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
