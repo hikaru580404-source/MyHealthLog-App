@@ -1,4 +1,3 @@
-// ★防弾1: Vercelの10秒タイムアウトを破壊するEdge Runtime
 export const config = {
   runtime: 'edge',
 };
@@ -14,12 +13,11 @@ export default async function handler(request) {
     const apiKey = process.env.OPENROUTER_API_KEY;
 
     if (!imageUrl) return new Response(JSON.stringify({ error: 'Image URL is missing' }), { status: 400 });
-    if (!apiKey) return new Response(JSON.stringify({ error: 'OpenRouter API Key is missing in Vercel' }), { status: 500 });
+    if (!apiKey) return new Response(JSON.stringify({ error: 'OpenRouter API Key is missing' }), { status: 500 });
 
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) return new Response(JSON.stringify({ error: 'Failed to fetch image' }), { status: 500 });
     
-    // ★防弾2: メモリ超過（500エラー）を防ぐ、Edge専用の安全で高速なBase64変換
     const arrayBuffer = await imageResponse.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
     const chunkSize = 8192;
@@ -30,20 +28,21 @@ export default async function handler(request) {
     const base64Image = btoa(binary);
     const dataUrl = `data:image/jpeg;base64,${base64Image}`;
 
-    const prompt = `この食事の画像から、以下の2点を推測して厳密なJSON形式のみで返してください。
+    const prompt = `この食事の画像から、以下の2点を推測して厳密なJSON形式のみで返してください。前置きや解説の文章は一切不要です。
 1. calories: 推定される合計カロリー（数値のみ）
 2. analysis: 栄養素や健康への影響に関するコメント（日本語100文字程度）。メモ「${memo || ''}」も考慮してください。
 出力フォーマット: {"calories": 500, "analysis": "..."}`;
 
-    // ★防弾3: 無料AIの全滅を防ぐカスケード（滝型）ルーティング
+    // ★修正1：OpenRouterで現在確実に動く「完全無料の画像認識AI」に厳選しました
     const models = [
-      "google/gemini-2.0-flash:free",           // 第1候補: 本命
-      "meta-llama/llama-3.2-90b-vision-instruct:free", // 第2候補: Metaの天才AI
-      "google/gemini-1.5-pro:free"              // 第3候補: 予備
+      "google/gemini-2.0-flash:free",
+      "google/gemini-2.0-flash-lite-preview-02-05:free",
+      "qwen/qwen-2-vl-7b-instruct:free" 
     ];
 
     let finalResult = null;
     let lastError = null;
+    let usedModel = null;
 
     for (const model of models) {
       try {
@@ -52,13 +51,12 @@ export default async function handler(request) {
           headers: {
             "Authorization": `Bearer ${apiKey}`,
             "Content-Type": "application/json",
-            // ★防弾4: OpenRouterの身元確認フィルターを正面突破
-            "HTTP-Referer": "https://meal-ai-log.vercel.app", // アプリのURL（ダミーでも可）
-            "X-Title": "MyHealthLog" // アプリ名
+            "HTTP-Referer": "https://meal-ai-log.vercel.app",
+            "X-Title": "MyHealthLog"
           },
           body: JSON.stringify({
             "model": model,
-            "response_format": { "type": "json_object" },
+            // ★修正2：一部の無料AIが嫌がる「JSON強制モード」を削除（プロンプトで制御します）
             "messages": [{
               "role": "user",
               "content": [
@@ -73,11 +71,16 @@ export default async function handler(request) {
         
         if (response.ok && data.choices && data.choices.length > 0) {
           let aiText = data.choices[0].message.content;
+          
+          // ★修正3：AIが余計な文字を混ぜてきても、{ から } までを強制的に抜き出してJSON化する最強のフィルター
           aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
+          const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+              aiText = jsonMatch[0];
+          }
           
           let parsed = JSON.parse(aiText);
 
-          // ★防弾5: AIの「約500kcal」といった文字化けから、数字だけを強制抽出
           if (typeof parsed.calories === 'string') {
             const match = parsed.calories.match(/\d+/);
             parsed.calories = match ? parseInt(match[0], 10) : 0;
@@ -86,18 +89,20 @@ export default async function handler(request) {
           }
 
           finalResult = parsed;
-          break; // 成功したらループを脱出
+          usedModel = model;
+          break; // 成功したらループ脱出
         } else {
           lastError = data.error ? data.error.message : 'Unknown AI Error';
-          continue; // 失敗したら次のAIへ
+          continue; 
         }
       } catch (err) {
         lastError = err.message;
-        continue; // ネットワークエラーでも次のAIへ
+        continue; 
       }
     }
 
     if (finalResult) {
+      finalResult.debug_model = usedModel; 
       return new Response(JSON.stringify(finalResult), { 
         status: 200, 
         headers: { 'Content-Type': 'application/json' } 
