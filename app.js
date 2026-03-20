@@ -6,21 +6,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     const dict = {
         en: {
             quick_action: "Quick Action", wake: "Wake Up", meal: "Meal", sleep: "Sleep",
-            kpi_title: "KPI", weight: "Weight", sleep_h: "Sleep", mental: "Mental Condition",
-            nav_meals: "Meals", nav_log: "Daily Log", nav_history: "History", chart_title: "Recent 7-Day Trend",
-            analysis: "Analysis", trend: "7-Day Trend", recorded: "Logged",
-            fat_p: "Fat", streak: "Streak", days: "Days", consecutive: "Consecutive",
-            completion: "Completion", last30days: "Last 30 Days",
-            msg_wake: "Good morning! ☀️", msg_sleep: "Good night! 🌙"
+            kpi_title: "KPI", weight: "Weight", fat_p: "Fat", sleep_h: "Sleep", mental: "Mental Condition",
+            streak: "Streak", days: "Days", consecutive: "Consecutive", completion: "Completion", last30days: "Last 30 Days",
+            month_count: "Month Count", logging: "Logging", calories: "Calories", today_total: "Today's Total",
+            nav_meals: "Meals", nav_history: "History", analysis: "Analysis", trend: "7-Day Trend", recorded: "Logged",
+            msg_wake: "Good morning! ☀️", msg_sleep: "Good night! 🌙",
+            adv_weight: "Weight fluctuates daily. Focus on the 7-day trend.",
+            adv_fat: "Body fat is affected by hydration. Measure consistently.",
+            adv_calories: "Today's estimated calories analyzed by AI.",
+            adv_sleep: "Aiming for ~7 hours stabilizes mental and physical health.",
+            adv_mental: "Mental condition correlates with sleep and diet.",
+            adv_streak: "Shows habit consistency. Restart immediately if broken.",
+            adv_completion: "Maintaining 80%+ enables highly accurate analysis.",
+            adv_month: "Total days logged this month."
         },
         ja: {
             quick_action: "クイックアクション", wake: "起床", meal: "食事", sleep: "就寝",
-            kpi_title: "指標", weight: "体重", sleep_h: "睡眠", mental: "メンタル",
-            nav_meals: "食事録", nav_log: "記録", nav_history: "履歴", chart_title: "直近7日の推移",
-            analysis: "分析", trend: "推移", recorded: "済",
-            fat_p: "体脂肪", streak: "継続日数", days: "日", consecutive: "連続記録中",
-            completion: "記録率", last30days: "過去30日",
-            msg_wake: "おはようございます！☀️", msg_sleep: "お疲れ様でした！🌙"
+            kpi_title: "指標", weight: "体重", fat_p: "体脂肪", sleep_h: "睡眠", mental: "メンタル",
+            streak: "継続日数", days: "日", consecutive: "連続記録中", completion: "記録率", last30days: "過去30日",
+            month_count: "月間記録数", logging: "記録済み", calories: "カロリー", today_total: "本日の合計",
+            nav_meals: "食事録", nav_history: "履歴", analysis: "分析", trend: "推移", recorded: "済",
+            msg_wake: "おはようございます！☀️", msg_sleep: "お疲れ様でした！🌙",
+            adv_weight: "体重は日々変動します。7日間のトレンドに注目しましょう。",
+            adv_fat: "体脂肪率は水分量に影響されます。一定の条件で測定しましょう。",
+            adv_calories: "AIによって解析された本日の推定摂取カロリーです。",
+            adv_sleep: "約7時間の睡眠は心身の健康を安定させます。",
+            adv_mental: "メンタル状態は睡眠や食事と密接に関係しています。",
+            adv_streak: "習慣の継続性を示します。途切れたら即座に再開しましょう。",
+            adv_completion: "80%以上の記録率を維持すると、分析の精度が向上します。",
+            adv_month: "今月の合計記録日数です。"
         }
     };
 
@@ -32,33 +46,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     updateLanguage();
 
-    // --- KPIカードタップ詳細表示 ---
+    // --- クイックアクション (即時DB更新) ---
+    async function quickLog(field, message) {
+        const today = new Date().toISOString().split('T')[0];
+        const payload = { user_id: user.id, measured_date: today };
+        payload[field] = new Date().toISOString();
+        
+        const { data: existing } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', today).maybeSingle();
+        if (existing) await supabaseClient.from('health_logs').update(payload).eq('id', existing.id);
+        else await supabaseClient.from('health_logs').insert(payload);
+        
+        alert(message);
+        loadDashboard();
+    }
+    document.getElementById('btnWaketime').onclick = () => quickLog('waketime', dict[currentLang].msg_wake);
+    document.getElementById('btnBedtime').onclick = () => quickLog('bedtime', dict[currentLang].msg_sleep);
+
+    // --- KPI詳細・アドバイス・グラフ表示 ---
     let detailChart = null;
     document.querySelectorAll('.kpi-card').forEach(card => {
         card.addEventListener('click', async () => {
-            const key = card.getAttribute('data-kpi');
+            const kpi = card.getAttribute('data-kpi');
             const title = card.querySelector('.kpi-label').innerText;
-            if (key === 'streak' || key === 'completion') return;
-
-            document.getElementById('mdKpiTitle').innerText = title + " (Last 30 Days)";
+            const val = card.querySelector('.kpi-value').innerText;
+            
+            document.getElementById('mdKpiTitle').innerText = title;
+            document.getElementById('mdKpiMainValue').innerText = val;
+            document.getElementById('mdAdvice').innerText = dict[currentLang]['adv_' + kpi] || "";
             document.getElementById('kpiDetailModal').style.display = 'flex';
 
-            const { data } = await supabaseClient.from('health_logs')
-                .select('measured_date, ' + (key === 'weight' ? 'weight' : 'sleep_hours'))
-                .eq('user_id', user.id).order('measured_date', { ascending: false }).limit(30);
-
+            const { data } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(30);
+            const logs = data.reverse();
+            
             if (detailChart) detailChart.destroy();
             const ctx = document.getElementById('detailModalChart').getContext('2d');
-            const logs = data.reverse();
             detailChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: logs.map(l => l.measured_date.split('-')[2]),
                     datasets: [{
                         label: title,
-                        data: logs.map(l => key === 'weight' ? l.weight : l.sleep_hours),
-                        borderColor: '#fbbf24', tension: 0.4, fill: true,
-                        backgroundColor: 'rgba(251, 191, 36, 0.1)'
+                        data: logs.map(l => l[kpi === 'sleep' ? 'sleep_hours' : kpi]),
+                        borderColor: '#fbbf24', tension: 0.4, fill: true, backgroundColor: 'rgba(251, 191, 36, 0.1)'
                     }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
@@ -66,20 +95,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // --- ダッシュボード更新 ---
+    // --- ダッシュボード更新・Activity Grid描画 ---
     window.loadDashboard = async function() {
+        // KPI取得
         const { data: kpiData } = await supabaseClient.rpc('get_user_performance', { target_user_id: user.id });
         if (kpiData?.[0]) {
             document.getElementById('streakDays').innerText = kpiData[0].streak_days;
             document.getElementById('completionRate').innerText = Math.round(kpiData[0].log_completion_rate);
+            document.getElementById('monthLogs').innerText = kpiData[0].logs_this_month;
         }
 
-        const { data: recentLogs } = await supabaseClient.from('health_logs')
-            .select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(1);
+        const { data: recent } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(1);
+        if (recent?.[0]) {
+            document.getElementById('latestWeight').innerText = recent[0].weight || "--";
+            document.getElementById('latestFat').innerText = recent[0].body_fat || "--";
+            document.getElementById('latestSleep').innerText = recent[0].sleep_hours || "--";
+            const mentalMap = ["", "😫", "😟", "😐", "🙂", "🤩"];
+            document.getElementById('latestMental').innerText = mentalMap[recent[0].mental_condition] || "--";
+        }
         
-        if (recentLogs?.[0]) {
-            document.getElementById('latestWeight').innerText = recentLogs[0].weight ? recentLogs[0].weight.toFixed(1) + " kg" : "-- kg";
-            document.getElementById('latestSleep').innerText = recentLogs[0].sleep_hours ? recentLogs[0].sleep_hours.toFixed(1) + " h" : "-- h";
+        // 今日のカロリー集計
+        const today = new Date().toISOString().split('T')[0];
+        const { data: meals } = await supabaseClient.from('meal_logs').select('calories').eq('user_id', user.id).eq('meal_date', today);
+        const totalCal = meals?.reduce((sum, m) => sum + (Number(m.calories) || 0), 0) || 0;
+        document.getElementById('todayCalories').innerText = totalCal;
+
+        // Activity Grid描画 (過去90日)
+        const grid = document.getElementById('activityGrid');
+        grid.innerHTML = '';
+        const { data: history } = await supabaseClient.from('health_logs').select('measured_date').eq('user_id', user.id);
+        const loggedDates = new Set(history?.map(h => h.measured_date));
+        
+        for (let i = 89; i >= 0; i--) {
+            const d = new Date(); d.setDate(d.getDate() - i);
+            const dStr = d.toISOString().split('T')[0];
+            const cell = document.createElement('div');
+            cell.className = 'streak-cell' + (loggedDates.has(dStr) ? ' lv-2' : '');
+            grid.appendChild(cell);
         }
     };
     
