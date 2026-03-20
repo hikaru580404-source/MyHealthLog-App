@@ -635,6 +635,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             } catch (err) { alert("Error: " + err.message); if(btn) btn.disabled = false; }
         });
     }
-
+ 
     if (document.getElementById('latestWeight') || document.getElementById('btnMealOpen')) { checkInitialSetup(); }
 });
