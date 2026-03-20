@@ -13,7 +13,6 @@
   <link rel="stylesheet" href="form.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    /* トーストアニメーション */
     #toastMsg {
       position: fixed; bottom: -50px; left: 50%; transform: translateX(-50%);
       background: var(--clr-accent); color: #111827; padding: 14px 24px;
@@ -24,7 +23,6 @@
     }
     #toastMsg.show { bottom: 30px; opacity: 1; }
     
-    /* ボタンの完全中央揃え */
     .btn-quick {
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center; gap: 8px; padding: 20px !important; transition: all 0.3s ease;
@@ -36,27 +34,21 @@
         opacity: 0.9; cursor: pointer;
     }
 
-    /* レスポンシブ8カード・最適化グリッド */
     .kpi-section {
         display: grid;
         gap: 16px;
         grid-template-columns: repeat(2, 1fr);
     }
     @media (min-width: 640px) {
-        .kpi-section {
-            grid-template-columns: repeat(4, 1fr);
-        }
+        .kpi-section { grid-template-columns: repeat(4, 1fr); }
     }
     
-    /* KPIカードをタップ可能にする */
     .kpi-card { transition: all 0.2s; cursor: pointer; }
     .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.4); border-color: rgba(251, 191, 36, 0.4); }
 
-    /* プロフェッショナルUI最適化：Saveを強調・Cancelを控えめに */
     .modal-content .btn-primary {
         background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%) !important;
-        color: #111827 !important;
-        border: none !important;
+        color: #111827 !important; border: none !important;
         box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3) !important;
     }
     .modal-content .btn-primary:hover { opacity: 0.9; }
@@ -163,8 +155,7 @@
   <div class="modal-content">
     <div class="modal-title" id="kpiModalTitle" style="color: var(--clr-text-secondary); font-size: 0.9rem; text-transform: uppercase; margin-bottom: 8px;">Detail</div>
     <div style="font-size: 2.2rem; font-weight: 800; color: var(--clr-accent); text-align: center; margin-bottom: 24px;" id="kpiModalValue">--</div>
-    <div style="font-size: 0.9rem; color: var(--clr-text-primary); line-height: 1.6; background: rgba(251, 191, 36, 0.05); border-left: 3px solid var(--clr-accent); padding: 16px; border-radius: 0 8px 8px 0; font-family: var(--font-jp);" id="kpiModalDesc">
-      </div>
+    <div style="font-size: 0.9rem; color: var(--clr-text-primary); line-height: 1.6; background: rgba(251, 191, 36, 0.05); border-left: 3px solid var(--clr-accent); padding: 16px; border-radius: 0 8px 8px 0; font-family: var(--font-jp);" id="kpiModalDesc"></div>
     <button id="btnKpiClose" class="btn-primary" style="margin-top:24px;">閉じる</button>
   </div>
 </div>
@@ -176,4 +167,125 @@
     <form id="initialSetupForm">
       <div class="form-row-grid" style="background: rgba(251, 191, 36, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(251, 191, 36, 0.2);">
         <div class="form-group" style="margin-bottom: 0;">
-          <label class
+          <label class="form-label" style="color: var(--clr-accent);">TARGET Weight (kg)</label>
+          <input type="number" id="initTargetWeight" class="form-input" step="0.1" value="65.0" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="color: var(--clr-accent);">TARGET Fat (%)</label>
+          <input type="number" id="initTargetFat" class="form-input" step="0.1" value="13.0" required>
+        </div>
+      </div>
+      <div class="form-row-grid">
+        <div class="form-group"><label class="form-label">昨晩の就寝</label><input type="time" id="initBedtime" class="form-input" required></div>
+        <div class="form-group"><label class="form-label">今朝の起床</label><input type="time" id="initWaketime" class="form-input" required></div>
+      </div>
+      <div class="form-row-grid">
+        <div class="form-group"><label class="form-label">現在の体重 (kg)</label><input type="number" id="initWeight" class="form-input" step="0.1"></div>
+        <div class="form-group"><label class="form-label">現在の体脂肪 (%)</label><input type="number" id="initFat" class="form-input" step="0.1"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">コンディション</label>
+        <div class="cond-group" id="initMGrp">
+          <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
+          <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
+          <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
+          <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
+          <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary" id="initSaveBtn">Set Targets & Start</button>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+    <div class="modal-title">Settings</div>
+    <div style="font-size: 0.85rem; font-weight: 700; color: var(--clr-accent); margin-bottom: 12px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 6px;">KPI TARGETS</div>
+    <div class="form-row-grid" style="margin-bottom: 24px;">
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label" style="color: var(--clr-accent);">TARGET Weight (kg)</label>
+        <input type="number" id="settingTargetWeight" class="form-input" step="0.1" required>
+      </div>
+      <div class="form-group" style="margin-bottom: 0;">
+        <label class="form-label" style="color: var(--clr-accent);">TARGET Fat (%)</label>
+        <input type="number" id="settingTargetFat" class="form-input" step="0.1" required>
+      </div>
+    </div>
+    <div style="font-size: 0.85rem; font-weight: 700; color: var(--clr-text-secondary); margin-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px;">TODAY'S RECORD</div>
+    <div class="form-row-grid">
+      <div class="form-group"><label class="form-label">昨晩の就寝</label><input type="time" id="settingBedtime" class="form-input"></div>
+      <div class="form-group"><label class="form-label">今朝の起床</label><input type="time" id="settingWaketime" class="form-input"></div>
+    </div>
+    <div class="form-row-grid">
+      <div class="form-group"><label class="form-label">現在の体重 (kg)</label><input type="number" id="settingWeight" class="form-input" step="0.1"></div>
+      <div class="form-group"><label class="form-label">現在の体脂肪 (%)</label><input type="number" id="settingFat" class="form-input" step="0.1"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">コンディション</label>
+      <div class="cond-group" id="settingMGrp">
+        <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
+        <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
+        <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
+        <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
+        <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
+      </div>
+    </div>
+    <button id="btnGuideOpen" style="width: 100%; padding: 14px; margin-bottom: 24px; font-size: 0.9rem; font-weight: 700; background: rgba(56, 189, 248, 0.1); border: 1px solid #38bdf8; color: #38bdf8; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+      <i class="fas fa-book" style="margin-right: 6px;"></i> 取扱説明・リリースノート (Guide)
+    </button>
+    <div class="modal-actions" style="margin-top: 0;">
+      <button id="btnSettingsCancel" class="btn-secondary" style="margin-top:0;">Cancel</button>
+      <button id="btnSettingsSave" class="btn-primary" style="margin-top:0;">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="guideModal">
+  <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+    <div class="modal-title">App Guide & Release Notes</div>
+    <div style="font-size: 0.85rem; color: var(--clr-text-primary); line-height: 1.6; font-family: var(--font-jp);">
+      <div style="margin-bottom: 16px; padding: 12px; background: rgba(251,191,36,0.05); border-left: 3px solid var(--clr-accent); border-radius: 4px;">
+        <div style="font-weight: 700; color: var(--clr-accent); margin-bottom: 4px;">🎯 システムの目的</div>
+        行動とコンディションを定量化し、感覚に頼らない軌道修正を行うためのインフラです。日々のデータ蓄積が確実な成果に直結します。
+      </div>
+      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">✨ 最新のアップデート</h4>
+      <ul style="padding-left: 20px; margin-bottom: 16px; color: var(--clr-text-secondary);">
+        <li><b>AIカロリー集計機能：</b> 写真から自動解析された本日の摂取カロリーが、ダッシュボードのKPIとしてリアルタイム表示されるようになりました。</li>
+        <li><b>KPI詳細解説の復活：</b> 各KPIカードをタップすることで、数値の意味と実務的なアドバイスを確認できるようになりました。</li>
+        <li><b>誤打刻の解除：</b> 黄色い「Logged」ボタンを再タップすると打刻をリセットできます。</li>
+      </ul>
+      <h4 style="color: var(--clr-accent); margin-bottom: 8px; border-bottom: 1px solid rgba(251,191,36,0.3); padding-bottom: 4px;">📖 基本オペレーション</h4>
+      <ul style="padding-left: 20px; margin-bottom: 16px; color: var(--clr-text-secondary);">
+        <li><b>目標の設定：</b> 初回のSetup、または右上の「歯車」から目標(KGI)を設定・調整します。</li>
+        <li><b>日々の打刻：</b> 上部の「Wake Up」「Sleep」で睡眠サイクル、「Meal」で食事を記録します。</li>
+      </ul>
+    </div>
+    <button id="btnGuideClose" class="btn-primary" style="margin-top:24px;">閉じる</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="mealModal">
+  <div class="modal-content">
+    <div class="modal-title">Meal Log</div>
+    <input type="date" id="quickMealDate" class="form-input" style="margin-bottom: 20px;">
+    <select id="quickMealType" class="form-input" style="margin-bottom: 20px;">
+      <option value="Breakfast">Breakfast</option>
+      <option value="Lunch">Lunch</option>
+      <option value="Dinner">Dinner</option>
+      <option value="Snack">Snack</option>
+    </select>
+    <input type="file" id="quickMealImage" accept="image/*" class="form-input" style="margin-bottom: 20px;">
+    <input type="text" id="quickMealMemo" class="form-input" placeholder="Memo / Calories" style="margin-bottom: 20px;">
+    <div class="modal-actions">
+      <button id="btnMealCancel" class="btn-secondary" style="margin-top:0;">Cancel</button>
+      <button id="btnMealSave" class="btn-primary" style="margin-top:0;">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastMsg"></div>
+<script src="supabase-client.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
