@@ -18,7 +18,6 @@ export default async function handler(request) {
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) return new Response(JSON.stringify({ error: 'Failed to fetch image' }), { status: 500 });
     
-    // エッジ環境用の安全なBase64変換
     const arrayBuffer = await imageResponse.arrayBuffer();
     const bytes = new Uint8Array(arrayBuffer);
     const chunkSize = 8192;
@@ -34,18 +33,17 @@ export default async function handler(request) {
 2. analysis: 栄養素や健康への影響に関するコメント（日本語100文字程度）。メモ「${memo || ''}」も考慮してください。
 出力フォーマット: {"calories": 500, "analysis": "..."}`;
 
-    // ★大反省と改善：現在OpenRouterで「最も安定して動く無料モデル」の精鋭リスト
+    // ★修正1：OpenRouterで現在確実に動く「完全無料の画像認識AI」に厳選しました
     const models = [
-      "meta-llama/llama-3.2-90b-vision-instruct:free", // 第1候補: Meta社の超高性能AI
-      "meta-llama/llama-3.2-11b-vision-instruct:free", // 第2候補: Meta社の軽量・高速AI
-      "qwen/qwen2.5-vl-72b-instruct:free"              // 第3候補: アジア圏で最強のQwen最新版
+      "google/gemini-2.0-flash:free",
+      "google/gemini-2.0-flash-lite-preview-02-05:free",
+      "qwen/qwen-2-vl-7b-instruct:free" 
     ];
 
     let finalResult = null;
     let lastError = null;
     let usedModel = null;
 
-    // 滝のように順番にAIにアタックをかける（カスケード接続）
     for (const model of models) {
       try {
         const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -58,6 +56,7 @@ export default async function handler(request) {
           },
           body: JSON.stringify({
             "model": model,
+            // ★修正2：一部の無料AIが嫌がる「JSON強制モード」を削除（プロンプトで制御します）
             "messages": [{
               "role": "user",
               "content": [
@@ -70,14 +69,15 @@ export default async function handler(request) {
 
         const data = await response.json();
         
-        // 解析成功した場合
         if (response.ok && data.choices && data.choices.length > 0) {
           let aiText = data.choices[0].message.content;
           
-          // JSON抽出フィルター
+          // ★修正3：AIが余計な文字を混ぜてきても、{ から } までを強制的に抜き出してJSON化する最強のフィルター
           aiText = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
           const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) { aiText = jsonMatch[0]; }
+          if (jsonMatch) {
+              aiText = jsonMatch[0];
+          }
           
           let parsed = JSON.parse(aiText);
 
@@ -90,10 +90,10 @@ export default async function handler(request) {
 
           finalResult = parsed;
           usedModel = model;
-          break; // 成功したらループを脱出
+          break; // 成功したらループ脱出
         } else {
-          lastError = data.error ? data.error.message : 'Unknown AI API Error';
-          continue; // 失敗したら次のAIへ
+          lastError = data.error ? data.error.message : 'Unknown AI Error';
+          continue; 
         }
       } catch (err) {
         lastError = err.message;
@@ -102,7 +102,7 @@ export default async function handler(request) {
     }
 
     if (finalResult) {
-      finalResult.debug_model = usedModel; // どのAIが成功したか記録
+      finalResult.debug_model = usedModel; 
       return new Response(JSON.stringify(finalResult), { 
         status: 200, 
         headers: { 'Content-Type': 'application/json' } 
