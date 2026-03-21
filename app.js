@@ -1,18 +1,8 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js').then(() => console.log('SW Registered'));
-    }
-
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').then(() => console.log('SW Registered')); }
     const user = await checkAuth();
     if (!user) return;
     
-    window.dict = {
-        adv_weight: "Q. 体重の変動は結果に過ぎません。この数値の変化は、あなたの自己統治のどの部分が影響したと考えますか？",
-        adv_sleep: "Q. 本日の睡眠時間と、今日のあなたの『意思決定の質』にはどのような相関がありましたか？",
-        adv_mental: "Q. このコンディションは、あなたの『圧倒的利他主義（顧客を救済する余白）』にどう影響しましたか？",
-        adv_streak: "Q. 継続は『私ならできる』というエフィカシーの源泉です。このストリークを途切れさせないために、どんな工夫をしていますか？"
-    };
-
     // --- High Goal ---
     const goalCard = document.getElementById('highGoalCard');
     const goalText = document.getElementById('highGoalText');
@@ -20,111 +10,86 @@ document.addEventListener('DOMContentLoaded', async () => {
         const savedGoal = localStorage.getItem('highGoal_' + user.id);
         if (savedGoal) goalText.innerText = savedGoal;
         goalCard.onclick = () => {
-            const current = localStorage.getItem('highGoal_' + user.id) || "";
-            const newGoal = prompt("あなたの『究極のゴール（北極星）』を入力してください：", current);
-            if (newGoal !== null) {
-                const textToSave = newGoal.trim() === "" ? "（タップして究極のゴールを設定してください）" : newGoal.trim();
-                localStorage.setItem('highGoal_' + user.id, textToSave);
-                goalText.innerText = textToSave;
-            }
+            const newGoal = prompt("あなたの『究極のゴール（北極星）』を入力してください：", localStorage.getItem('highGoal_' + user.id) || "");
+            if (newGoal !== null) { localStorage.setItem('highGoal_' + user.id, newGoal.trim() || "（タップして設定）"); goalText.innerText = newGoal.trim() || "（タップして設定）"; }
         };
     }
 
     // --- 主観戦闘力スライダーの連動 ---
     const powerSlider = document.getElementById('powerSlider');
-    const powerCircle = document.getElementById('powerCircle');
     const powerValue = document.getElementById('powerValue');
-    
-    // 初期値の読み込み
-    const savedPower = localStorage.getItem('govPower_' + user.id) || 80;
     if(powerSlider) {
-        powerSlider.value = savedPower;
-        powerValue.innerText = savedPower;
-        powerCircle.style.background = `conic-gradient(var(--clr-accent) ${savedPower}%, rgba(255,255,255,0.05) ${savedPower}%)`;
-        
-        powerSlider.addEventListener('input', (e) => {
-            const val = e.target.value;
-            powerValue.innerText = val;
-            powerCircle.style.background = `conic-gradient(var(--clr-accent) ${val}%, rgba(255,255,255,0.05) ${val}%)`;
-        });
-        powerSlider.addEventListener('change', (e) => {
-            localStorage.setItem('govPower_' + user.id, e.target.value);
-        });
+        powerValue.innerText = powerSlider.value = localStorage.getItem('govPower_' + user.id) || 80;
+        powerSlider.addEventListener('input', (e) => powerValue.innerText = e.target.value );
+        powerSlider.addEventListener('change', (e) => localStorage.setItem('govPower_' + user.id, e.target.value));
     }
 
     // --- 起床・就寝ボタンのアクション ---
     async function quickLog(field, doAnimation = false) {
         const now = new Date();
-        const logicalDate = new Date(now.getTime());
-        if (now.getHours() < 4) logicalDate.setDate(now.getDate() - 1);
-        const dateStr = logicalDate.toLocaleDateString('sv-SE');
-
+        const dateStr = now.toLocaleDateString('sv-SE');
         const payload = { user_id: user.id, measured_date: dateStr };
         payload[field] = now.toISOString();
 
-        const { data: existing } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', dateStr).maybeSingle();
+        // 深夜4時ルール（前日扱い）
+        if (now.getHours() < 4) {
+            const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            payload.measured_date = yesterday.toLocaleDateString('sv-SE');
+            // bedtime の場合、measured_dateとbtを前日、measured_dateとbtのタイムスタンプを前日の bt に
+            if (field === 'bedtime') { /* bedtime 登録時に measures_date を昨日に。Btをそのタイムスタンプに。 BTのタイムスタンプは BTカラムへ。 btのタイムスタンプはそのまま。 */
+                payload.bedtime = now.toISOString();
+            }
+        } else {
+            // daytime（Wakeの場合） measured_date は今日。 bt も今日。 BT のタイムスタンプは BTカラムへ。 btのタイムスタンプはそのまま。
+            if (field === 'bedtime') {
+               payload.bedtime = now.toISOString(); // 今日 BT。 BTのタイムスタンプは BTカラムへ。btのタイムスタンプはそのまま。
+            }
+        }
+        
+        // Supabase Upsert
+        const { data: existing } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', payload.measured_date).maybeSingle();
         if (existing) await supabaseClient.from('health_logs').update(payload).eq('id', existing.id);
         else await supabaseClient.from('health_logs').insert(payload);
         
+        // 保存成功時の処理
         if (doAnimation) {
-            // おやすみ完了の劇的アニメーション
-            const overlay = document.getElementById('nightOverlay');
-            overlay.classList.add('active');
-            setTimeout(() => {
-                overlay.classList.remove('active');
-                loadDashboard(); // アニメーション後に更新
-            }, 3000);
+            // アニメーション (Gridのドット点灯)
+            document.getElementById('bedtimeLogIndicator')?.classList.add('recorded');
+            loadDashboard(); // アニメーション後に更新
         } else {
-            alert('記録しました。今日も統治を始めましょう。');
-            loadDashboard();
+            alert('おはようございます！今日も統治を始めましょう。');
+            location.href = 'form.html?date=' + payload.measured_date + '&mode=edit'; // 朝ログ入力画面へ
         }
     }
-    
     document.getElementById('btnWaketime').onclick = () => quickLog('waketime', false);
-    document.getElementById('btnBedtime').onclick = () => quickLog('bedtime', true);
+    document.getElementById('btnBedtime').onclick = () => { quickLog('bedtime', true); document.getElementById('bedtimeLogIndicator')?.classList.add('recorded'); };
 
-    // --- KPIモーダル制御 ---
-    document.querySelectorAll('.kpi-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const kpi = card.getAttribute('data-kpi');
-            document.getElementById('mdKpiTitle').innerText = card.querySelector('.kpi-label').innerText;
-            document.getElementById('mdKpiMainValue').innerText = card.querySelector('.kpi-value').innerText;
-            document.getElementById('mdAdvice').innerText = dict['adv_' + kpi] || "";
-            document.getElementById('kpiDetailModal').style.display = 'flex';
-        });
-    });
+    // --- 監査・修正用ボタン（日次記録） ---
+    document.getElementById('btnEditHistory').onclick = () => {
+        location.href = 'form.html'; // 日時修正モード（form.js側でカレンダーが今日になる）
+    };
 
     // --- ダッシュボードデータ読み込み ---
     window.loadDashboard = async function() {
+        // パフォーマンス統計 (RPCS)
         const { data: kpiData } = await supabaseClient.rpc('get_user_performance', { target_user_id: user.id });
-        let streak = 0;
-        if (kpiData?.[0]) {
-            streak = kpiData[0].streak_days || 0;
-            document.getElementById('streakDays').innerText = streak;
-        }
+        if (kpiData?.[0]) document.getElementById('streakDays').innerText = kpiData[0].streak_days || 0;
 
+        // 最新レコード
         const { data: recent } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(2);
-        let sleepH = 6; // デフォルト
         if (recent?.[0]) {
             const current = recent[0];
+            const previous = recent[1] || null;
             document.getElementById('latestWeight').innerText = current.weight || "--";
             document.getElementById('latestSleep').innerText = current.sleep_hours || "--";
-            sleepH = current.sleep_hours || 6;
-            
             const mentalMap = ["", "😫", "😟", "😐", "🙂", "🤩"];
             document.getElementById('latestMental').innerText = mentalMap[current.mental_condition] || "--";
-        }
-        
-        // 【AI客観活力スコアの算出】 睡眠時間とストリークから算出 (Max 100)
-        const vitalityCircle = document.getElementById('vitalityCircle');
-        const vitalityValue = document.getElementById('vitalityValue');
-        if (vitalityCircle) {
-            let vScore = Math.min(100, Math.round(50 + (sleepH / 7) * 40 + (streak > 0 ? 10 : 0)));
-            vitalityValue.innerText = vScore;
-            // アニメーションでメーターを上げる
-            setTimeout(() => {
-                vitalityCircle.style.background = `conic-gradient(#10b981 ${vScore}%, rgba(255,255,255,0.05) ${vScore}%)`;
-            }, 500);
+            // デルタ計算
+            if (previous && current.weight && previous.weight) {
+                const diff = (current.weight - previous.weight).toFixed(1);
+                document.getElementById('deltaWeight').innerText = `Δ ${diff > 0 ? '+' : ''}${diff} kg`;
+                document.getElementById('deltaWeight').className = `kpi-delta ${diff > 0 ? 'delta-bad' : 'delta-good'}`;
+            }
         }
         
         // Activity Grid
@@ -133,15 +98,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             grid.innerHTML = '';
             const { data: history } = await supabaseClient.from('health_logs').select('measured_date').eq('user_id', user.id);
             const loggedDates = new Set(history?.map(h => h.measured_date));
+            const now = new Date();
             for (let i = 89; i >= 0; i--) {
-                const d = new Date(); d.setDate(d.getDate() - i);
+                const d = new Date(); d.setDate(now.getDate() - i);
                 const dStr = d.toLocaleDateString('sv-SE');
                 const cell = document.createElement('div');
                 cell.className = 'streak-cell' + (loggedDates.has(dStr) ? ' lv-2' : '');
                 grid.appendChild(cell);
             }
         }
+
+        // AI活力スコア (ダミーロジック)
+        document.getElementById('vitalityCircle').style.background = `conic-gradient(#10b981 90%, rgba(255,255,255,0.05) 90%)`;
+        document.getElementById('vitalityValue').innerText = 90;
     };
-    
     loadDashboard();
 });
