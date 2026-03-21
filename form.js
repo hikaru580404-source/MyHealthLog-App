@@ -1,211 +1,124 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // 認証チェック
     const user = await checkAuth();
     if (!user) return;
-    let mVal = 3;
 
-    function getLocalLogicalDateStr(dateObj) {
-        const d = new Date(dateObj.getTime());
-        if (d.getHours() < 4) d.setDate(d.getDate() - 1);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${y}-${m}-${day}`;
-    }
-
-    function createSafeDate(dateStr, timeStr) {
-        if (!timeStr) return null;
-        const [y, m, d] = dateStr.split('-').map(Number);
-        const [h, min] = timeStr.split(':').map(Number);
-        return new Date(y, m - 1, d, h, min);
-    }
-
-    function formatTimeForInput(isoString) {
-        if (!isoString) return "";
-        const d = new Date(isoString);
-        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-    }
-
-    const todayStr = getLocalLogicalDateStr(new Date());
-    const dateInput = document.getElementById('date');
-    if (dateInput) dateInput.value = todayStr;
-
-    document.querySelectorAll('#mGrp .cond-btn').forEach(b => {
-        b.addEventListener('click', () => {
-            document.querySelectorAll('#mGrp .cond-btn').forEach(x => x.classList.remove('active'));
-            b.classList.add('active');
-            mVal = b.dataset.v;
+    // --- 1. UIの初期設定 ---
+    
+    // コンディションボタンの選択制御
+    document.querySelectorAll('#mGrp .cond-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('#mGrp .cond-btn').forEach(b => b.classList.remove('active'));
+            e.currentTarget.classList.add('active');
         });
     });
 
-    async function loadDataForDate(targetDate) {
-        const { data, error } = await supabaseClient.from('health_logs')
-            .select('*').eq('user_id', user.id).eq('measured_date', targetDate).maybeSingle();
-
-        const submitBtn = document.querySelector('#hForm button[type="submit"]');
-        if (!submitBtn) return;
-
-        if (data) {
-            document.getElementById('w').value = data.weight || "";
-            document.getElementById('f').value = data.body_fat || "";
-            document.getElementById('wt').value = formatTimeForInput(data.waketime);
-            document.getElementById('bt').value = formatTimeForInput(data.bedtime);
-            const noteEl = document.getElementById('note');
-            if(noteEl) noteEl.value = data.daily_notes || "";
-            
-            if (data.mental_condition) {
-                document.querySelectorAll('#mGrp .cond-btn').forEach(b => b.classList.remove('active'));
-                const targetBtn = document.querySelector(`#mGrp .cond-btn[data-v="${data.mental_condition}"]`);
-                if(targetBtn) targetBtn.classList.add('active');
-                mVal = data.mental_condition;
-            }
-            submitBtn.innerText = "修正確認する";
-        } else {
-            document.getElementById('w').value = "";
-            document.getElementById('f').value = "";
-            document.getElementById('wt').value = "";
-            document.getElementById('bt').value = "";
-            const noteEl = document.getElementById('note');
-            if(noteEl) noteEl.value = "";
-            document.querySelectorAll('#mGrp .cond-btn').forEach(b => b.classList.remove('active'));
-            const targetBtn = document.querySelector(`#mGrp .cond-btn[data-v="3"]`);
-            if(targetBtn) targetBtn.classList.add('active');
-            mVal = 3;
-            submitBtn.innerText = "確認へ進む";
-        }
-    }
-    
+    // 日付の初期値（深夜4時までは前日扱い）
+    const dateInput = document.getElementById('date');
     if (dateInput) {
-        dateInput.addEventListener('change', (e) => loadDataForDate(e.target.value));
+        const now = new Date();
+        const logicalDate = new Date(now.getTime());
+        if (now.getHours() < 4) logicalDate.setDate(now.getDate() - 1);
+        dateInput.value = logicalDate.toLocaleDateString('sv-SE');
     }
+
+    // --- 2. データの収集と確認画面への遷移 ---
     
-    await loadDataForDate(todayStr);
+    const form = document.getElementById('hForm');
+    let payloadToSave = {}; // DBに送るデータを格納する箱
 
-    const hForm = document.getElementById('hForm');
-    if (hForm) {
-        hForm.addEventListener('submit', async (e) => {
+    if (form) {
+        form.addEventListener('submit', (e) => {
             e.preventDefault();
-            const date = document.getElementById('date').value;
-            const wt = document.getElementById('wt').value;
-            const bt = document.getElementById('bt').value;
-            const wValue = document.getElementById('w').value;
-            let diff = "未計算";
 
-            if (wt) {
-                const dDate = new Date(date);
-                dDate.setDate(dDate.getDate() - 1);
-                const { data: prevDay } = await supabaseClient.from('health_logs')
-                    .select('bedtime').eq('user_id', user.id).eq('measured_date', getLocalLogicalDateStr(dDate)).maybeSingle();
+            // 現在「朝」と「夜」どちらの画面が開いているかを判定
+            const isMorning = document.getElementById('morningSection').style.display === 'block';
+            const isNight = document.getElementById('nightSection').style.display === 'block';
 
-                if (prevDay && prevDay.bedtime) {
-                    const btDate = new Date(prevDay.bedtime);
-                    const wtDate = createSafeDate(date, wt);
-                    let hours = (wtDate - btDate) / 3600000;
-                    if (hours < 0) hours += 24;
-                    diff = hours.toFixed(1) + " h";
-                } else { diff = "前日の記録なし"; }
+            // ベースとなるデータ（誰の、いつの記録か）
+            payloadToSave = {
+                user_id: user.id,
+                measured_date: dateInput.value,
+            };
+
+            // 確認画面（cList）のHTMLをリセット
+            const cList = document.getElementById('cList');
+            cList.innerHTML = `<div><span>日付</span><span>${dateInput.value}</span></div>`;
+
+            // 【重要】朝の画面が開いている時だけ、体重などのデータを取得する
+            if (isMorning) {
+                const wt = document.getElementById('wt').value;
+                const bt = document.getElementById('bt').value;
+                const w = document.getElementById('w').value;
+                const f = document.getElementById('f').value;
+                const cond = document.querySelector('#mGrp .cond-btn.active').getAttribute('data-v');
+
+                if(wt) { payloadToSave.waketime = `${dateInput.value}T${wt}:00`; cList.innerHTML += `<div><span>起床</span><span>${wt}</span></div>`; }
+                if(bt) { payloadToSave.bedtime = `${dateInput.value}T${bt}:00`; cList.innerHTML += `<div><span>就寝(昨夜)</span><span>${bt}</span></div>`; }
+                if(w)  { payloadToSave.weight = parseFloat(w); cList.innerHTML += `<div><span>体重</span><span>${w} kg</span></div>`; }
+                if(f)  { payloadToSave.body_fat = parseFloat(f); cList.innerHTML += `<div><span>体脂肪</span><span>${f} %</span></div>`; }
+                
+                payloadToSave.mental_condition = parseInt(cond);
+                cList.innerHTML += `<div><span>コンディション</span><span>Level ${cond}</span></div>`;
             }
 
-            document.getElementById('cList').innerHTML = `
-                <div><span>日付:</span><span>${date}</span></div>
-                <div><span>起床:</span><span>${wt ? wt : "未入力"}</span></div>
-                <div><span>就寝:</span><span>${bt ? bt : "未入力"}</span></div>
-                <div><span>睡眠:</span><span>${diff}</span></div>
-                <div><span>体重:</span><span>${wValue ? wValue + " kg" : "未入力"}</span></div>
-            `;
+            // 【重要】夜の画面が開いている時だけ、ジャーナルのデータを取得する
+            if (isNight) {
+                const note = document.getElementById('note').value;
+                if(note) {
+                    payloadToSave.daily_notes = note;
+                    cList.innerHTML += `<div><span>ジャーナル</span><span>入力あり</span></div>`;
+                }
+            }
+
+            // P1(入力)を隠して、P2(確認)を表示
             document.getElementById('p1').classList.remove('active');
             document.getElementById('p2').classList.add('active');
+            document.getElementById('s1').classList.remove('active');
             document.getElementById('s1').classList.add('done');
             document.getElementById('s2').classList.add('active');
         });
     }
 
+    // --- 3. データベースへの保存（Upsert処理） ---
+    
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn) {
-        saveBtn.addEventListener('click', async () => {
-            const btn = document.getElementById('saveBtn');
+        saveBtn.addEventListener('click', async (e) => {
+            const btn = e.target;
             btn.disabled = true;
             btn.innerText = "保存中...";
 
             try {
-                const date = document.getElementById('date').value;
-                const wt = document.getElementById('wt').value;
-                const bt = document.getElementById('bt').value;
-                const payload = { user_id: user.id, measured_date: date, mental_condition: parseInt(mVal) };
-                
-                // 空欄にされた場合は null としてDBを更新するよう修正
-                const noteEl = document.getElementById('note');
-                payload.daily_notes = (noteEl && noteEl.value) ? noteEl.value : null;
+                // すでに今日のデータが存在するか確認
+                const { data: existing } = await supabaseClient
+                    .from('health_logs')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .eq('measured_date', payloadToSave.measured_date)
+                    .maybeSingle();
 
-                const wInput = document.getElementById('w').value;
-                payload.weight = wInput ? parseFloat(wInput) : null;
-                
-                const fInput = document.getElementById('f').value;
-                payload.body_fat = fInput ? parseFloat(fInput) : null;
-
-                if (wt) {
-                    payload.waketime = createSafeDate(date, wt).toISOString();
-                    const dDate = new Date(date); dDate.setDate(dDate.getDate() - 1);
-                    const { data: prevDay } = await supabaseClient.from('health_logs')
-                        .select('bedtime').eq('user_id', user.id).eq('measured_date', getLocalLogicalDateStr(dDate)).maybeSingle();
-                    if (prevDay && prevDay.bedtime) {
-                        let hours = (new Date(payload.waketime) - new Date(prevDay.bedtime)) / 3600000;
-                        if (hours < 0) hours += 24;
-                        payload.sleep_hours = parseFloat(hours.toFixed(1));
-                    }
+                if (existing) {
+                    // データがあれば「上書き（更新）」※今回送信した項目のみ更新される
+                    const { error } = await supabaseClient.from('health_logs').update(payloadToSave).eq('id', existing.id);
+                    if (error) throw error;
                 } else {
-                    payload.waketime = null;
-                    payload.sleep_hours = null;
-                }
-                
-                if (bt) {
-                    let bDate = createSafeDate(date, bt);
-                    if (bDate.getHours() < 4) bDate.setDate(bDate.getDate() + 1);
-                    payload.bedtime = bDate.toISOString();
-                } else {
-                    payload.bedtime = null;
+                    // データがなければ「新規作成」
+                    const { error } = await supabaseClient.from('health_logs').insert(payloadToSave);
+                    if (error) throw error;
                 }
 
-                const { data: existing } = await supabaseClient.from('health_logs')
-                    .select('id').eq('user_id', user.id).eq('measured_date', date).maybeSingle();
-                
-                let dbErr;
-                if (existing && existing.id) {
-                    dbErr = (await supabaseClient.from('health_logs').update(payload).eq('id', existing.id)).error;
-                } else {
-                    dbErr = (await supabaseClient.from('health_logs').insert(payload)).error;
-                }
+                // 保存成功：P2(確認)を隠して、P3(完了)を表示
+                document.getElementById('p2').classList.remove('active');
+                document.getElementById('p3').classList.add('active');
+                document.getElementById('s2').classList.remove('active');
+                document.getElementById('s2').classList.add('done');
+                document.getElementById('s3').classList.add('active');
 
-                if (!dbErr) {
-                    // ★【追加機能】就寝時間を変更した場合、自動で「翌日の睡眠時間」を再計算して修正する
-                    const nextDateObj = new Date(date);
-                    nextDateObj.setDate(nextDateObj.getDate() + 1);
-                    const nextDateStr = getLocalLogicalDateStr(nextDateObj);
-
-                    const { data: nextDay } = await supabaseClient.from('health_logs')
-                        .select('id, waketime').eq('user_id', user.id).eq('measured_date', nextDateStr).maybeSingle();
-
-                    // 翌日に起床時間が既に記録されている場合のみ計算
-                    if (nextDay && nextDay.waketime) {
-                        if (bt) {
-                            let bDate = createSafeDate(date, bt);
-                            if (bDate.getHours() < 4) bDate.setDate(bDate.getDate() + 1);
-                            let hours = (new Date(nextDay.waketime) - bDate) / 3600000;
-                            if (hours < 0) hours += 24;
-                            await supabaseClient.from('health_logs').update({ sleep_hours: parseFloat(hours.toFixed(1)) }).eq('id', nextDay.id);
-                        } else {
-                            // 就寝時間を消した場合は、翌日の睡眠時間もリセット
-                            await supabaseClient.from('health_logs').update({ sleep_hours: null }).eq('id', nextDay.id);
-                        }
-                    }
-
-                    document.getElementById('p2').classList.remove('active'); 
-                    document.getElementById('p3').classList.add('active');
-                    document.getElementById('s2').classList.add('done'); 
-                    document.getElementById('s3').classList.add('active');
-                } else { throw dbErr; }
-            } catch (e) {
-                alert("システムエラー: " + e.message);
-                btn.disabled = false; btn.innerText = "確定する";
+            } catch(err) {
+                alert("システムエラー: " + err.message);
+                btn.disabled = false;
+                btn.innerText = "確定する";
             }
         });
     }
