@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const user = await checkAuth();
     if (!user) return;
     
-    // --- 【復旧】ログアウト機能 ---
+    // --- ログアウト機能 ---
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.onclick = async () => {
@@ -14,15 +14,78 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    // シンプルなポイント説明
+    // --- 【復旧】多言語辞書と翻訳ロジック ---
+    window.currentLang = localStorage.getItem('appLang_' + user.id) || 'ja';
+    
     window.dict = {
-        adv_weight: "【ポイント】体重は水分量や食事のタイミングで日々変動します。一喜一憂せず、1週間〜1ヶ月の長期的なトレンド（推移）を重視してください。",
-        adv_fat: "【ポイント】体脂肪率は計測時の体内水分量に大きく影響されます。毎日同じ条件（例：起床後のトイレ後）で計測することで、精度の高いデータが得られます。",
-        adv_sleep: "【ポイント】7時間の睡眠は「休息」ではなく、日中の意思決定の質を最大化するための「戦略的メンテナンス」です。脳のパフォーマンスに直結します。",
-        adv_mental: "【ポイント】コンディションは利他（他者への価値提供）の余裕を表す指標です。数値が低い日は無理をせず、自己の回復（睡眠や休養）を最優先してください。",
-        adv_streak: "【ポイント】連続記録（ストリーク）は、あなた自身の自己効力感（私ならできるという自信）の証明です。1日でも長く繋ぐことが重要です。",
-        adv_log_count: "【ポイント】月間の記録日数は、自己を統治できているかの客観的なバロメーターです。記録率が高いほど正確な振り返りが可能になります。"
+        en: {
+            night_msg: "Governance completed. Good night.",
+            high_goal_placeholder: "(Tap to set your High Goal)",
+            vitality_ai: "Vitality Score",
+            gov_power: "Governance Power",
+            guide_slider: "Slide up/down to set your current power.",
+            guide_hide: "Hide this next time",
+            wake: "Wake", meal: "Meal", sleep: "Sleep",
+            edit_history: "Daily Log (Edit/Audit Past Logs)",
+            ai_analysis_title: "AI Personal Coach Standby",
+            ai_analysis_wait: "Analysis & Diet Support (Preparing)",
+            weight: "Weight", fat: "Body Fat", sleep_lbl: "Sleep", mental: "Mental",
+            streak: "Streak", days: "Days", consecutive: "Consecutive",
+            logs: "Logs", this_month: "This Month",
+            activity_grid: "Activity Grid (Last 90 Days)",
+            analysis: "Analysis", nav_meals: "Meals (Photo)", nav_history: "History",
+            msg_wake: "Good morning! Let's start governing today.",
+            adv_weight: "[Point] Weight fluctuates daily with water and meals. Focus on the long-term trend (1 week to 1 month) rather than daily changes.",
+            adv_fat: "[Point] Body fat % is heavily affected by body water. Measure under the same conditions daily (e.g., after waking/restroom) for accuracy.",
+            adv_sleep: "[Point] 7 hours of sleep is not just 'rest', but 'strategic maintenance' to maximize the quality of daytime decisions.",
+            adv_mental: "[Point] Condition reflects your margin for altruism. If low, prioritize your own recovery (sleep/rest) without pushing too hard.",
+            adv_streak: "[Point] Your streak is proof of your self-efficacy ('I can do it'). Keeping it unbroken as long as possible is crucial.",
+            adv_log_count: "[Point] Monthly logged days act as a barometer of your self-governance. A higher log rate enables more accurate reflection."
+        },
+        ja: {
+            night_msg: "今日も1日、統治完了。おやすみなさい。",
+            high_goal_placeholder: "（タップして究極のゴールを設定）",
+            vitality_ai: "客観活力",
+            gov_power: "主観戦闘力",
+            guide_slider: "ダイヤルを上下に動かして、今の戦闘力をセットします。",
+            guide_hide: "次回から非表示",
+            wake: "Wake", meal: "Meal", sleep: "Sleep",
+            edit_history: "日次記録（過去ログ修正・監査）",
+            ai_analysis_title: "AI Personal Coach Standby",
+            ai_analysis_wait: "解析・ダイエット支援（準備中）",
+            weight: "Weight", fat: "Body Fat", sleep_lbl: "Sleep", mental: "Mental",
+            streak: "Streak", days: "Days", consecutive: "Consecutive",
+            logs: "Logs", this_month: "This Month",
+            activity_grid: "Activity Grid (Last 90 Days)",
+            analysis: "Analysis", nav_meals: "Meals(画像)", nav_history: "History",
+            msg_wake: "おはようございます！今日も統治を始めましょう。",
+            adv_weight: "【ポイント】体重は水分量や食事のタイミングで日々変動します。一喜一憂せず、1週間〜1ヶ月の長期的なトレンド（推移）を重視してください。",
+            adv_fat: "【ポイント】体脂肪率は計測時の体内水分量に大きく影響されます。毎日同じ条件（例：起床後のトイレ後）で計測することで、精度の高いデータが得られます。",
+            adv_sleep: "【ポイント】7時間の睡眠は「休息」ではなく、日中の意思決定の質を最大化するための「戦略的メンテナンス」です。脳のパフォーマンスに直結します。",
+            adv_mental: "【ポイント】コンディションは利他（他者への価値提供）の余裕を表す指標です。数値が低い日は無理をせず、自己の回復（睡眠や休養）を最優先してください。",
+            adv_streak: "【ポイント】連続記録（ストリーク）は、あなた自身の自己効力感（私ならできるという自信）の証明です。1日でも長く繋ぐことが重要です。",
+            adv_log_count: "【ポイント】月間の記録日数は、自己を統治できているかの客観的なバロメーターです。記録率が高いほど正確な振り返りが可能になります。"
+        }
     };
+
+    function updateLanguage() {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            if (window.dict[window.currentLang] && window.dict[window.currentLang][key]) {
+                el.innerHTML = window.dict[window.currentLang][key]; // HTMLタグ（アイコン等）も反映できるようにinnerHTMLを使用
+            }
+        });
+    }
+    updateLanguage(); // ロード時に翻訳実行
+
+    const langBtn = document.getElementById('langToggleBtn');
+    if (langBtn) {
+        langBtn.onclick = () => {
+            window.currentLang = (window.currentLang === 'en' ? 'ja' : 'en');
+            localStorage.setItem('appLang_' + user.id, window.currentLang);
+            updateLanguage();
+        };
+    }
 
     // --- High Goal ---
     const goalCard = document.getElementById('highGoalCard');
@@ -32,7 +95,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (savedGoal) goalText.innerText = savedGoal;
         goalCard.onclick = () => {
             const newGoal = prompt("あなたの『究極のゴール（北極星）』を入力してください：", localStorage.getItem('highGoal_' + user.id) || "");
-            if (newGoal !== null) { localStorage.setItem('highGoal_' + user.id, newGoal.trim() || "（タップして設定）"); goalText.innerText = newGoal.trim() || "（タップして設定）"; }
+            if (newGoal !== null) { 
+                const placeholder = window.dict[window.currentLang].high_goal_placeholder;
+                localStorage.setItem('highGoal_' + user.id, newGoal.trim() || placeholder); 
+                goalText.innerText = newGoal.trim() || placeholder; 
+            }
         };
     }
 
@@ -100,7 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             overlay.classList.add('active');
             setTimeout(() => { overlay.classList.remove('active'); loadDashboard(); }, 3000);
         } else {
-            alert('おはようございます！今日も統治を始めましょう。');
+            alert(window.dict[window.currentLang].msg_wake);
             location.href = 'form.html?date=' + payload.measured_date + '&mode=edit';
         }
     }
@@ -115,9 +182,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.kpi-card').forEach(card => {
         card.addEventListener('click', async () => {
             const kpi = card.getAttribute('data-kpi');
+            // ラベル要素の中身を取得 (innerHTMLだと翻訳spanタグごと取れるのでinnerTextを使用)
             document.getElementById('mdKpiTitle').innerText = card.querySelector('.kpi-label').innerText;
             document.getElementById('mdKpiMainValue').innerText = card.querySelector('.kpi-value').innerText;
-            document.getElementById('mdAdvice').innerText = window.dict['adv_' + kpi] || "";
+            // 辞書からポイント説明を取得して表示
+            document.getElementById('mdAdvice').innerText = window.dict[window.currentLang]['adv_' + kpi] || "";
             document.getElementById('kpiDetailModal').style.display = 'flex';
 
             if (['streak', 'log_count', 'mental'].includes(kpi)) {
