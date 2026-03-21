@@ -17,8 +17,10 @@
   <style>
     /* 北極星 */
     .high-goal-container { margin-bottom: 24px; }
-    .high-goal-card { background: rgba(251, 191, 36, 0.05); border: 1px dashed var(--clr-accent); border-radius: var(--radius-md); padding: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; text-align: center; transition: background 0.2s; }
-    .high-goal-text { color: var(--clr-accent); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.05em; line-height: 1.4; }
+    .high-goal-card { background: rgba(251, 191, 36, 0.05); border: 1px dashed var(--clr-accent); border-radius: var(--radius-md); padding: 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; text-align: center; transition: background 0.2s; }
+    .high-goal-card:hover { background: rgba(251, 191, 36, 0.1); }
+    .high-goal-text { color: var(--clr-accent); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.05em; line-height: 1.4; flex: 1; }
+    .high-goal-edit-icon { color: var(--clr-text-secondary); font-size: 0.85rem; padding-left: 8px; }
 
     /* デュアルスコア UI（3Dメタル＆縦ダイヤル） */
     .dual-score-container { display: flex; gap: 16px; margin-bottom: 24px; }
@@ -64,6 +66,9 @@
     @keyframes shine { 0% {left:-100%;} 100% {left:200%;} }
     .btn-quick.bed:active { transform: scale(0.95) translateY(2px); box-shadow: 0 0 5px rgba(251, 191, 36, 0.2); }
     
+    /* 儀式ボタンの制限用（非活性）CSS */
+    .btn-quick.disabled { opacity: 0.4; filter: grayscale(100%); pointer-events: none; cursor: not-allowed; box-shadow: none; border-color: #334155; background: #1e293b; color: #64748b; }
+
     /* おやすみ完了アニメーション */
     .night-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.9); z-index: 9999; display: none; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 1s; }
     .night-overlay.active { display: flex; opacity: 1; }
@@ -95,11 +100,11 @@
   <div class="high-goal-container">
     <div class="high-goal-card" id="highGoalCard">
       <span class="high-goal-text" id="highGoalText" data-i18n="high_goal_placeholder">（タップして究極のゴールを設定）</span>
+      <i class="fas fa-edit high-goal-edit-icon"></i>
     </div>
   </div>
 
   <div class="dual-score-container">
-    
     <div class="score-box">
       <div class="score-title"><span data-i18n="vitality_ai">客観活力</span> <span style="color:#10b981;">(AI)</span></div>
       <div class="meter-layout">
@@ -113,13 +118,11 @@
     
     <div class="score-box">
       <div class="score-title" data-i18n="gov_power">主観戦闘力</div>
-      
       <div class="guide-tooltip" id="powerGuide" style="display: none;">
         <i class="fas fa-hand-pointer" style="color: var(--clr-accent); margin-bottom: 4px;"></i><br>
         <span data-i18n="guide_slider">ダイヤルを上下に動かして、今の戦闘力をセットします。</span><br>
         <button class="guide-btn-hide" id="btnHideGuide"><span data-i18n="guide_hide">次回から非表示</span> <i class="fas fa-times"></i></button>
       </div>
-
       <div class="meter-layout">
         <div class="score-circle-wrap">
           <div class="score-circle" id="powerCircle" style="background: conic-gradient(var(--clr-accent) 80%, #1e293b 80%);">

@@ -1,72 +1,81 @@
-/* =============================================
-   summary.css - ダークテーマ完全統合版
-   ============================================= */
+document.addEventListener('DOMContentLoaded', async () => {
+    // 認証チェック
+    const user = await checkAuth();
+    if (!user) return;
 
-.summary-header {
-  padding: 1.2rem 1.5rem;
-  background: transparent;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  display: flex; justify-content: space-between; align-items: center;
-  position: sticky; top: 0; z-index: 10;
-}
-.header-title {
-  font-size: 1.1rem; font-weight: 800; font-family: var(--font-en);
-  letter-spacing: 0.1em; color: var(--clr-text-primary);
-}
-.nav-back-premium {
-  color: var(--clr-text-primary); text-decoration: none;
-  font-size: 1.2rem; transition: opacity 0.2s;
-}
+    const tbody = document.getElementById('historyBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">Loading...</td></tr>';
 
-.summary-container { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
+    // Supabaseからユーザーの全ログを取得
+    const { data: logs, error } = await supabaseClient
+        .from('health_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('measured_date', { ascending: false });
 
-.history-card {
-  background: var(--clr-surface); border-radius: var(--radius-lg);
-  border: 1px solid var(--clr-border); overflow: hidden;
-  backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
+    if (error) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#ef4444;">Error loading data</td></tr>';
+        return;
+    }
 
-.table-wrapper { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; text-align: left; }
+    // 日付をキーにしたマップを作成（検索しやすくするため）
+    const logMap = {};
+    if (logs) {
+        logs.forEach(log => { logMap[log.measured_date] = log; });
+    }
 
-th {
-  background: rgba(0,0,0,0.3); padding: 1rem 1.2rem;
-  font-size: 0.75rem; font-weight: 700; font-family: var(--font-en);
-  color: var(--clr-text-secondary); text-transform: uppercase;
-  letter-spacing: 0.05em; border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-td {
-  padding: 1.2rem; font-size: 0.95rem; border-bottom: 1px solid rgba(255,255,255,0.05);
-  font-family: var(--font-en); color: var(--clr-text-primary); transition: background-color 0.2s ease;
-}
-tbody tr:hover td { background-color: rgba(255,255,255,0.03); }
+    tbody.innerHTML = '';
+    
+    // 深夜4時ルールを適用した「今日」の論理日付を取得
+    const today = new Date();
+    if (today.getHours() < 4) today.setDate(today.getDate() - 1);
 
-.col-date { font-weight: 600; white-space: nowrap; }
-.col-date .dow { font-size: 0.75rem; color: var(--clr-text-secondary); font-weight: 400; margin-left: 4px; }
+    // 過去30日間をループして一覧を生成
+    for (let i = 0; i < 30; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toLocaleDateString('sv-SE'); // YYYY-MM-DD
+        
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        // 行をタップで、対象日のEDIT MODEへ遷移
+        tr.onclick = () => { location.href = `form.html?date=${dateStr}`; };
 
-.col-val { font-weight: 600; text-align: right; white-space: nowrap; }
-th.col-val { text-align: right; }
+        const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+        const dateDisplay = `${dateStr.slice(5)} <span class="dow">${dayOfWeek}</span>`; // MM-DD Sun
 
-.col-mental { font-family: var(--font-jp); text-align: center; }
-th.col-mental { text-align: center; }
+        if (logMap[dateStr]) {
+            // 記録がある場合（データ展開）
+            const log = logMap[dateStr];
+            const weight = log.weight ? `${log.weight} <span style="font-size:0.7rem;color:var(--clr-text-secondary)">kg</span>` : '--';
+            const sleep = log.sleep_hours ? `${log.sleep_hours} <span style="font-size:0.7rem;color:var(--clr-text-secondary)">h</span>` : '--';
+            
+            let mentalBadge = '--';
+            if (log.mental_condition) {
+                const mFaces = ["", "😫", "😟", "😐", "🙂", "🤩"];
+                mentalBadge = `<span class="badge-mental m-${log.mental_condition}">${mFaces[log.mental_condition]}</span>`;
+            }
+            
+            // ジャーナルは15文字で省略
+            const note = log.daily_notes ? (log.daily_notes.length > 15 ? log.daily_notes.substring(0, 15) + '...' : log.daily_notes) : '--';
 
-.col-note { font-family: var(--font-jp); color: var(--clr-text-secondary); font-size: 0.85rem; line-height: 1.5; min-width: 200px; }
-
-.badge-mental {
-  display: inline-block; padding: 0.3rem 0.8rem; border-radius: 99px;
-  font-weight: 700; font-size: 0.75rem; letter-spacing: 0.05em;
-}
-
-/* 5段階のコンディションカラー定義（ダークテーマのネオン風発色） */
-.m-5 { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); } /* 絶好調 */
-.m-4 { background: rgba(56, 189, 248, 0.15); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.3); } /* 良 */
-.m-3 { background: rgba(255, 255, 255, 0.1); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.2); } /* 並 */
-.m-2 { background: rgba(249, 115, 22, 0.15); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.3); } /* 低調 */
-.m-1 { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); } /* 不調 */
-
-@media (max-width: 640px) {
-  .summary-header { padding: 1rem; }
-  .summary-container { margin: 1rem auto; }
-  td, th { padding: 1rem 0.8rem; font-size: 0.85rem; }
-  .col-note { min-width: 150px; }
-}
+            tr.innerHTML = `
+                <td class="col-date">${dateDisplay}</td>
+                <td class="col-val">${weight}</td>
+                <td class="col-val">${sleep}</td>
+                <td class="col-mental">${mentalBadge}</td>
+                <td class="col-note">${note}</td>
+            `;
+        } else {
+            // 記録がない場合（Null表示）
+            tr.innerHTML = `
+                <td class="col-date">${dateDisplay}</td>
+                <td colspan="4" style="text-align: center; color: rgba(255,255,255,0.2); font-size: 0.85rem; letter-spacing: 0.1em;">
+                    [ Null ] 未記録 - タップして修正
+                </td>
+            `;
+        }
+        tbody.appendChild(tr);
+    }
+});

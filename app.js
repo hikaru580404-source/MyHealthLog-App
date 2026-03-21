@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    // --- 【復旧】多言語辞書と翻訳ロジック ---
+    // --- 多言語辞書と翻訳ロジック ---
     window.currentLang = localStorage.getItem('appLang_' + user.id) || 'ja';
     
     window.dict = {
@@ -72,11 +72,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             if (window.dict[window.currentLang] && window.dict[window.currentLang][key]) {
-                el.innerHTML = window.dict[window.currentLang][key]; // HTMLタグ（アイコン等）も反映できるようにinnerHTMLを使用
+                el.innerHTML = window.dict[window.currentLang][key];
             }
         });
     }
-    updateLanguage(); // ロード時に翻訳実行
+    updateLanguage();
 
     const langBtn = document.getElementById('langToggleBtn');
     if (langBtn) {
@@ -87,18 +87,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    // --- High Goal ---
+    // --- 【新機能】High Goal（粋なコメント付き） ---
     const goalCard = document.getElementById('highGoalCard');
     const goalText = document.getElementById('highGoalText');
     if (goalCard && goalText) {
         const savedGoal = localStorage.getItem('highGoal_' + user.id);
-        if (savedGoal) goalText.innerText = savedGoal;
+        const placeholder = window.dict[window.currentLang].high_goal_placeholder;
+        if (savedGoal && savedGoal !== placeholder) goalText.innerText = savedGoal;
+        
         goalCard.onclick = () => {
-            const newGoal = prompt("あなたの『究極のゴール（北極星）』を入力してください：", localStorage.getItem('highGoal_' + user.id) || "");
+            const currentGoal = localStorage.getItem('highGoal_' + user.id) || "";
+            const isFirstTime = !currentGoal || currentGoal === placeholder;
+            const newGoal = prompt("あなたの『究極のゴール（北極星）』を入力してください：", currentGoal === placeholder ? "" : currentGoal);
+            
             if (newGoal !== null) { 
-                const placeholder = window.dict[window.currentLang].high_goal_placeholder;
-                localStorage.setItem('highGoal_' + user.id, newGoal.trim() || placeholder); 
-                goalText.innerText = newGoal.trim() || placeholder; 
+                const finalGoal = newGoal.trim() || placeholder;
+                localStorage.setItem('highGoal_' + user.id, finalGoal); 
+                goalText.innerText = finalGoal; 
+                
+                // コメントの出し分け
+                if (finalGoal !== placeholder) {
+                    if (isFirstTime) {
+                        alert("素晴らしい北極星です。統治を始めましょう。");
+                    } else {
+                        alert("目標の再定義、承知しました。さらなる高みへ。");
+                    }
+                }
             }
         };
     }
@@ -129,15 +143,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     if(powerSlider) {
         const initialVal = localStorage.getItem('govPower_' + user.id) || 80;
         powerSlider.value = initialVal;
-        updatePowerMeter(initialVal); // 初期描画
+        updatePowerMeter(initialVal); 
         
         powerSlider.addEventListener('input', (e) => {
             updatePowerMeter(e.target.value);
-            if (guide && guide.style.display === 'block') {
-                guide.style.display = 'none';
-            }
+            if (guide && guide.style.display === 'block') { guide.style.display = 'none'; }
         });
-        
         powerSlider.addEventListener('change', (e) => {
             localStorage.setItem('govPower_' + user.id, e.target.value);
         });
@@ -171,21 +182,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             location.href = 'form.html?date=' + payload.measured_date + '&mode=edit';
         }
     }
-    document.getElementById('btnWaketime').onclick = () => quickLog('waketime', false);
-    document.getElementById('btnBedtime').onclick = () => { quickLog('bedtime', true); };
 
-    // --- 監査・修正用ボタン（日次記録） ---
-    document.getElementById('btnEditHistory').onclick = () => { location.href = 'form.html'; };
+    // 【修正】存在チェック(if)を入れて、summary.htmlでのエラーを防止
+    const btnWake = document.getElementById('btnWaketime');
+    const btnBed = document.getElementById('btnBedtime');
+    const btnEdit = document.getElementById('btnEditHistory');
+
+    if (btnWake) btnWake.onclick = () => quickLog('waketime', false);
+    if (btnBed) btnBed.onclick = () => quickLog('bedtime', true);
+    if (btnEdit) btnEdit.onclick = () => { location.href = 'form.html'; };
 
     // --- KPIカードのタップイベントと詳細グラフ ---
     let detailChart = null;
     document.querySelectorAll('.kpi-card').forEach(card => {
         card.addEventListener('click', async () => {
             const kpi = card.getAttribute('data-kpi');
-            // ラベル要素の中身を取得 (innerHTMLだと翻訳spanタグごと取れるのでinnerTextを使用)
             document.getElementById('mdKpiTitle').innerText = card.querySelector('.kpi-label').innerText;
             document.getElementById('mdKpiMainValue').innerText = card.querySelector('.kpi-value').innerText;
-            // 辞書からポイント説明を取得して表示
             document.getElementById('mdAdvice').innerText = window.dict[window.currentLang]['adv_' + kpi] || "";
             document.getElementById('kpiDetailModal').style.display = 'flex';
 
@@ -221,6 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // --- ダッシュボードデータ読み込み ---
     window.loadDashboard = async function() {
+        // パフォーマンス集計
         const { data: kpiData } = await supabaseClient.rpc('get_user_performance', { target_user_id: user.id });
         let streak = 0;
         if (kpiData?.[0]) {
@@ -229,6 +243,31 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('monthLogs').innerText = kpiData[0].logs_count || 0;
         }
 
+        // --- 【新機能】儀式ボタン（Wake/Sleep）の厳格な制限ロジック ---
+        if (btnWake && btnBed) {
+            const todayD = new Date();
+            if (todayD.getHours() < 4) todayD.setDate(todayD.getDate() - 1);
+            const logicalTodayStr = todayD.toLocaleDateString('sv-SE');
+
+            const { data: todayLog } = await supabaseClient
+                .from('health_logs')
+                .select('waketime, bedtime')
+                .eq('user_id', user.id)
+                .eq('measured_date', logicalTodayStr)
+                .maybeSingle();
+
+            if (todayLog && todayLog.waketime) {
+                // 今日すでにWakeしている -> Wake不可、Sleep可
+                btnWake.classList.add('disabled');
+                btnBed.classList.remove('disabled');
+            } else {
+                // 今日まだWakeしていない -> Wake可、Sleep不可
+                btnWake.classList.remove('disabled');
+                btnBed.classList.add('disabled');
+            }
+        }
+
+        // 最新の2件取得（デルタ計算と表示用）
         const { data: recent } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(2);
         let sleepH = 6;
         if (recent?.[0]) {
