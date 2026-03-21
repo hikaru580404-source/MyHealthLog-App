@@ -3,7 +3,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const user = await checkAuth();
     if (!user) return;
     
-    // 【修正】コーチの問いではなく、シンプルで客観的なポイント説明に変更
+    // --- 【復旧】ログアウト機能 ---
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.onclick = async () => {
+            if(confirm("ログアウトしますか？")) {
+                await supabaseClient.auth.signOut();
+                location.href = 'login.html';
+            }
+        };
+    }
+
+    // シンプルなポイント説明
     window.dict = {
         adv_weight: "【ポイント】体重は水分量や食事のタイミングで日々変動します。一喜一憂せず、1週間〜1ヶ月の長期的なトレンド（推移）を重視してください。",
         adv_fat: "【ポイント】体脂肪率は計測時の体内水分量に大きく影響されます。毎日同じ条件（例：起床後のトイレ後）で計測することで、精度の高いデータが得られます。",
@@ -25,13 +36,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    // --- 主観戦闘力スライダーの連動 ---
+    // --- 操作ガイド（チュートリアル）の表示制御 ---
+    const guide = document.getElementById('powerGuide');
+    const btnHideGuide = document.getElementById('btnHideGuide');
+    if (guide && btnHideGuide) {
+        if (localStorage.getItem('hidePowerGuide_' + user.id) !== 'true') {
+            guide.style.display = 'block';
+        }
+        btnHideGuide.onclick = () => {
+            localStorage.setItem('hidePowerGuide_' + user.id, 'true');
+            guide.style.display = 'none';
+        };
+    }
+
+    // --- 主観戦闘力：縦ダイヤルと円形メーターの完全連動 ---
     const powerSlider = document.getElementById('powerSlider');
+    const powerCircle = document.getElementById('powerCircle');
     const powerValue = document.getElementById('powerValue');
+    
+    function updatePowerMeter(val) {
+        powerValue.innerText = val;
+        powerCircle.style.background = `conic-gradient(var(--clr-accent) ${val}%, #1e293b ${val}%)`;
+    }
+
     if(powerSlider) {
-        powerValue.innerText = powerSlider.value = localStorage.getItem('govPower_' + user.id) || 80;
-        powerSlider.addEventListener('input', (e) => powerValue.innerText = e.target.value );
-        powerSlider.addEventListener('change', (e) => localStorage.setItem('govPower_' + user.id, e.target.value));
+        const initialVal = localStorage.getItem('govPower_' + user.id) || 80;
+        powerSlider.value = initialVal;
+        updatePowerMeter(initialVal); // 初期描画
+        
+        powerSlider.addEventListener('input', (e) => {
+            updatePowerMeter(e.target.value);
+            if (guide && guide.style.display === 'block') {
+                guide.style.display = 'none';
+            }
+        });
+        
+        powerSlider.addEventListener('change', (e) => {
+            localStorage.setItem('govPower_' + user.id, e.target.value);
+        });
     }
 
     // --- 起床・就寝ボタンのアクション ---
@@ -66,11 +108,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btnBedtime').onclick = () => { quickLog('bedtime', true); };
 
     // --- 監査・修正用ボタン（日次記録） ---
-    document.getElementById('btnEditHistory').onclick = () => {
-        location.href = 'form.html'; 
-    };
+    document.getElementById('btnEditHistory').onclick = () => { location.href = 'form.html'; };
 
-    // 【復旧】KPIカードのタップイベントと詳細グラフ
+    // --- KPIカードのタップイベントと詳細グラフ ---
     let detailChart = null;
     document.querySelectorAll('.kpi-card').forEach(card => {
         card.addEventListener('click', async () => {
@@ -80,13 +120,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('mdAdvice').innerText = window.dict['adv_' + kpi] || "";
             document.getElementById('kpiDetailModal').style.display = 'flex';
 
-            // グラフ描画対象外のカード
             if (['streak', 'log_count', 'mental'].includes(kpi)) {
                 if (detailChart) detailChart.destroy();
                 return;
             }
 
-            // DBから過去30件を取得してグラフ化
             const { data } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(30);
             if (!data) return;
             const logs = data.reverse();
@@ -164,11 +202,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             let vScore = Math.min(100, Math.round(50 + (sleepH / 7) * 40 + (streak > 0 ? 10 : 0)));
             vitalityValue.innerText = vScore;
             setTimeout(() => {
-                vitalityCircle.style.background = `conic-gradient(#10b981 ${vScore}%, rgba(255,255,255,0.05) ${vScore}%)`;
+                vitalityCircle.style.background = `conic-gradient(#10b981 ${vScore}%, #1e293b ${vScore}%)`;
             }, 500);
         }
 
-        // 【復旧】Analytics (7-Day Trend Chart) の描画
+        // Analytics (7-Day Trend Chart)
         const { data: trendData } = await supabaseClient.from('health_logs').select('measured_date, weight, sleep_hours').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(7);
         if (trendData && trendData.length > 0) {
             const logs = trendData.reverse();

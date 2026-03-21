@@ -82,7 +82,6 @@
       const dMsg = document.getElementById('dayTimeMessage');
       const btn = document.getElementById('submitBtn');
 
-      // 深夜4時ルール（当日の論理日付）
       function getLogicalToday() {
         let logicalTodayDate = new Date();
         if (logicalTodayDate.getHours() < 4) {
@@ -113,12 +112,11 @@
         if (typeof window.loadDataByDate === 'function') window.loadDataByDate(selectedDateStr);
       }
 
-      // カレンダーライブラリ (Flatpickr) の初期化
       flatpickr("#date", {
         locale: "ja",
         dateFormat: "Y-m-d",
         defaultDate: initialDate,
-        disableMobile: "true", // スマホの標準UIを無効化し、カスタムカレンダーを表示
+        disableMobile: "true", 
         onChange: function(selectedDates, dateStr, instance) {
           updateUIByTimeAndDate(dateStr);
         }
