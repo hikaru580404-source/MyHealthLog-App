@@ -105,7 +105,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 localStorage.setItem('highGoal_' + user.id, finalGoal); 
                 goalText.innerText = finalGoal; 
                 
-                // コメントの出し分け
                 if (finalGoal !== placeholder) {
                     if (isFirstTime) {
                         alert("素晴らしい北極星です。統治を始めましょう。");
@@ -117,20 +116,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    // --- 操作ガイド（チュートリアル）の表示制御 ---
+    // --- 操作ガイド ---
     const guide = document.getElementById('powerGuide');
     const btnHideGuide = document.getElementById('btnHideGuide');
     if (guide && btnHideGuide) {
-        if (localStorage.getItem('hidePowerGuide_' + user.id) !== 'true') {
-            guide.style.display = 'block';
-        }
-        btnHideGuide.onclick = () => {
-            localStorage.setItem('hidePowerGuide_' + user.id, 'true');
-            guide.style.display = 'none';
-        };
+        if (localStorage.getItem('hidePowerGuide_' + user.id) !== 'true') { guide.style.display = 'block'; }
+        btnHideGuide.onclick = () => { localStorage.setItem('hidePowerGuide_' + user.id, 'true'); guide.style.display = 'none'; };
     }
 
-    // --- 主観戦闘力：縦ダイヤルと円形メーターの完全連動 ---
+    // --- 主観戦闘力 ---
     const powerSlider = document.getElementById('powerSlider');
     const powerCircle = document.getElementById('powerCircle');
     const powerValue = document.getElementById('powerValue');
@@ -138,7 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     function updatePowerMeter(val) {
         if (!powerValue || !powerCircle) return;
         powerValue.innerText = val;
-        powerCircle.style.background = `conic-gradient(var(--clr-accent) ${val}%, #1e293b ${val}%)`;
+        powerCircle.style.background = `conic-gradient(#eecb70 ${val}%, #1e293b ${val}%)`;
     }
 
     if(powerSlider) {
@@ -150,12 +144,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             updatePowerMeter(e.target.value);
             if (guide && guide.style.display === 'block') { guide.style.display = 'none'; }
         });
-        powerSlider.addEventListener('change', (e) => {
-            localStorage.setItem('govPower_' + user.id, e.target.value);
-        });
+        powerSlider.addEventListener('change', (e) => { localStorage.setItem('govPower_' + user.id, e.target.value); });
     }
 
-    // --- 起床・就寝ボタンのアクション ---
+    // --- 起床・就寝ボタン ---
     async function quickLog(field, doAnimation = false) {
         const now = new Date();
         const dateStr = now.toLocaleDateString('sv-SE');
@@ -194,7 +186,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnBed) btnBed.onclick = () => quickLog('bedtime', true);
     if (btnEdit) btnEdit.onclick = () => { location.href = 'form.html'; };
 
-    // --- KPIカードのタップイベントと詳細グラフ ---
+    // --- KPI詳細グラフ ---
     let detailChart = null;
     document.querySelectorAll('.kpi-card').forEach(card => {
         card.addEventListener('click', async () => {
@@ -226,6 +218,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const ctx = chartCanvas.getContext('2d');
             const dbColumn = (kpi === 'sleep' ? 'sleep_hours' : (kpi === 'fat' ? 'body_fat' : kpi));
 
+            // シャンパンゴールドの透過グラデーション
+            const gradientLine = ctx.createLinearGradient(0, 0, 0, 180);
+            gradientLine.addColorStop(0, 'rgba(238, 203, 112, 0.4)');
+            gradientLine.addColorStop(1, 'rgba(238, 203, 112, 0)');
+
             detailChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -233,7 +230,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     datasets: [{
                         label: card.querySelector('.kpi-label').innerText, 
                         data: logs.map(l => l[dbColumn]),
-                        borderColor: '#fbbf24', tension: 0.4, fill: true, backgroundColor: 'rgba(251, 191, 36, 0.1)'
+                        borderColor: '#eecb70', 
+                        borderWidth: 2,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#eecb70',
+                        pointBorderWidth: 1.5,
+                        tension: 0.4, 
+                        fill: true, 
+                        backgroundColor: gradientLine
                     }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
@@ -243,59 +247,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    // --- ダッシュボードデータ読み込み ---
+    // --- ダッシュボードデータ ---
     window.loadDashboard = async function() {
-        // パフォーマンス集計
         const { data: kpiData } = await supabaseClient.rpc('get_user_performance', { target_user_id: user.id });
         let streak = 0;
         if (kpiData?.[0]) {
             streak = kpiData[0].streak_days || 0;
-            // 【安全装置】要素が存在する場合のみinnerTextをセット
             const elStreakDays = document.getElementById('streakDays');
             if (elStreakDays) elStreakDays.innerText = streak;
-            
             const elMonthLogs = document.getElementById('monthLogs');
             if (elMonthLogs) elMonthLogs.innerText = kpiData[0].logs_count || 0;
         }
 
-        // 儀式ボタン（Wake/Sleep）の厳格な制限ロジック
         if (btnWake && btnBed) {
             const todayD = new Date();
             if (todayD.getHours() < 4) todayD.setDate(todayD.getDate() - 1);
             const logicalTodayStr = todayD.toLocaleDateString('sv-SE');
 
-            const { data: todayLog } = await supabaseClient
-                .from('health_logs')
-                .select('waketime, bedtime')
-                .eq('user_id', user.id)
-                .eq('measured_date', logicalTodayStr)
-                .maybeSingle();
+            const { data: todayLog } = await supabaseClient.from('health_logs').select('waketime, bedtime').eq('user_id', user.id).eq('measured_date', logicalTodayStr).maybeSingle();
 
             if (todayLog && todayLog.waketime) {
-                // 今日すでにWakeしている -> Wake不可、Sleep可
-                btnWake.classList.add('disabled');
-                btnBed.classList.remove('disabled');
+                btnWake.classList.add('disabled'); btnBed.classList.remove('disabled');
             } else {
-                // 今日まだWakeしていない -> Wake可、Sleep不可
-                btnWake.classList.remove('disabled');
-                btnBed.classList.add('disabled');
+                btnWake.classList.remove('disabled'); btnBed.classList.add('disabled');
             }
         }
 
-        // 最新の2件取得（デルタ計算と表示用）
         const { data: recent } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(2);
         let sleepH = 6;
         if (recent?.[0]) {
-            const current = recent[0];
-            const previous = recent[1] || null;
+            const current = recent[0]; const previous = recent[1] || null;
             
-            // 【安全装置】各KPIカードの要素チェック
             const elLatestWeight = document.getElementById('latestWeight');
             if (elLatestWeight) elLatestWeight.innerText = current.weight || "--";
-            
             const elLatestFat = document.getElementById('latestFat');
             if (elLatestFat) elLatestFat.innerText = current.body_fat || "--";
-            
             const elLatestSleep = document.getElementById('latestSleep');
             if (elLatestSleep) elLatestSleep.innerText = current.sleep_hours || "--";
             sleepH = current.sleep_hours || 6;
@@ -316,7 +302,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
         
-        // Activity Grid
         const grid = document.getElementById('activityGrid');
         if (grid) {
             grid.innerHTML = '';
@@ -332,7 +317,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // AI活力スコア (AI算出)
         const vitalityCircle = document.getElementById('vitalityCircle');
         const vitalityValue = document.getElementById('vitalityValue');
         if (vitalityCircle && vitalityValue) {
@@ -343,7 +327,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, 500);
         }
 
-        // Analytics (7-Day Trend Chart)
+        // --- 究極のシャンパンゴールド・チャート ---
         const { data: trendData } = await supabaseClient.from('health_logs').select('measured_date, weight, sleep_hours').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(7);
         if (trendData && trendData.length > 0) {
             const logs = trendData.reverse();
@@ -351,20 +335,44 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (chartCanvas) {
                 const ctx = chartCanvas.getContext('2d');
                 if (window.mainChart) window.mainChart.destroy();
+                
+                // バーグラデーション（上部は光り、下部は沈み込む）
+                const gradientSleep = ctx.createLinearGradient(0, 0, 0, 250);
+                gradientSleep.addColorStop(0, 'rgba(238, 203, 112, 0.9)'); 
+                gradientSleep.addColorStop(1, 'rgba(138, 106, 28, 0.4)');
+
                 window.mainChart = new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: logs.map(l => l.measured_date.split('-')[2]),
                         datasets: [
-                            { label: 'Sleep (h)', data: logs.map(l => l.sleep_hours), backgroundColor: '#fbbf24', borderRadius: 4, yAxisID: 'ySleep' },
-                            { label: 'Weight (kg)', data: logs.map(l => l.weight), type: 'line', borderColor: '#f8fafc', borderWidth: 2, pointBackgroundColor: '#f8fafc', tension: 0.4, yAxisID: 'yWeight' }
+                            { 
+                                label: 'Sleep (h)', 
+                                data: logs.map(l => l.sleep_hours), 
+                                backgroundColor: gradientSleep, 
+                                borderRadius: 4, 
+                                yAxisID: 'ySleep' 
+                            },
+                            { 
+                                label: 'Weight (kg)', 
+                                data: logs.map(l => l.weight), 
+                                type: 'line', 
+                                borderColor: '#ffffff', // 白線でパキッと際立たせる
+                                borderWidth: 2, 
+                                pointBackgroundColor: '#eecb70', // ポイントはゴールド
+                                pointBorderColor: '#ffffff',
+                                pointBorderWidth: 1.5,
+                                pointRadius: 4,
+                                tension: 0.4, 
+                                yAxisID: 'yWeight' 
+                            }
                         ]
                     },
                     options: {
                         responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
                         scales: {
-                            ySleep: { type: 'linear', position: 'left', min: 0, max: 12, grid: { display: false }, ticks: { color: '#8b9bb4' } },
-                            yWeight: { type: 'linear', position: 'right', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b9bb4' } }
+                            ySleep: { type: 'linear', position: 'left', min: 0, max: 12, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#8b9bb4' } },
+                            yWeight: { type: 'linear', position: 'right', grid: { display: false }, ticks: { color: '#8b9bb4' } }
                         }
                     }
                 });
