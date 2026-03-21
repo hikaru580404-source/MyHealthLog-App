@@ -33,14 +33,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             streak: "Streak", days: "Days", consecutive: "Consecutive",
             logs: "Logs", this_month: "This Month",
             activity_grid: "Activity Grid (Last 90 Days)",
-            analysis: "Analysis", nav_meals: "Meals (Photo)", nav_history: "History",
+            analysis: "Analysis", nav_meals: "Meals", nav_history: "History",
             msg_wake: "Good morning! Let's start governing today.",
             adv_weight: "[Point] Weight fluctuates daily with water and meals. Focus on the long-term trend (1 week to 1 month) rather than daily changes.",
             adv_fat: "[Point] Body fat % is heavily affected by body water. Measure under the same conditions daily (e.g., after waking/restroom) for accuracy.",
             adv_sleep: "[Point] 7 hours of sleep is not just 'rest', but 'strategic maintenance' to maximize the quality of daytime decisions.",
             adv_mental: "[Point] Condition reflects your margin for altruism. If low, prioritize your own recovery (sleep/rest) without pushing too hard.",
             adv_streak: "[Point] Your streak is proof of your self-efficacy ('I can do it'). Keeping it unbroken as long as possible is crucial.",
-            adv_log_count: "[Point] Monthly logged days act as a barometer of your self-governance. A higher log rate enables more accurate reflection."
+            adv_log_count: "[Point] Monthly logged days act as a barometer of your self-governance. A higher log rate enables more accurate reflection.",
+            
+            // --- ナビゲーションポップアップ用辞書 ---
+            desc_analysis: "View detailed analytics and trend charts of your governance.",
+            desc_meals: "Log and review your daily meals with photos.",
+            desc_history: "Review past logs, edit or audit your governance history.",
+            understood: "Proceed",
+            cancel: "Cancel"
         },
         ja: {
             night_msg: "今日も1日、統治完了。おやすみなさい。",
@@ -64,7 +71,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             adv_sleep: "【ポイント】7時間の睡眠は「休息」ではなく、日中の意思決定の質を最大化するための「戦略的メンテナンス」です。脳のパフォーマンスに直結します。",
             adv_mental: "【ポイント】コンディションは利他（他者への価値提供）の余裕を表す指標です。数値が低い日は無理をせず、自己の回復（睡眠や休養）を最優先してください。",
             adv_streak: "【ポイント】連続記録（ストリーク）は、あなた自身の自己効力感（私ならできるという自信）の証明です。1日でも長く繋ぐことが重要です。",
-            adv_log_count: "【ポイント】月間の記録日数は、自己を統治できているかの客観的なバロメーターです。記録率が高いほど正確な振り返りが可能になります。"
+            adv_log_count: "【ポイント】月間の記録日数は、自己を統治できているかの客観的なバロメーターです。記録率が高いほど正確な振り返りが可能になります。",
+            
+            // --- ナビゲーションポップアップ用辞書 ---
+            desc_analysis: "これまでの統治記録の推移と、詳細な分析データを確認します。",
+            desc_meals: "日々の食事を画像で記録し、食生活の振り返りを行います。",
+            desc_history: "過去の統治記録を一覧で振り返り、記録の修正や監査を行います。",
+            understood: "了解 / 遷移する",
+            cancel: "キャンセル"
         }
     };
 
@@ -185,6 +199,41 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnWake) btnWake.onclick = () => quickLog('waketime', false);
     if (btnBed) btnBed.onclick = () => quickLog('bedtime', true);
     if (btnEdit) btnEdit.onclick = () => { location.href = 'form.html'; };
+
+    // --- ＝＝＝ 新設：ナビゲーション・ポップアップロジック ＝＝＝ ---
+    const navModal = document.getElementById('navConfirmModal');
+    const navTitle = document.getElementById('navModalTitle');
+    const navDesc = document.getElementById('navModalDesc');
+    const navProceed = document.getElementById('navModalProceed');
+
+    function openNavModal(titleKey, descKey, targetUrl) {
+        if (!navModal || !navTitle || !navDesc || !navProceed) return;
+        
+        // 辞書からテキストを取得
+        navTitle.innerText = window.dict[window.currentLang][titleKey] || titleKey;
+        navDesc.innerText = window.dict[window.currentLang][descKey] || descKey;
+        
+        navModal.style.display = 'flex';
+        
+        navProceed.onclick = () => {
+            if (targetUrl) {
+                location.href = targetUrl;
+            } else {
+                // Analysis(現在ページ)の場合は閉じて一番上へスムーズスクロール
+                navModal.style.display = 'none';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        };
+    }
+
+    const btnNavAnalysis = document.getElementById('navAnalysis');
+    const btnNavMeals = document.getElementById('navMeals');
+    const btnNavHistory = document.getElementById('navHistory');
+
+    if (btnNavAnalysis) btnNavAnalysis.onclick = () => openNavModal('analysis', 'desc_analysis', ''); // 現在ページ用
+    if (btnNavMeals) btnNavMeals.onclick = () => openNavModal('nav_meals', 'desc_meals', 'meals.html'); // Mealsへ
+    if (btnNavHistory) btnNavHistory.onclick = () => openNavModal('nav_history', 'desc_history', 'summary.html'); // Historyへ
+
 
     // --- KPI詳細グラフ ---
     let detailChart = null;
