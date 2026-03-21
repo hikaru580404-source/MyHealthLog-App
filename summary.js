@@ -3,9 +3,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const user = await checkAuth();
     if (!user) return;
 
-    const tbody = document.getElementById('historyBody');
-    if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 2rem;">Loading...</td></tr>';
+    const listContainer = document.getElementById('historyBody');
+    if (!listContainer) return;
+    listContainer.innerHTML = '<div style="text-align:center; padding: 3rem; color: #64748b; font-weight: 600; letter-spacing: 0.1em;">Loading...</div>';
 
     // Supabaseからユーザーの全ログを取得
     const { data: logs, error } = await supabaseClient
@@ -15,17 +15,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         .order('measured_date', { ascending: false });
 
     if (error) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#ef4444;">Error loading data</td></tr>';
+        listContainer.innerHTML = '<div style="text-align:center; color:#ef4444; padding: 2rem;">Error loading data</div>';
         return;
     }
 
-    // 日付をキーにしたマップを作成（検索しやすくするため）
+    // 日付をキーにしたマップを作成
     const logMap = {};
     if (logs) {
         logs.forEach(log => { logMap[log.measured_date] = log; });
     }
 
-    tbody.innerHTML = '';
+    listContainer.innerHTML = '';
     
     // 深夜4時ルールを適用した「今日」の論理日付を取得
     const today = new Date();
@@ -37,45 +37,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         d.setDate(d.getDate() - i);
         const dateStr = d.toLocaleDateString('sv-SE'); // YYYY-MM-DD
         
-        const tr = document.createElement('tr');
-        tr.style.cursor = 'pointer';
-        // 行をタップで、対象日のEDIT MODEへ遷移
-        tr.onclick = () => { location.href = `form.html?date=${dateStr}`; };
+        // 1行分のコンテナ (div) を生成
+        const row = document.createElement('div');
+        row.className = 'archive-row';
+        row.onclick = () => { location.href = `form.html?date=${dateStr}`; };
 
         const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
-        const dateDisplay = `${dateStr.slice(5)} <span class="dow">${dayOfWeek}</span>`; // MM-DD Sun
+        // 例: 03/22 Sun
+        const dateDisplay = `${dateStr.slice(5).replace('-', '/')} <span class="dow">${dayOfWeek}</span>`; 
 
         if (logMap[dateStr]) {
-            // 記録がある場合（データ展開）
+            // 記録がある場合
             const log = logMap[dateStr];
-            const weight = log.weight ? `${log.weight} <span style="font-size:0.7rem;color:var(--clr-text-secondary)">kg</span>` : '--';
-            const sleep = log.sleep_hours ? `${log.sleep_hours} <span style="font-size:0.7rem;color:var(--clr-text-secondary)">h</span>` : '--';
+            const weight = log.weight ? `${log.weight} <small>kg</small>` : '--';
+            const sleep = log.sleep_hours ? `${log.sleep_hours} <small>h</small>` : '--';
             
             let mentalBadge = '--';
             if (log.mental_condition) {
                 const mFaces = ["", "😫", "😟", "😐", "🙂", "🤩"];
-                mentalBadge = `<span class="badge-mental m-${log.mental_condition}">${mFaces[log.mental_condition]}</span>`;
+                mentalBadge = mFaces[log.mental_condition];
             }
             
-            // ジャーナルは15文字で省略
-            const note = log.daily_notes ? (log.daily_notes.length > 15 ? log.daily_notes.substring(0, 15) + '...' : log.daily_notes) : '--';
+            // CSSで自動省略されるため、そのまま全テキストを投入
+            const note = log.daily_notes || '';
 
-            tr.innerHTML = `
-                <td class="col-date">${dateDisplay}</td>
-                <td class="col-val">${weight}</td>
-                <td class="col-val">${sleep}</td>
-                <td class="col-mental">${mentalBadge}</td>
-                <td class="col-note">${note}</td>
+            row.innerHTML = `
+                <div class="col-date">${dateDisplay}</div>
+                <div class="col-metrics">
+                    <div class="metric-val">${weight}</div>
+                    <div class="metric-val">${sleep}</div>
+                </div>
+                <div class="col-mental">${mentalBadge}</div>
+                <div class="col-journal">${note}</div>
             `;
         } else {
-            // 記録がない場合（Null表示）
-            tr.innerHTML = `
-                <td class="col-date">${dateDisplay}</td>
-                <td colspan="4" style="text-align: center; color: rgba(255,255,255,0.2); font-size: 0.85rem; letter-spacing: 0.1em;">
-                    [ Null ] 未記録 - タップして修正
-                </td>
+            // 記録がない場合（Nullスタイルを適用）
+            row.classList.add('is-null');
+            row.innerHTML = `
+                <div class="col-date">${dateDisplay}</div>
+                <div class="col-null-msg">
+                    <span class="null-badge">[ NULL ]</span>
+                </div>
             `;
         }
-        tbody.appendChild(tr);
+        listContainer.appendChild(row);
     }
 });

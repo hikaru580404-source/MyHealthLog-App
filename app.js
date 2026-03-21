@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    // --- 【新機能】High Goal（粋なコメント付き） ---
+    // --- High Goal（粋なコメント付き） ---
     const goalCard = document.getElementById('highGoalCard');
     const goalText = document.getElementById('highGoalText');
     if (goalCard && goalText) {
@@ -136,6 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const powerValue = document.getElementById('powerValue');
     
     function updatePowerMeter(val) {
+        if (!powerValue || !powerCircle) return;
         powerValue.innerText = val;
         powerCircle.style.background = `conic-gradient(var(--clr-accent) ${val}%, #1e293b ${val}%)`;
     }
@@ -175,15 +176,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         if (doAnimation) {
             const overlay = document.getElementById('nightOverlay');
-            overlay.classList.add('active');
-            setTimeout(() => { overlay.classList.remove('active'); loadDashboard(); }, 3000);
+            if (overlay) {
+                overlay.classList.add('active');
+                setTimeout(() => { overlay.classList.remove('active'); loadDashboard(); }, 3000);
+            }
         } else {
             alert(window.dict[window.currentLang].msg_wake);
             location.href = 'form.html?date=' + payload.measured_date + '&mode=edit';
         }
     }
 
-    // 【修正】存在チェック(if)を入れて、summary.htmlでのエラーを防止
     const btnWake = document.getElementById('btnWaketime');
     const btnBed = document.getElementById('btnBedtime');
     const btnEdit = document.getElementById('btnEditHistory');
@@ -197,10 +199,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelectorAll('.kpi-card').forEach(card => {
         card.addEventListener('click', async () => {
             const kpi = card.getAttribute('data-kpi');
-            document.getElementById('mdKpiTitle').innerText = card.querySelector('.kpi-label').innerText;
-            document.getElementById('mdKpiMainValue').innerText = card.querySelector('.kpi-value').innerText;
-            document.getElementById('mdAdvice').innerText = window.dict[window.currentLang]['adv_' + kpi] || "";
-            document.getElementById('kpiDetailModal').style.display = 'flex';
+            
+            const titleEl = document.getElementById('mdKpiTitle');
+            const mainValueEl = document.getElementById('mdKpiMainValue');
+            const adviceEl = document.getElementById('mdAdvice');
+            const modalEl = document.getElementById('kpiDetailModal');
+            
+            if (titleEl) titleEl.innerText = card.querySelector('.kpi-label').innerText;
+            if (mainValueEl) mainValueEl.innerText = card.querySelector('.kpi-value').innerText;
+            if (adviceEl) adviceEl.innerText = window.dict[window.currentLang]['adv_' + kpi] || "";
+            if (modalEl) modalEl.style.display = 'flex';
 
             if (['streak', 'log_count', 'mental'].includes(kpi)) {
                 if (detailChart) detailChart.destroy();
@@ -212,7 +220,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const logs = data.reverse();
             
             if (detailChart) detailChart.destroy();
-            const ctx = document.getElementById('detailModalChart').getContext('2d');
+            const chartCanvas = document.getElementById('detailModalChart');
+            if (!chartCanvas) return;
+            
+            const ctx = chartCanvas.getContext('2d');
             const dbColumn = (kpi === 'sleep' ? 'sleep_hours' : (kpi === 'fat' ? 'body_fat' : kpi));
 
             detailChart = new Chart(ctx, {
@@ -239,11 +250,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         let streak = 0;
         if (kpiData?.[0]) {
             streak = kpiData[0].streak_days || 0;
-            document.getElementById('streakDays').innerText = streak;
-            document.getElementById('monthLogs').innerText = kpiData[0].logs_count || 0;
+            // 【安全装置】要素が存在する場合のみinnerTextをセット
+            const elStreakDays = document.getElementById('streakDays');
+            if (elStreakDays) elStreakDays.innerText = streak;
+            
+            const elMonthLogs = document.getElementById('monthLogs');
+            if (elMonthLogs) elMonthLogs.innerText = kpiData[0].logs_count || 0;
         }
 
-        // --- 【新機能】儀式ボタン（Wake/Sleep）の厳格な制限ロジック ---
+        // 儀式ボタン（Wake/Sleep）の厳格な制限ロジック
         if (btnWake && btnBed) {
             const todayD = new Date();
             if (todayD.getHours() < 4) todayD.setDate(todayD.getDate() - 1);
@@ -273,17 +288,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (recent?.[0]) {
             const current = recent[0];
             const previous = recent[1] || null;
-            document.getElementById('latestWeight').innerText = current.weight || "--";
-            document.getElementById('latestFat').innerText = current.body_fat || "--";
-            document.getElementById('latestSleep').innerText = current.sleep_hours || "--";
+            
+            // 【安全装置】各KPIカードの要素チェック
+            const elLatestWeight = document.getElementById('latestWeight');
+            if (elLatestWeight) elLatestWeight.innerText = current.weight || "--";
+            
+            const elLatestFat = document.getElementById('latestFat');
+            if (elLatestFat) elLatestFat.innerText = current.body_fat || "--";
+            
+            const elLatestSleep = document.getElementById('latestSleep');
+            if (elLatestSleep) elLatestSleep.innerText = current.sleep_hours || "--";
             sleepH = current.sleep_hours || 6;
-            const mentalMap = ["", "😫", "😟", "😐", "🙂", "🤩"];
-            document.getElementById('latestMental').innerText = mentalMap[current.mental_condition] || "--";
+            
+            const elLatestMental = document.getElementById('latestMental');
+            if (elLatestMental) {
+                const mentalMap = ["", "😫", "😟", "😐", "🙂", "🤩"];
+                elLatestMental.innerText = mentalMap[current.mental_condition] || "--";
+            }
             
             if (previous && current.weight && previous.weight) {
                 const diff = (current.weight - previous.weight).toFixed(1);
-                document.getElementById('deltaWeight').innerText = `Δ ${diff > 0 ? '+' : ''}${diff} kg`;
-                document.getElementById('deltaWeight').className = `kpi-delta ${diff > 0 ? 'delta-bad' : 'delta-good'}`;
+                const elDeltaWeight = document.getElementById('deltaWeight');
+                if (elDeltaWeight) {
+                    elDeltaWeight.innerText = `Δ ${diff > 0 ? '+' : ''}${diff} kg`;
+                    elDeltaWeight.className = `kpi-delta ${diff > 0 ? 'delta-bad' : 'delta-good'}`;
+                }
             }
         }
         
@@ -306,7 +335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // AI活力スコア (AI算出)
         const vitalityCircle = document.getElementById('vitalityCircle');
         const vitalityValue = document.getElementById('vitalityValue');
-        if (vitalityCircle) {
+        if (vitalityCircle && vitalityValue) {
             let vScore = Math.min(100, Math.round(50 + (sleepH / 7) * 40 + (streak > 0 ? 10 : 0)));
             vitalityValue.innerText = vScore;
             setTimeout(() => {
@@ -318,10 +347,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { data: trendData } = await supabaseClient.from('health_logs').select('measured_date, weight, sleep_hours').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(7);
         if (trendData && trendData.length > 0) {
             const logs = trendData.reverse();
-            const ctx = document.getElementById('healthCorrelationChart');
-            if (ctx) {
+            const chartCanvas = document.getElementById('healthCorrelationChart');
+            if (chartCanvas) {
+                const ctx = chartCanvas.getContext('2d');
                 if (window.mainChart) window.mainChart.destroy();
-                window.mainChart = new Chart(ctx.getContext('2d'), {
+                window.mainChart = new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: logs.map(l => l.measured_date.split('-')[2]),

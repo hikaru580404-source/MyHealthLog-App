@@ -1,40 +1,121 @@
 /* =============================================
-   summary.css - 健康管理履歴・分析専用スタイル
+   summary.css - 至高のアーカイブ・リスト (Chronograph Edition)
    ============================================= */
 
-/* --- 月セレクターバー --- */
-.summary-month-bar {
-  display: flex; align-items: center; gap: 8px;
-  background: var(--clr-surface); border-radius: var(--radius-md);
-  padding: 10px 14px; margin-bottom: 16px;
-  box-shadow: var(--shadow-sm);
+/* --- ヘッダー領域 --- */
+.summary-header {
+  padding: 1.2rem 1.5rem;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex; justify-content: space-between; align-items: center;
+  position: sticky; top: 0; z-index: 20;
 }
-.month-nav-btn-sm {
-  width: 34px; height: 34px; border-radius: 50%;
-  border: 1.5px solid var(--clr-border); background: var(--clr-bg);
-  color: var(--clr-text-secondary); display: flex; align-items: center; justify-content: center;
-  cursor: pointer; transition: var(--tr);
+.header-title {
+  font-size: 1.1rem; font-weight: 800; font-family: var(--font-en);
+  letter-spacing: 0.15em; color: #fff; margin: 0;
 }
-.summary-month-label { flex: 1; text-align: center; font-weight: 700; font-size: .95rem; }
+.nav-back-premium {
+  color: var(--clr-accent); text-decoration: none;
+  font-size: 1.2rem; transition: opacity 0.2s;
+}
+.nav-back-premium:active { opacity: 0.5; }
 
-/* --- 履歴リストの論理構造 --- */
-#dailyLogList { display: flex; flex-direction: column; gap: 10px; }
-.daily-card {
-  background: var(--clr-surface); border-radius: var(--radius-md);
-  padding: 16px; box-shadow: var(--shadow-sm);
-  display: flex; flex-direction: column; gap: 8px;
+/* --- メインコンテナ --- */
+.summary-container { 
+  max-width: 800px; 
+  margin: 1.5rem auto; 
+  padding: 0 12px; 
+  padding-bottom: 4rem; 
 }
 
-.meal-badge {
-  display: inline-block; padding: 2px 8px; border-radius: 6px;
-  font-size: .65rem; font-weight: 700; color: #fff; margin-right: 6px;
+.history-card {
+  background: linear-gradient(145deg, #1e293b, #0f172a);
+  border-radius: var(--radius-lg);
+  border: 1px solid #334155; 
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.05);
 }
-.meal-bfast  { background: var(--clr-meal-bfast); }
-.meal-lunch  { background: var(--clr-meal-lunch); }
-.meal-dinner { background: var(--clr-meal-dinner); }
-.meal-snack  { background: var(--clr-meal-snack); }
 
-.empty-msg {
-  text-align: center; padding: 40px 20px; color: var(--clr-text-muted);
-  font-size: .85rem; font-weight: 600;
+/* --- リストヘッダー（項目名） --- */
+.archive-header {
+  display: flex; align-items: center; 
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.4); 
+  border-bottom: 1px solid #334155;
+  font-size: 0.65rem; font-weight: 800; color: #64748b;
+  letter-spacing: 0.1em; text-transform: uppercase;
+}
+
+/* --- 1行のリスト構造 (Flexbox) --- */
+.archive-row {
+  display: flex; align-items: center; 
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  cursor: pointer; transition: background 0.2s ease;
+  text-decoration: none; color: inherit;
+}
+.archive-row:active, .archive-row:hover { 
+  background: rgba(251, 191, 36, 0.08); /* ゴールドの微かなハイライト */
+}
+.archive-row:last-child { border-bottom: none; }
+
+/* --- 各カラムの精密な幅設定 --- */
+/* 1. 日付 (例: 03-22 Sun) */
+.col-date {
+  width: 75px; flex-shrink: 0; 
+  font-size: 0.95rem; font-weight: 700; color: #e2e8f0; 
+  font-family: var(--font-en);
+}
+.col-date .dow { 
+  font-size: 0.65rem; color: #94a3b8; font-weight: 500; margin-left: 4px; 
+}
+
+/* 2. メトリクス (Weight & Sleep) を縦にコンパクトに配置 */
+.col-metrics {
+  width: 70px; flex-shrink: 0; 
+  display: flex; flex-direction: column; gap: 2px;
+}
+.metric-val { 
+  font-size: 0.85rem; font-weight: 600; color: #f8fafc; font-family: var(--font-en); 
+  display: flex; justify-content: space-between; padding-right: 8px;
+}
+.metric-val small { 
+  font-size: 0.6rem; color: #64748b; margin-left: 2px; 
+}
+
+/* 3. コンディション (絵文字) */
+.col-mental {
+  width: 40px; flex-shrink: 0; 
+  text-align: center; font-size: 1.2rem;
+  text-shadow: 0 0 10px rgba(255,255,255,0.2);
+}
+
+/* 4. ジャーナル (テキスト省略) */
+.col-journal {
+  flex: 1; min-width: 0; /* これがないとテキストがはみ出します */
+  font-size: 0.8rem; color: #94a3b8; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  padding-left: 8px; border-left: 1px solid rgba(255,255,255,0.05);
+}
+
+/* --- Null（未記録）状態のストイックなデザイン --- */
+.archive-row.is-null .col-date { color: #475569; }
+.archive-row.is-null .col-date .dow { color: #334155; }
+
+.col-null-msg {
+  flex: 1; display: flex; align-items: center; gap: 12px;
+}
+/* 計器盤のガイドラインのような点線 */
+.col-null-msg::before {
+  content: ''; flex: 1; height: 1px; 
+  background: repeating-linear-gradient(to right, #334155 0, #334155 2px, transparent 2px, transparent 6px);
+  opacity: 0.6;
+}
+.null-badge {
+  background: rgba(15, 23, 42, 0.8); border: 1px solid #334155;
+  padding: 2px 8px; border-radius: 4px; 
+  font-size: 0.65rem; color: #64748b; font-family: var(--font-en); font-weight: 700;
+  letter-spacing: 0.05em;
 }
