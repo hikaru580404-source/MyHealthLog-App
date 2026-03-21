@@ -2,141 +2,21 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>LOG | 履歴</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AsirLabo">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+
+  <title>ARCHIVE | HEALTH LOG</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
-  <style>
-    :root {
-      --clr-premium-bg: #f9fafb;
-      --clr-premium-text: #111827;
-      --clr-premium-sub: #6b7280;
-      --clr-premium-border: #e5e7eb;
-      --font-en: 'Inter', sans-serif;
-      --font-jp: 'Noto Sans JP', sans-serif;
-    }
-
-    body {
-      background-color: var(--clr-premium-bg);
-      font-family: var(--font-jp);
-      color: var(--clr-premium-text);
-      letter-spacing: 0.02em;
-    }
-
-    .summary-header {
-      padding: 1.5rem 1.5rem;
-      background: #fff;
-      border-bottom: 1px solid var(--clr-premium-border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-
-    .header-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      font-family: var(--font-en);
-      letter-spacing: 0.05em;
-      color: var(--clr-premium-text);
-    }
-
-    .nav-back-premium {
-      color: var(--clr-premium-text);
-      text-decoration: none;
-      font-size: 1.1rem;
-      transition: opacity 0.2s;
-    }
-
-    .summary-container {
-      max-width: 1000px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-    }
-
-    .history-card {
-      background: #fff;
-      border-radius: 12px;
-      border: 1px solid var(--clr-premium-border);
-      overflow: hidden;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
-    }
-
-    .table-wrapper {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-    }
-
-    th {
-      background: #fdfdfd;
-      padding: 1rem 1.2rem;
-      font-size: 0.75rem;
-      font-weight: 600;
-      font-family: var(--font-en);
-      color: var(--clr-premium-sub);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      border-bottom: 1px solid var(--clr-premium-border);
-    }
-
-    td {
-      padding: 1.2rem;
-      font-size: 0.95rem;
-      border-bottom: 1px solid #f3f4f6;
-      font-family: var(--font-en);
-      color: var(--clr-premium-text);
-      transition: background-color 0.2s ease;
-    }
-
-    tbody tr:hover td {
-      background-color: #f9fafb;
-    }
-
-    .col-date { font-weight: 600; white-space: nowrap; }
-    .col-date .dow { font-size: 0.75rem; color: var(--clr-premium-sub); font-weight: 400; margin-left: 4px; }
-    
-    /* 数値データは右揃えで比較しやすくする */
-    .col-val { font-weight: 500; text-align: right; white-space: nowrap; }
-    th.col-val { text-align: right; }
-    
-    .col-mental { font-family: var(--font-jp); text-align: center; }
-    th.col-mental { text-align: center; }
-    
-    .col-note { font-family: var(--font-jp); color: var(--clr-premium-sub); font-size: 0.85rem; line-height: 1.5; min-width: 200px; }
-
-    .badge-mental {
-      display: inline-block;
-      padding: 0.3rem 0.8rem;
-      border-radius: 99px;
-      font-weight: 600;
-      font-size: 0.75rem;
-      letter-spacing: 0.02em;
-    }
-    
-    /* 5段階のコンディションカラー定義 */
-    .m-5 { background: #f0fdf4; color: #166534; } /* 絶好調 */
-    .m-4 { background: #f0f9ff; color: #075985; } /* 良 */
-    .m-3 { background: #f3f4f6; color: #374151; } /* 並 */
-    .m-2 { background: #fff7ed; color: #9a3412; } /* 低調 */
-    .m-1 { background: #fef2f2; color: #991b1b; } /* 不調 */
-
-    @media (max-width: 640px) {
-      .summary-header { padding: 1rem; }
-      .summary-container { margin: 1rem auto; }
-      td, th { padding: 1rem 0.8rem; font-size: 0.85rem; }
-      .col-note { min-width: 150px; }
-    }
-  </style>
+  <link rel="stylesheet" href="summary.css" />
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -167,6 +47,7 @@
   </main>
 
   <script src="supabase-client.js"></script>
-  <script src="app.js"></script> <script src="summary.js"></script>
+  <script src="app.js"></script> 
+  <script src="summary.js"></script>
 </body>
 </html>

@@ -1,23 +1,22 @@
 /* =============================================
-   form.css - 記録画面専用 洗練スタイル
+   form.css - ダークテーマ完全統合版
    ============================================= */
 
 /* --- モダンヘッダー --- */
 .form-header {
-  height: 56px;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 16px; background: #fff;
-  border-bottom: 1px solid #f3f4f6;
+  height: 56px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; background: transparent;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
   position: sticky; top: 0; z-index: 100;
 }
 .header-left, .header-right { width: 40px; }
-.header-center { flex: 1; text-align: center; font-weight: 700; font-size: 1rem; color: #111827; }
+.header-center { flex: 1; text-align: center; font-weight: 800; font-size: 1rem; color: var(--clr-text-primary); letter-spacing: 0.1em; font-family: var(--font-en); }
 .nav-back {
-  color: #4b5563; text-decoration: none; font-size: 1.2rem;
+  color: var(--clr-text-primary); text-decoration: none; font-size: 1.2rem;
   display: inline-flex; align-items: center; justify-content: center;
-  width: 36px; height: 36px; border-radius: 50%; transition: background 0.2s;
+  width: 36px; height: 36px; border-radius: 50%; transition: 0.2s;
 }
-.nav-back:hover { background: #f3f4f6; }
+.nav-back:hover { background: rgba(255,255,255,0.1); }
 
 /* --- レイアウト基盤 --- */
 .form-main { max-width: 640px; margin: 0 auto; padding: 24px 16px; }
@@ -27,82 +26,81 @@
 .step { display: flex; flex-direction: column; align-items: center; }
 .step-dot {
   width: 28px; height: 28px; border-radius: 50%;
-  background: #f3f4f6; color: #9ca3af;
+  background: rgba(255,255,255,0.1); color: var(--clr-text-secondary);
   display: flex; align-items: center; justify-content: center;
   font-size: 0.8rem; font-weight: 700; transition: all 0.3s;
 }
-.step.active .step-dot { background: var(--clr-balance); color: #fff; box-shadow: 0 0 0 4px var(--clr-balance-light); }
+.step.active .step-dot { background: var(--clr-accent); color: #000; box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.2); }
 .step.done .step-dot { background: #10b981; color: #fff; }
-.step-line { flex: 1; height: 2px; background: #f3f4f6; margin: 0 10px; max-width: 40px; }
+.step-line { flex: 1; height: 2px; background: rgba(255,255,255,0.1); margin: 0 10px; max-width: 40px; }
 
-/* --- パネル切り替えロジック（必須） --- */
 .step-panel { display: none; }
 .step-panel.active { display: block; animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
 /* --- フォームカードと入力要素 --- */
 .form-card {
-  background: #fff; border-radius: 12px; padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-  border: 1px solid #f3f4f6;
+  background: var(--clr-surface); border-radius: var(--radius-lg); padding: 24px;
+  border: 1px solid var(--clr-border); backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
 }
 .form-group { margin-bottom: 20px; }
 .form-row-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 
-.form-label { display: block; font-size: 0.8rem; font-weight: 600; color: #4b5563; margin-bottom: 8px; }
+.form-label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--clr-text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
 .form-input {
   width: 100%; padding: 14px;
-  background: #f9fafb; border: 1px solid #e5e7eb;
-  border-radius: 8px; font-size: 1rem; color: #111827;
+  background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-sm); font-size: 1rem; color: var(--clr-text-primary);
   font-family: inherit; transition: all 0.2s;
 }
 .form-input:focus {
-  outline: none; background: #fff; border-color: var(--clr-balance);
-  box-shadow: 0 0 0 3px var(--clr-balance-light);
+  outline: none; background: rgba(0,0,0,0.5); border-color: var(--clr-accent);
 }
 
 /* --- コンディションボタン --- */
 .cond-group { display: flex; gap: 8px; }
 .cond-btn {
   flex: 1; aspect-ratio: 1; max-height: 54px;
-  border-radius: 8px; border: 1px solid #e5e7eb;
-  background: #fff; color: #9ca3af;
+  border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.2); color: var(--clr-text-secondary);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; transition: all 0.2s;
 }
 .cond-btn i { font-size: 1.4rem; }
 .cond-btn.active {
-  background: #f0f9ff; border-color: #3b82f6; color: #3b82f6;
+  background: rgba(251, 191, 36, 0.1); border-color: var(--clr-accent); color: var(--clr-accent);
 }
 
 /* --- ボタンデザイン --- */
 .btn-primary {
   width: 100%; padding: 15px; margin-top: 10px;
-  background: #111827; color: #fff; /* シャープな黒ベース */
-  border: none; border-radius: 8px;
-  font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); color: #000;
+  border: none; border-radius: var(--radius-sm);
+  font-size: 0.95rem; font-weight: 800; cursor: pointer; transition: opacity 0.2s;
 }
 .btn-primary:hover { opacity: 0.85; }
 
 .btn-secondary {
   width: 100%; padding: 14px;
-  background: #fff; color: #4b5563;
-  border: 1px solid #d1d5db; border-radius: 8px;
-  font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  background: transparent; color: var(--clr-text-primary);
+  border: 1px solid rgba(255,255,255,0.3); border-radius: var(--radius-sm);
+  font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: 0.2s;
 }
+.btn-secondary:hover { background: rgba(255,255,255,0.1); }
 
 .action-group { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
 
 /* --- 確認画面のリスト --- */
-.confirm-title { font-size: 1rem; font-weight: 700; text-align: center; margin-bottom: 20px; color: #111827; }
-.confirm-list { border-top: 1px solid #e5e7eb; margin-bottom: 10px; }
+.confirm-title { font-size: 1.1rem; font-weight: 800; text-align: center; margin-bottom: 20px; color: var(--clr-accent); letter-spacing: 0.1em; font-family: var(--font-en); }
+.confirm-list { border-top: 1px solid rgba(255,255,255,0.1); margin-bottom: 10px; }
 .confirm-list div {
   display: flex; justify-content: space-between;
-  padding: 16px 4px; border-bottom: 1px solid #f3f4f6;
-  font-size: 0.95rem; color: #374151; font-weight: 600;
+  padding: 16px 4px; border-bottom: 1px solid rgba(255,255,255,0.05);
+  font-size: 0.95rem; color: var(--clr-text-primary); font-weight: 600;
 }
+.confirm-list div span:first-child { color: var(--clr-text-secondary); font-weight: 400; font-size: 0.85rem;}
 
 /* --- 完了画面 --- */
 .done-card { text-align: center; padding: 40px 20px; }
-.done-icon { font-size: 3.5rem; color: #10b981; margin-bottom: 16px; }
-.done-title { font-size: 1.2rem; font-weight: 700; color: #111827; }
+.done-icon { font-size: 4rem; color: #10b981; margin-bottom: 16px; text-shadow: 0 0 20px rgba(16, 185, 129, 0.4); }
+.done-title { font-size: 1.2rem; font-weight: 800; color: var(--clr-text-primary); letter-spacing: 0.1em; }
