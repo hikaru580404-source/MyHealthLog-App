@@ -3,6 +3,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const user = await checkAuth();
     if (!user) return;
     
+    // 【修正】コーチの問いではなく、シンプルで客観的なポイント説明に変更
+    window.dict = {
+        adv_weight: "【ポイント】体重は水分量や食事のタイミングで日々変動します。一喜一憂せず、1週間〜1ヶ月の長期的なトレンド（推移）を重視してください。",
+        adv_fat: "【ポイント】体脂肪率は計測時の体内水分量に大きく影響されます。毎日同じ条件（例：起床後のトイレ後）で計測することで、精度の高いデータが得られます。",
+        adv_sleep: "【ポイント】7時間の睡眠は「休息」ではなく、日中の意思決定の質を最大化するための「戦略的メンテナンス」です。脳のパフォーマンスに直結します。",
+        adv_mental: "【ポイント】コンディションは利他（他者への価値提供）の余裕を表す指標です。数値が低い日は無理をせず、自己の回復（睡眠や休養）を最優先してください。",
+        adv_streak: "【ポイント】連続記録（ストリーク）は、あなた自身の自己効力感（私ならできるという自信）の証明です。1日でも長く繋ぐことが重要です。",
+        adv_log_count: "【ポイント】月間の記録日数は、自己を統治できているかの客観的なバロメーターです。記録率が高いほど正確な振り返りが可能になります。"
+    };
+
     // --- High Goal ---
     const goalCard = document.getElementById('highGoalCard');
     const goalText = document.getElementById('highGoalText');
@@ -31,60 +41,99 @@ document.addEventListener('DOMContentLoaded', async () => {
         const payload = { user_id: user.id, measured_date: dateStr };
         payload[field] = now.toISOString();
 
-        // 深夜4時ルール（前日扱い）
         if (now.getHours() < 4) {
             const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
             payload.measured_date = yesterday.toLocaleDateString('sv-SE');
-            // bedtime の場合、measured_dateとbtを前日、measured_dateとbtのタイムスタンプを前日の bt に
-            if (field === 'bedtime') { /* bedtime 登録時に measures_date を昨日に。Btをそのタイムスタンプに。 BTのタイムスタンプは BTカラムへ。 btのタイムスタンプはそのまま。 */
-                payload.bedtime = now.toISOString();
-            }
+            if (field === 'bedtime') payload.bedtime = now.toISOString();
         } else {
-            // daytime（Wakeの場合） measured_date は今日。 bt も今日。 BT のタイムスタンプは BTカラムへ。 btのタイムスタンプはそのまま。
-            if (field === 'bedtime') {
-               payload.bedtime = now.toISOString(); // 今日 BT。 BTのタイムスタンプは BTカラムへ。btのタイムスタンプはそのまま。
-            }
+            if (field === 'bedtime') payload.bedtime = now.toISOString();
         }
         
-        // Supabase Upsert
         const { data: existing } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', payload.measured_date).maybeSingle();
         if (existing) await supabaseClient.from('health_logs').update(payload).eq('id', existing.id);
         else await supabaseClient.from('health_logs').insert(payload);
         
-        // 保存成功時の処理
         if (doAnimation) {
-            // アニメーション (Gridのドット点灯)
-            document.getElementById('bedtimeLogIndicator')?.classList.add('recorded');
-            loadDashboard(); // アニメーション後に更新
+            const overlay = document.getElementById('nightOverlay');
+            overlay.classList.add('active');
+            setTimeout(() => { overlay.classList.remove('active'); loadDashboard(); }, 3000);
         } else {
             alert('おはようございます！今日も統治を始めましょう。');
-            location.href = 'form.html?date=' + payload.measured_date + '&mode=edit'; // 朝ログ入力画面へ
+            location.href = 'form.html?date=' + payload.measured_date + '&mode=edit';
         }
     }
     document.getElementById('btnWaketime').onclick = () => quickLog('waketime', false);
-    document.getElementById('btnBedtime').onclick = () => { quickLog('bedtime', true); document.getElementById('bedtimeLogIndicator')?.classList.add('recorded'); };
+    document.getElementById('btnBedtime').onclick = () => { quickLog('bedtime', true); };
 
     // --- 監査・修正用ボタン（日次記録） ---
     document.getElementById('btnEditHistory').onclick = () => {
-        location.href = 'form.html'; // 日時修正モード（form.js側でカレンダーが今日になる）
+        location.href = 'form.html'; 
     };
+
+    // 【復旧】KPIカードのタップイベントと詳細グラフ
+    let detailChart = null;
+    document.querySelectorAll('.kpi-card').forEach(card => {
+        card.addEventListener('click', async () => {
+            const kpi = card.getAttribute('data-kpi');
+            document.getElementById('mdKpiTitle').innerText = card.querySelector('.kpi-label').innerText;
+            document.getElementById('mdKpiMainValue').innerText = card.querySelector('.kpi-value').innerText;
+            document.getElementById('mdAdvice').innerText = window.dict['adv_' + kpi] || "";
+            document.getElementById('kpiDetailModal').style.display = 'flex';
+
+            // グラフ描画対象外のカード
+            if (['streak', 'log_count', 'mental'].includes(kpi)) {
+                if (detailChart) detailChart.destroy();
+                return;
+            }
+
+            // DBから過去30件を取得してグラフ化
+            const { data } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(30);
+            if (!data) return;
+            const logs = data.reverse();
+            
+            if (detailChart) detailChart.destroy();
+            const ctx = document.getElementById('detailModalChart').getContext('2d');
+            const dbColumn = (kpi === 'sleep' ? 'sleep_hours' : (kpi === 'fat' ? 'body_fat' : kpi));
+
+            detailChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: logs.map(l => l.measured_date.split('-')[2]),
+                    datasets: [{
+                        label: card.querySelector('.kpi-label').innerText, 
+                        data: logs.map(l => l[dbColumn]),
+                        borderColor: '#fbbf24', tension: 0.4, fill: true, backgroundColor: 'rgba(251, 191, 36, 0.1)'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { y: { ticks: { color: '#8b9bb4' }, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { ticks: { color: '#8b9bb4' } } }
+                }
+            });
+        });
+    });
 
     // --- ダッシュボードデータ読み込み ---
     window.loadDashboard = async function() {
-        // パフォーマンス統計 (RPCS)
         const { data: kpiData } = await supabaseClient.rpc('get_user_performance', { target_user_id: user.id });
-        if (kpiData?.[0]) document.getElementById('streakDays').innerText = kpiData[0].streak_days || 0;
+        let streak = 0;
+        if (kpiData?.[0]) {
+            streak = kpiData[0].streak_days || 0;
+            document.getElementById('streakDays').innerText = streak;
+            document.getElementById('monthLogs').innerText = kpiData[0].logs_count || 0;
+        }
 
-        // 最新レコード
         const { data: recent } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(2);
+        let sleepH = 6;
         if (recent?.[0]) {
             const current = recent[0];
             const previous = recent[1] || null;
             document.getElementById('latestWeight').innerText = current.weight || "--";
+            document.getElementById('latestFat').innerText = current.body_fat || "--";
             document.getElementById('latestSleep').innerText = current.sleep_hours || "--";
+            sleepH = current.sleep_hours || 6;
             const mentalMap = ["", "😫", "😟", "😐", "🙂", "🤩"];
             document.getElementById('latestMental').innerText = mentalMap[current.mental_condition] || "--";
-            // デルタ計算
+            
             if (previous && current.weight && previous.weight) {
                 const diff = (current.weight - previous.weight).toFixed(1);
                 document.getElementById('deltaWeight').innerText = `Δ ${diff > 0 ? '+' : ''}${diff} kg`;
@@ -108,9 +157,43 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // AI活力スコア (ダミーロジック)
-        document.getElementById('vitalityCircle').style.background = `conic-gradient(#10b981 90%, rgba(255,255,255,0.05) 90%)`;
-        document.getElementById('vitalityValue').innerText = 90;
+        // AI活力スコア (AI算出)
+        const vitalityCircle = document.getElementById('vitalityCircle');
+        const vitalityValue = document.getElementById('vitalityValue');
+        if (vitalityCircle) {
+            let vScore = Math.min(100, Math.round(50 + (sleepH / 7) * 40 + (streak > 0 ? 10 : 0)));
+            vitalityValue.innerText = vScore;
+            setTimeout(() => {
+                vitalityCircle.style.background = `conic-gradient(#10b981 ${vScore}%, rgba(255,255,255,0.05) ${vScore}%)`;
+            }, 500);
+        }
+
+        // 【復旧】Analytics (7-Day Trend Chart) の描画
+        const { data: trendData } = await supabaseClient.from('health_logs').select('measured_date, weight, sleep_hours').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(7);
+        if (trendData && trendData.length > 0) {
+            const logs = trendData.reverse();
+            const ctx = document.getElementById('healthCorrelationChart');
+            if (ctx) {
+                if (window.mainChart) window.mainChart.destroy();
+                window.mainChart = new Chart(ctx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: logs.map(l => l.measured_date.split('-')[2]),
+                        datasets: [
+                            { label: 'Sleep (h)', data: logs.map(l => l.sleep_hours), backgroundColor: '#fbbf24', borderRadius: 4, yAxisID: 'ySleep' },
+                            { label: 'Weight (kg)', data: logs.map(l => l.weight), type: 'line', borderColor: '#f8fafc', borderWidth: 2, pointBackgroundColor: '#f8fafc', tension: 0.4, yAxisID: 'yWeight' }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                        scales: {
+                            ySleep: { type: 'linear', position: 'left', min: 0, max: 12, grid: { display: false }, ticks: { color: '#8b9bb4' } },
+                            yWeight: { type: 'linear', position: 'right', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#8b9bb4' } }
+                        }
+                    }
+                });
+            }
+        }
     };
     loadDashboard();
 });

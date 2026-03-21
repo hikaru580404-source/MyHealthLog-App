@@ -13,17 +13,18 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="form.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ja.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <header class="form-header">
-    <div class="header-left">
-      <a href="index.html" class="nav-back"><i class="fas fa-chevron-left"></i></a>
-    </div>
+    <div class="header-left"><a href="index.html" class="nav-back"><i class="fas fa-chevron-left"></i></a></div>
     <div class="header-center" id="formTitle">DAILY LOG</div>
     <div class="header-right"></div>
   </header>
-
   <main class="form-main">
     <div class="step-indicator">
       <div class="step active" id="s1"><div class="step-dot">1</div></div>
@@ -32,54 +33,34 @@
       <div class="step-line"></div>
       <div class="step" id="s3"><div class="step-dot"><i class="fas fa-check"></i></div></div>
     </div>
-
     <div class="step-panel active" id="p1">
       <form id="hForm" class="form-card">
         <div class="form-group">
-          <label class="form-label">日付 (カレンダー)</label>
-          <input type="date" id="date" class="form-input" required>
+          <label class="form-label" style="color: var(--clr-accent);"><i class="fas fa-calendar-alt"></i> 記録日 (🗓️タップしてカレンダーから選択)</label>
+          <input type="text" id="date" class="form-input" style="cursor: pointer; background: rgba(251, 191, 36, 0.1); border-color: var(--clr-accent); font-weight: bold;" readonly>
         </div>
         
         <div id="morningSection" style="display: none;">
           <div class="form-row-grid">
-            <div class="form-group">
-              <label class="form-label">起床時刻</label>
-              <input type="time" id="wt" class="form-input">
-            </div>
-            <div class="form-group">
-              <label class="form-label">就寝時刻 (昨夜)</label>
-              <input type="time" id="bt" class="form-input">
-            </div>
+            <div class="form-group"><label class="form-label">起床時刻</label><input type="time" id="wt" class="form-input"></div>
+            <div class="form-group"><label class="form-label">就寝時刻 (昨夜)</label><input type="time" id="bt" class="form-input"></div>
           </div>
           <div class="form-row-grid">
-            <div class="form-group">
-              <label class="form-label">体重 (kg)</label>
-              <input type="number" id="w" class="form-input" step="0.1" placeholder="00.0">
-            </div>
-            <div class="form-group">
-              <label class="form-label">体脂肪 (%)</label>
-              <input type="number" id="f" class="form-input" step="0.1" placeholder="00.0">
-            </div>
+            <div class="form-group"><label class="form-label">体重 (kg)</label><input type="number" id="w" class="form-input" step="0.1" placeholder="00.0"></div>
+            <div class="form-group"><label class="form-label">体脂肪 (%)</label><input type="number" id="f" class="form-input" step="0.1" placeholder="00.0"></div>
           </div>
-          <div class="form-group">
-            <label class="form-label">コンディション</label>
-            <div class="cond-group" id="mGrp">
-              <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
-              <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
-              <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
-              <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
-              <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
-            </div>
-          </div>
+          <div class="form-group"><label class="form-label">コンディション</label><div class="cond-group" id="mGrp">
+            <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
+            <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
+            <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
+            <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
+            <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
+          </div></div>
         </div>
-
         <div id="nightSection" style="display: none;">
-          <div class="form-group">
-            <label class="form-label" style="color:var(--clr-accent);">ジャーナル（本日のパフォーマンスや気づき）</label>
-            <textarea id="note" class="form-input" rows="5" placeholder="Q. 今日、ゴールに向けてどんな「選択」と「統治」をしましたか？"></textarea>
-          </div>
+          <div class="form-group"><label class="form-label" style="color:var(--clr-accent);">ジャーナル（本日のパフォーマンスや気づき）</label>
+          <textarea id="note" class="form-input" rows="5" placeholder="Q. 今日、ゴールに向けてどんな「選択」と「統治」をしましたか？"></textarea></div>
         </div>
-
         <div id="dayTimeMessage" style="display: none; text-align: center; color: var(--clr-text-secondary); padding: 16px 0;">
           <i class="fas fa-utensils" style="font-size: 2rem; margin-bottom: 12px;"></i><br>昼の食事録はMealsから行ってください。
         </div>
@@ -87,32 +68,12 @@
         <button type="submit" class="btn-primary" id="submitBtn">確認へ進む</button>
       </form>
     </div>
-
-    <div class="step-panel" id="p2">
-      <div class="form-card">
-        <h3 class="confirm-title">確認 / CONFIRM</h3>
-        <div id="cList" class="confirm-list"></div>
-        <div class="action-group">
-          <button type="button" class="btn-secondary" onclick="location.reload()">修正する</button>
-          <button type="button" class="btn-primary" id="saveBtn">確定する</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="step-panel" id="p3">
-      <div class="form-card done-card">
-        <div class="done-icon"><i class="fas fa-check-circle"></i></div>
-        <h2 class="done-title">LOGGED SUCCESSFULLY</h2>
-        <p style="color:var(--clr-text-secondary); font-size: 0.85rem; margin-top: 12px;">今日も自己統治が完了しました。</p>
-        <a href="index.html" class="btn-secondary" style="display:block; text-decoration:none; text-align:center; margin-top:32px;">ダッシュボードへ</a>
-      </div>
-    </div>
+    <div class="step-panel" id="p2"><div class="form-card"><h3 class="confirm-title">確認 / CONFIRM</h3><div id="cList" class="confirm-list"></div><div class="action-group"><button type="button" class="btn-secondary" onclick="location.reload()">修正</button><button type="button" class="btn-primary" id="saveBtn">確定</button></div></div></div>
+    <div class="step-panel" id="p3"><div class="form-card done-card"><div class="done-icon"><i class="fas fa-check-circle"></i></div><h2 class="done-title">LOGGED!</h2><p style="color:var(--clr-text-secondary); font-size: 0.85rem; margin-top: 12px;">今日も自己統治が完了しました。</p><a href="index.html" class="btn-secondary" style="display:block; text-decoration:none; text-align:center; margin-top:32px;">ダッシュボードへ</a></div></div>
   </main>
-
   <script src="supabase-client.js"></script>
   <script src="form.js"></script>
   <script>
-    // 時間帯×日付によるダイナミック UI 制御
     document.addEventListener('DOMContentLoaded', () => {
       const dateInput = document.getElementById('date');
       const title = document.getElementById('formTitle');
@@ -121,34 +82,49 @@
       const dMsg = document.getElementById('dayTimeMessage');
       const btn = document.getElementById('submitBtn');
 
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('date')) dateInput.value = urlParams.get('date');
+      // 深夜4時ルール（当日の論理日付）
+      function getLogicalToday() {
+        let logicalTodayDate = new Date();
+        if (logicalTodayDate.getHours() < 4) {
+          logicalTodayDate.setDate(logicalTodayDate.getDate() - 1);
+        }
+        return logicalTodayDate.toLocaleDateString('sv-SE');
+      }
 
-      function updateUIByTimeAndDate() {
-        const d = new Date(dateInput.value);
+      const urlParams = new URLSearchParams(window.location.search);
+      const initialDate = urlParams.get('date') || getLogicalToday();
+
+      function updateUIByTimeAndDate(selectedDateStr) {
         const now = new Date();
         const hour = now.getHours();
-
-        let logicalTodayDate = new Date();
-        if (now.getHours() < 4) logicalTodayDate.setDate(now.getDate() - 1);
-        const logicalTodayStr = logicalTodayDate.toLocaleDateString('sv-SE');
+        const logicalTodayStr = getLogicalToday();
 
         mSec.style.display = 'none'; nSec.style.display = 'none'; dMsg.style.display = 'none'; btn.style.display = 'block';
 
-        if (dateInput.value === logicalTodayStr) {
+        if (selectedDateStr === logicalTodayStr) {
           if (hour >= 4 && hour < 12) { title.innerText = "MORNING LOG"; mSec.style.display = 'block'; }
           else if (hour >= 20 || hour < 4) { title.innerText = "NIGHT LOG"; nSec.style.display = 'block'; }
           else { title.innerText = "DAY TIME (Log meals in Meals tab)"; dMsg.style.display = 'block'; btn.style.display = 'none'; }
         } else {
-          title.innerText = "EDIT MODE / " + dateInput.value;
+          title.innerText = "EDIT MODE / " + selectedDateStr;
           mSec.style.display = 'block'; nSec.style.display = 'block';
         }
         
-        if (typeof window.loadDataByDate === 'function') window.loadDataByDate(dateInput.value);
+        if (typeof window.loadDataByDate === 'function') window.loadDataByDate(selectedDateStr);
       }
 
-      dateInput.addEventListener('change', updateUIByTimeAndDate);
-      updateUIByTimeAndDate();
+      // カレンダーライブラリ (Flatpickr) の初期化
+      flatpickr("#date", {
+        locale: "ja",
+        dateFormat: "Y-m-d",
+        defaultDate: initialDate,
+        disableMobile: "true", // スマホの標準UIを無効化し、カスタムカレンダーを表示
+        onChange: function(selectedDates, dateStr, instance) {
+          updateUIByTimeAndDate(dateStr);
+        }
+      });
+
+      updateUIByTimeAndDate(initialDate);
     });
   </script>
 </body>
