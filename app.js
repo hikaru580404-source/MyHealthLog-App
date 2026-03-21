@@ -8,15 +8,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const user = await checkAuth();
     if (!user) return;
     
-    // グローバル変数を定義して dict にアクセス可能にする
+    // --- 多言語辞書（i18n）の保全と拡張 ---
     window.currentLang = localStorage.getItem('appLang_' + user.id) || 'en';
     window.dict = {
         en: {
             quick_action: "Quick Action", wake: "Wake Up", meal: "Meal", sleep: "Sleep",
-            kpi_title: "KPI", weight: "Weight", fat_p: "Fat", sleep_h: "Sleep", mental: "Mental Condition",
+            kpi_title: "Key Performance Indicators", weight: "Weight", fat_p: "Body Fat", sleep_h: "Sleep", mental: "Mental",
             streak: "Streak", days: "Days", consecutive: "Consecutive", completion: "Completion", last30days: "Last 30 Days",
             month_count: "Month Count", logging: "Logging", calories: "Calories", today_total: "Today's Total",
-            nav_meals: "Meals", nav_history: "History", analysis: "Analysis", trend: "7-Day Trend", recorded: "Logged",
+            nav_meals: "Meals", nav_history: "History", analysis: "Analysis", trend: "Trend", recorded: "Logged",
             ai_analysis_title: "AI Analysis Engine", ai_analysis_wait: "Premium features standby...",
             msg_wake: "Good morning! ☀️", msg_sleep: "Good night! 🌙",
             adv_weight: "Weight fluctuates daily. Focus on the 7-day trend.",
@@ -24,13 +24,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             adv_calories: "Premium feature release is near. Wait for the AI precision analysis with excitement!",
             adv_sleep: "Aiming for ~7 hours stabilizes health.",
             adv_mental: "Mental condition correlates with sleep and diet.",
-            adv_streak: "Shows habit consistency.",
-            adv_completion: "Maintaining 80%+ enables high accuracy.",
-            adv_month: "Total days logged this month."
+            adv_streak: "Shows habit consistency. Every green dot is a win.",
+            adv_completion: "Maintaining 80%+ enables high accuracy analysis.",
+            adv_month: "Total unique days logged this calendar month."
         },
         ja: {
             quick_action: "クイックアクション", wake: "起床", meal: "食事", sleep: "就寝",
-            kpi_title: "指標", weight: "体重", fat_p: "体脂肪", sleep_h: "睡眠", mental: "メンタル",
+            kpi_title: "主要指標 (KPI)", weight: "体重", fat_p: "体脂肪", sleep_h: "睡眠時間", mental: "メンタル",
             streak: "継続日数", days: "日", consecutive: "連続記録中", completion: "記録率", last30days: "過去30日",
             month_count: "月間記録数", logging: "記録済み", calories: "カロリー", today_total: "本日の合計",
             nav_meals: "食事録", nav_history: "履歴", analysis: "分析", trend: "推移", recorded: "済",
@@ -41,9 +41,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             adv_calories: "プレミアム機能の解放は間近です。AIによる精密解析をお楽しみに！",
             adv_sleep: "約7時間の睡眠は心身の健康を安定させます。",
             adv_mental: "メンタル状態は睡眠や食事と密接に関係しています。",
-            adv_streak: "習慣の継続性を示します。",
-            adv_completion: "80%以上の記録率を維持すると精度が向上します。",
-            adv_month: "今月の合計記録日数です。"
+            adv_streak: "習慣の継続性を示します。緑の点が増えるほど健康が加速します。",
+            adv_completion: "80%以上の記録率を維持すると、分析の精度が飛躍的に向上します。",
+            adv_month: "今月の合計記録日数です。毎日を積み重ねましょう。"
         }
     };
 
@@ -55,6 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     updateLanguage();
 
+    // 言語切り替えロジック
     const langBtn = document.getElementById('langToggleBtn');
     if (langBtn) {
         langBtn.onclick = () => {
@@ -65,6 +66,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
+    // ログアウトロジック
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.onclick = async () => {
@@ -73,21 +75,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
+    // クイックログ機能（深夜4時ルール適用）
     async function quickLog(field, message) {
-        const today = new Date().toLocaleDateString('sv-SE');
-        const payload = { user_id: user.id, measured_date: today };
-        payload[field] = new Date().toISOString();
-        const { data: existing } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', today).maybeSingle();
+        const now = new Date();
+        const logicalDate = new Date(now.getTime());
+        if (now.getHours() < 4) logicalDate.setDate(now.getDate() - 1);
+        const dateStr = logicalDate.toLocaleDateString('sv-SE');
+
+        const payload = { user_id: user.id, measured_date: dateStr };
+        payload[field] = now.toISOString();
+
+        const { data: existing } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', dateStr).maybeSingle();
         if (existing) await supabaseClient.from('health_logs').update(payload).eq('id', existing.id);
         else await supabaseClient.from('health_logs').insert(payload);
+        
         alert(message);
         loadDashboard();
     }
-    const btnWake = document.getElementById('btnWaketime');
-    const btnBed = document.getElementById('btnBedtime');
-    if (btnWake) btnWake.onclick = () => quickLog('waketime', dict[currentLang].msg_wake);
-    if (btnBed) btnBed.onclick = () => quickLog('bedtime', dict[currentLang].msg_sleep);
+    document.getElementById('btnWaketime').onclick = () => quickLog('waketime', dict[currentLang].msg_wake);
+    document.getElementById('btnBedtime').onclick = () => quickLog('bedtime', dict[currentLang].msg_sleep);
 
+    // --- KPI詳細モーダル & チャートロジック ---
     let detailChart = null;
     document.querySelectorAll('.kpi-card').forEach(card => {
         card.addEventListener('click', async () => {
@@ -99,6 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('mdAdvice').innerText = dict[currentLang]['adv_' + kpi] || "";
             document.getElementById('kpiDetailModal').style.display = 'flex';
 
+            // 数値データ以外のKPIはチャートをスキップ
             if (['streak', 'completion', 'month_count', 'calories', 'mental'].includes(kpi)) {
                 if (detailChart) detailChart.destroy();
                 return;
@@ -119,12 +128,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                         borderColor: '#fbbf24', tension: 0.4, fill: true, backgroundColor: 'rgba(251, 191, 36, 0.1)'
                     }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                    scales: { y: { ticks: { color: '#8b9bb4' }, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { ticks: { color: '#8b9bb4' } } }
+                }
             });
         });
     });
 
+    // --- ダッシュボードの主力エンジン ---
     window.loadDashboard = async function() {
+        // 1. パフォーマンス統計 (SQL関数)
         const { data: kpiData } = await supabaseClient.rpc('get_user_performance', { target_user_id: user.id });
         if (kpiData?.[0]) {
             document.getElementById('streakDays').innerText = kpiData[0].streak_days || 0;
@@ -132,20 +145,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('monthLogs').innerText = kpiData[0].logs_count || 0;
         }
 
-        const { data: recent } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(1);
+        // 2. 最新レコード (Weight, Fat, Sleep, Mental)
+        const { data: recent } = await supabaseClient.from('health_logs').select('*').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(2);
         if (recent?.[0]) {
-            document.getElementById('latestWeight').innerText = recent[0].weight || "--";
-            document.getElementById('latestFat').innerText = recent[0].body_fat || "--";
-            document.getElementById('latestSleep').innerText = recent[0].sleep_hours || "--";
+            const current = recent[0];
+            const previous = recent[1] || null;
+
+            document.getElementById('latestWeight').innerText = current.weight || "--";
+            document.getElementById('latestFat').innerText = current.body_fat || "--";
+            document.getElementById('latestSleep').innerText = current.sleep_hours || "--";
+            
             const mentalMap = ["", "😫", "😟", "😐", "🙂", "🤩"];
-            document.getElementById('latestMental').innerText = mentalMap[recent[0].mental_condition] || "--";
+            document.getElementById('latestMental').innerText = mentalMap[current.mental_condition] || "--";
+
+            // Δ（デルタ）計算
+            if (previous && current.weight && previous.weight) {
+                const diff = (current.weight - previous.weight).toFixed(1);
+                const el = document.getElementById('deltaWeight');
+                el.innerText = `Δ ${diff > 0 ? '+' : ''}${diff} kg`;
+                el.className = `kpi-delta ${diff > 0 ? 'delta-bad' : 'delta-good'}`;
+            }
         }
         
+        // 3. 本日のカロリー集計
         const todayStr = new Date().toLocaleDateString('sv-SE');
         const { data: meals } = await supabaseClient.from('meal_logs').select('calories').eq('user_id', user.id).eq('meal_date', todayStr);
         const totalCal = meals?.reduce((sum, m) => sum + (Number(m.calories) || 0), 0) || 0;
         document.getElementById('todayCalories').innerText = totalCal;
 
+        // 4. Activity Grid (GitHub風90日間)
         const grid = document.getElementById('activityGrid');
         if (grid) {
             grid.innerHTML = '';
@@ -160,11 +188,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
+        // 5. 7-Day Trend Chart
         const { data: trendData } = await supabaseClient.from('health_logs').select('measured_date, weight, sleep_hours').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(7);
-        const chartCanvas = document.getElementById('healthCorrelationChart');
-        if (chartCanvas && trendData && trendData.length > 0) {
+        if (trendData && trendData.length > 0) {
             const logs = trendData.reverse();
-            const ctx = chartCanvas.getContext('2d');
+            const ctx = document.getElementById('healthCorrelationChart').getContext('2d');
             if (window.mainChart) window.mainChart.destroy();
             window.mainChart = new Chart(ctx, {
                 type: 'bar',
@@ -185,5 +213,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         }
     };
+    
     loadDashboard();
 });
