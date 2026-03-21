@@ -8,42 +8,42 @@ document.addEventListener('DOMContentLoaded', async () => {
     const user = await checkAuth();
     if (!user) return;
     
-    // --- 多言語辞書（i18n）の保全と拡張 ---
+    // --- 多言語辞書（i18n）をコーチングの『問い』へ完全刷新 ---
     window.currentLang = localStorage.getItem('appLang_' + user.id) || 'en';
     window.dict = {
         en: {
             quick_action: "Quick Action", wake: "Wake Up", meal: "Meal", sleep: "Sleep",
-            kpi_title: "Key Performance Indicators", weight: "Weight", fat_p: "Body Fat", sleep_h: "Sleep", mental: "Mental",
+            kpi_title: "KPI (Governance Metrics)", weight: "Weight", fat_p: "Body Fat", sleep_h: "Sleep", mental: "Mental",
             streak: "Streak", days: "Days", consecutive: "Consecutive", completion: "Completion", last30days: "Last 30 Days",
             month_count: "Month Count", logging: "Logging", calories: "Calories", today_total: "Today's Total",
-            nav_meals: "Meals", nav_history: "History", analysis: "Analysis", trend: "Trend", recorded: "Logged",
-            ai_analysis_title: "AI Analysis Engine", ai_analysis_wait: "Premium features standby...",
-            msg_wake: "Good morning! ☀️", msg_sleep: "Good night! 🌙",
-            adv_weight: "Weight fluctuates daily. Focus on the 7-day trend.",
-            adv_fat: "Body fat is affected by hydration. Measure consistently.",
-            adv_calories: "Premium feature release is near. Wait for the AI precision analysis with excitement!",
-            adv_sleep: "Aiming for ~7 hours stabilizes health.",
-            adv_mental: "Mental condition correlates with sleep and diet.",
-            adv_streak: "Shows habit consistency. Every green dot is a win.",
-            adv_completion: "Maintaining 80%+ enables high accuracy analysis.",
-            adv_month: "Total unique days logged this calendar month."
+            nav_meals: "Meals (Photo Log)", nav_history: "History", analysis: "Analysis", trend: "Trend", recorded: "Logged",
+            ai_analysis_title: "AI / Personal Coach Standby", ai_analysis_wait: "Premium features standby...",
+            msg_wake: "Good morning! ☀️", msg_sleep: "Perfect Governance. Good night! 🌙",
+            adv_weight: "Q. Weight is just a result. Which of your 'Self-Governance' habits caused this change?",
+            adv_fat: "Q. Body fat reflects your lifestyle. What will you change tomorrow to close the gap to your goal?",
+            adv_calories: "Premium feature (AI Meal/Diet Coaching) is preparing. Your daily meal photos will be the strongest data for future analysis.",
+            adv_sleep: "Q. How did today's sleep hours affect the 'Quality of your Decision Making'?",
+            adv_mental: "Q. How did this mental condition impact your 'Margin for Altruism (Serving others)'?",
+            adv_streak: "Q. Streak is the source of your efficacy. What is your strategy to keep this unbroken?",
+            adv_completion: "Q. High logging rate means high meta-cognition. What system do you need to fill the remaining gap?",
+            adv_month: "Q. Days logged equal days invested in your business. How will you increase this investment next month?"
         },
         ja: {
             quick_action: "クイックアクション", wake: "起床", meal: "食事", sleep: "就寝",
-            kpi_title: "主要指標 (KPI)", weight: "体重", fat_p: "体脂肪", sleep_h: "睡眠時間", mental: "メンタル",
+            kpi_title: "統治指標 (KPI)", weight: "体重", fat_p: "体脂肪", sleep_h: "睡眠", mental: "メンタル",
             streak: "継続日数", days: "日", consecutive: "連続記録中", completion: "記録率", last30days: "過去30日",
             month_count: "月間記録数", logging: "記録済み", calories: "カロリー", today_total: "本日の合計",
-            nav_meals: "食事録", nav_history: "履歴", analysis: "分析", trend: "推移", recorded: "済",
-            ai_analysis_title: "AI自動解析エンジン", ai_analysis_wait: "プレミアム機能解放までお待ちください...",
-            msg_wake: "おはようございます！☀️", msg_sleep: "お疲れ様でした！🌙",
-            adv_weight: "体重は日々変動します。7日間のトレンドに注目しましょう。",
-            adv_fat: "体脂肪率は水分量に影響されます。一定の条件で測定しましょう。",
-            adv_calories: "プレミアム機能の解放は間近です。AIによる精密解析をお楽しみに！",
-            adv_sleep: "約7時間の睡眠は心身の健康を安定させます。",
-            adv_mental: "メンタル状態は睡眠や食事と密接に関係しています。",
-            adv_streak: "習慣の継続性を示します。緑の点が増えるほど健康が加速します。",
-            adv_completion: "80%以上の記録率を維持すると、分析の精度が飛躍的に向上します。",
-            adv_month: "今月の合計記録日数です。毎日を積み重ねましょう。"
+            nav_meals: "食事録(画像)", nav_history: "履歴", analysis: "分析", trend: "推移", recorded: "済",
+            ai_analysis_title: "AI / Personal Coach Standby", ai_analysis_wait: "食事画像・データを蓄積し、解析をお待ちください...",
+            msg_wake: "おはようございます！☀️", msg_sleep: "完璧な統治です。お疲れ様でした！🌙",
+            adv_weight: "Q. 体重の変動は結果に過ぎません。この数値の変化は、あなたの自己統治のどの部分が影響したと考えますか？",
+            adv_fat: "Q. 体脂肪は生活習慣の鏡です。目標値とのギャップを埋めるために、明日から何を変えますか？",
+            adv_calories: "※プレミアム機能（食事解析・ダイエット支援）は準備中です。毎日の食事画像データの蓄積が、将来のAIコーチングの最高の資産となります。記録を続けましょう。",
+            adv_sleep: "Q. 本日の睡眠時間と、今日のあなたの『意思決定の質』にはどのような相関がありましたか？",
+            adv_mental: "Q. このコンディションは、あなたの『圧倒的利他主義（顧客を救済する余白）』にどう影響しましたか？",
+            adv_streak: "Q. 継続は『私ならできる』というエフィカシーの源泉です。このストリークを途切れさせないために、どんな工夫をしていますか？",
+            adv_completion: "Q. 記録率の高さは、メタ認知の高さです。残りの空白を埋めるために必要なシステム（仕組み）は何ですか？",
+            adv_month: "Q. 今月の記録日数は、あなたの事業への投資日数そのものです。来月、さらにこの投資を増やすための戦略は？"
         }
     };
 
@@ -72,6 +72,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         logoutBtn.onclick = async () => {
             await supabaseClient.auth.signOut();
             location.href = 'login.html';
+        };
+    }
+
+    // --- High Goal (北極星) の処理 ---
+    const goalCard = document.getElementById('highGoalCard');
+    const goalText = document.getElementById('highGoalText');
+    if (goalCard && goalText) {
+        // localStorageから読み込み
+        const savedGoal = localStorage.getItem('highGoal_' + user.id);
+        if (savedGoal) goalText.innerText = savedGoal;
+        
+        goalCard.onclick = () => {
+            const current = localStorage.getItem('highGoal_' + user.id) || "";
+            const newGoal = prompt("あなたの『究極のゴール（北極星）』を入力してください：\n（例：年商1億円達成し、業界の常識を覆す）", current);
+            if (newGoal !== null) {
+                const textToSave = newGoal.trim() === "" ? "（タップして究極のゴールを設定してください）" : newGoal.trim();
+                localStorage.setItem('highGoal_' + user.id, textToSave);
+                goalText.innerText = textToSave;
+            }
         };
     }
 
@@ -104,10 +123,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const val = card.querySelector('.kpi-value').innerText;
             document.getElementById('mdKpiTitle').innerText = title;
             document.getElementById('mdKpiMainValue').innerText = val;
+            
+            // 変更：解説（コンサル）ではなく「問い（コーチング）」を表示
             document.getElementById('mdAdvice').innerText = dict[currentLang]['adv_' + kpi] || "";
             document.getElementById('kpiDetailModal').style.display = 'flex';
 
-            // 数値データ以外のKPIはチャートをスキップ
             if (['streak', 'completion', 'month_count', 'calories', 'mental'].includes(kpi)) {
                 if (detailChart) detailChart.destroy();
                 return;
@@ -179,6 +199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             grid.innerHTML = '';
             const { data: history } = await supabaseClient.from('health_logs').select('measured_date').eq('user_id', user.id);
             const loggedDates = new Set(history?.map(h => h.measured_date));
+            // 90日間表示
             for (let i = 89; i >= 0; i--) {
                 const d = new Date(); d.setDate(d.getDate() - i);
                 const dStr = d.toLocaleDateString('sv-SE');
