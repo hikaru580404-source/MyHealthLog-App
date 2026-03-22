@@ -82,7 +82,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('[data-i18n]').forEach(el => {
             const key = el.getAttribute('data-i18n');
             if (window.dict[window.currentLang] && window.dict[window.currentLang][key]) {
-                el.innerHTML = window.dict[window.currentLang][key];
+                // 【バグ修正】High Goal の場合はユーザー独自の設定を上書きしない
+                if (el.id === 'highGoalText') {
+                    const savedGoal = localStorage.getItem('highGoal_' + user.id);
+                    const currentPlaceholder = window.dict[window.currentLang].high_goal_placeholder;
+                    const jaPlaceholder = window.dict.ja.high_goal_placeholder;
+                    const enPlaceholder = window.dict.en.high_goal_placeholder;
+                    
+                    // 日英どちらのプレースホルダーでもないテキストが保存されている場合（＝ユーザー独自の目標）
+                    if (savedGoal && savedGoal !== jaPlaceholder && savedGoal !== enPlaceholder) {
+                        el.innerText = savedGoal;
+                    } else {
+                        el.innerText = currentPlaceholder;
+                    }
+                } else {
+                    el.innerHTML = window.dict[window.currentLang][key];
+                }
             }
         });
     }
@@ -102,20 +117,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     const goalText = document.getElementById('highGoalText');
     if (goalCard && goalText) {
         const savedGoal = localStorage.getItem('highGoal_' + user.id);
-        const placeholder = window.dict[window.currentLang].high_goal_placeholder;
-        if (savedGoal && savedGoal !== placeholder) goalText.innerText = savedGoal;
+        const currentPlaceholder = window.dict[window.currentLang].high_goal_placeholder;
+        const jaPlaceholder = window.dict.ja.high_goal_placeholder;
+        const enPlaceholder = window.dict.en.high_goal_placeholder;
+
+        if (savedGoal && savedGoal !== jaPlaceholder && savedGoal !== enPlaceholder) {
+            goalText.innerText = savedGoal;
+        } else {
+            goalText.innerText = currentPlaceholder;
+        }
         
         goalCard.onclick = () => {
             const currentGoal = localStorage.getItem('highGoal_' + user.id) || "";
-            const isFirstTime = !currentGoal || currentGoal === placeholder;
-            const newGoal = prompt("あなたの『究極のゴール（北極星）』を入力してください：", currentGoal === placeholder ? "" : currentGoal);
+            const isFirstTime = !currentGoal || currentGoal === jaPlaceholder || currentGoal === enPlaceholder;
+            const newGoal = prompt("あなたの『究極のゴール（北極星）』を入力してください：", isFirstTime ? "" : currentGoal);
             
             if (newGoal !== null) { 
-                const finalGoal = newGoal.trim() || placeholder;
+                const finalGoal = newGoal.trim() || currentPlaceholder;
                 localStorage.setItem('highGoal_' + user.id, finalGoal); 
                 goalText.innerText = finalGoal; 
                 
-                if (finalGoal !== placeholder) {
+                if (finalGoal !== currentPlaceholder && finalGoal !== jaPlaceholder && finalGoal !== enPlaceholder) {
                     if (isFirstTime) {
                         alert("素晴らしい北極星です。統治を始めましょう。");
                     } else {
@@ -180,7 +202,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .eq('measured_date', payload.measured_date)
             .maybeSingle();
             
-        // 【新機能】睡眠時間の自動算出ロジック（ダッシュボードボタン用）
+        // 睡眠時間の自動算出ロジック（ダッシュボードボタン用）
         let wTime = field === 'waketime' ? payload.waketime : (existing?.waketime || null);
         let bTime = field === 'bedtime' ? payload.bedtime : (existing?.bedtime || null);
         
