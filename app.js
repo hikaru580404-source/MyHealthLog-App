@@ -41,8 +41,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             adv_mental: "[Point] Condition reflects your margin for altruism. If low, prioritize your own recovery (sleep/rest) without pushing too hard.",
             adv_streak: "[Point] Your streak is proof of your self-efficacy ('I can do it'). Keeping it unbroken as long as possible is crucial.",
             adv_log_count: "[Point] Monthly logged days act as a barometer of your self-governance. A higher log rate enables more accurate reflection.",
-            
-            // --- ナビゲーションポップアップ用辞書 ---
             desc_analysis: "View detailed analytics and trend charts of your governance.",
             desc_meals: "Log and review your daily meals with photos.",
             desc_history: "Review past logs, edit or audit your governance history.",
@@ -72,8 +70,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             adv_mental: "【ポイント】コンディションは利他（他者への価値提供）の余裕を表す指標です。数値が低い日は無理をせず、自己の回復（睡眠や休養）を最優先してください。",
             adv_streak: "【ポイント】連続記録（ストリーク）は、あなた自身の自己効力感（私ならできるという自信）の証明です。1日でも長く繋ぐことが重要です。",
             adv_log_count: "【ポイント】月間の記録日数は、自己を統治できているかの客観的なバロメーターです。記録率が高いほど正確な振り返りが可能になります。",
-            
-            // --- ナビゲーションポップアップ用辞書 ---
             desc_analysis: "これまでの統治記録の推移と、詳細な分析データを確認します。",
             desc_meals: "日々の食事を画像で記録し、食生活の振り返りを行います。",
             desc_history: "過去の統治記録を一覧で振り返り、記録の修正や監査を行います。",
@@ -161,7 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         powerSlider.addEventListener('change', (e) => { localStorage.setItem('govPower_' + user.id, e.target.value); });
     }
 
-    // --- 起床・就寝ボタン ---
+    // --- 起床・就寝ボタン (クイックログ機能) ---
     async function quickLog(field, doAnimation = false) {
         const now = new Date();
         const dateStr = now.toLocaleDateString('sv-SE');
@@ -176,7 +172,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (field === 'bedtime') payload.bedtime = now.toISOString();
         }
         
-        const { data: existing } = await supabaseClient.from('health_logs').select('id').eq('user_id', user.id).eq('measured_date', payload.measured_date).maybeSingle();
+        // 既存データの取得（id, waketime, bedtime）
+        const { data: existing } = await supabaseClient
+            .from('health_logs')
+            .select('id, waketime, bedtime')
+            .eq('user_id', user.id)
+            .eq('measured_date', payload.measured_date)
+            .maybeSingle();
+            
+        // 【新機能】睡眠時間の自動算出ロジック（ダッシュボードボタン用）
+        let wTime = field === 'waketime' ? payload.waketime : (existing?.waketime || null);
+        let bTime = field === 'bedtime' ? payload.bedtime : (existing?.bedtime || null);
+        
+        if (wTime && bTime) {
+            let wD = new Date(wTime);
+            let bD = new Date(bTime);
+            let diffM = (wD - bD) / (1000 * 60);
+            if (diffM < 0) diffM += 24 * 60; // 日付またぎ補正
+            payload.sleep_hours = Math.round((diffM / 60) * 10) / 10;
+        }
+
         if (existing) await supabaseClient.from('health_logs').update(payload).eq('id', existing.id);
         else await supabaseClient.from('health_logs').insert(payload);
         
@@ -184,6 +199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const overlay = document.getElementById('nightOverlay');
             if (overlay) {
                 overlay.classList.add('active');
+                // アニメーション完了後にダッシュボードを自動更新し、最新の睡眠時間を反映
                 setTimeout(() => { overlay.classList.remove('active'); loadDashboard(); }, 3000);
             }
         } else {
@@ -200,7 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (btnBed) btnBed.onclick = () => quickLog('bedtime', true);
     if (btnEdit) btnEdit.onclick = () => { location.href = 'form.html'; };
 
-    // --- ＝＝＝ 新設：ナビゲーション・ポップアップロジック ＝＝＝ ---
+    // --- ナビゲーション・ポップアップロジック ---
     const navModal = document.getElementById('navConfirmModal');
     const navTitle = document.getElementById('navModalTitle');
     const navDesc = document.getElementById('navModalDesc');
@@ -209,17 +225,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     function openNavModal(titleKey, descKey, targetUrl) {
         if (!navModal || !navTitle || !navDesc || !navProceed) return;
         
-        // 辞書からテキストを取得
         navTitle.innerText = window.dict[window.currentLang][titleKey] || titleKey;
         navDesc.innerText = window.dict[window.currentLang][descKey] || descKey;
-        
         navModal.style.display = 'flex';
         
         navProceed.onclick = () => {
             if (targetUrl) {
                 location.href = targetUrl;
             } else {
-                // Analysis(現在ページ)の場合は閉じて一番上へスムーズスクロール
                 navModal.style.display = 'none';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
@@ -230,10 +243,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnNavMeals = document.getElementById('navMeals');
     const btnNavHistory = document.getElementById('navHistory');
 
-    if (btnNavAnalysis) btnNavAnalysis.onclick = () => openNavModal('analysis', 'desc_analysis', ''); // 現在ページ用
-    if (btnNavMeals) btnNavMeals.onclick = () => openNavModal('nav_meals', 'desc_meals', 'meals.html'); // Mealsへ
-    if (btnNavHistory) btnNavHistory.onclick = () => openNavModal('nav_history', 'desc_history', 'summary.html'); // Historyへ
-
+    if (btnNavAnalysis) btnNavAnalysis.onclick = () => openNavModal('analysis', 'desc_analysis', ''); 
+    if (btnNavMeals) btnNavMeals.onclick = () => openNavModal('nav_meals', 'desc_meals', 'meals.html'); 
+    if (btnNavHistory) btnNavHistory.onclick = () => openNavModal('nav_history', 'desc_history', 'summary.html'); 
 
     // --- KPI詳細グラフ ---
     let detailChart = null;
@@ -267,7 +279,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const ctx = chartCanvas.getContext('2d');
             const dbColumn = (kpi === 'sleep' ? 'sleep_hours' : (kpi === 'fat' ? 'body_fat' : kpi));
 
-            // シャンパンゴールドの透過グラデーション
             const gradientLine = ctx.createLinearGradient(0, 0, 0, 180);
             gradientLine.addColorStop(0, 'rgba(238, 203, 112, 0.4)');
             gradientLine.addColorStop(1, 'rgba(238, 203, 112, 0)');
@@ -376,7 +387,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }, 500);
         }
 
-        // --- 究極のシャンパンゴールド・チャート ---
         const { data: trendData } = await supabaseClient.from('health_logs').select('measured_date, weight, sleep_hours').eq('user_id', user.id).order('measured_date', { ascending: false }).limit(7);
         if (trendData && trendData.length > 0) {
             const logs = trendData.reverse();
@@ -385,7 +395,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const ctx = chartCanvas.getContext('2d');
                 if (window.mainChart) window.mainChart.destroy();
                 
-                // バーグラデーション（上部は光り、下部は沈み込む）
                 const gradientSleep = ctx.createLinearGradient(0, 0, 0, 250);
                 gradientSleep.addColorStop(0, 'rgba(238, 203, 112, 0.9)'); 
                 gradientSleep.addColorStop(1, 'rgba(138, 106, 28, 0.4)');
@@ -406,9 +415,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 label: 'Weight (kg)', 
                                 data: logs.map(l => l.weight), 
                                 type: 'line', 
-                                borderColor: '#ffffff', // 白線でパキッと際立たせる
+                                borderColor: '#ffffff', 
                                 borderWidth: 2, 
-                                pointBackgroundColor: '#eecb70', // ポイントはゴールド
+                                pointBackgroundColor: '#eecb70', 
                                 pointBorderColor: '#ffffff',
                                 pointBorderWidth: 1.5,
                                 pointRadius: 4,

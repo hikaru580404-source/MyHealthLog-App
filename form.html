@@ -33,6 +33,7 @@
       <div class="step-line"></div>
       <div class="step" id="s3"><div class="step-dot"><i class="fas fa-check"></i></div></div>
     </div>
+    
     <div class="step-panel active" id="p1">
       <form id="hForm" class="form-card">
         <div class="form-group">
@@ -57,10 +58,12 @@
             <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
           </div></div>
         </div>
+        
         <div id="nightSection" style="display: none;">
           <div class="form-group"><label class="form-label" style="color:var(--clr-accent);">ジャーナル（本日のパフォーマンスや気づき）</label>
           <textarea id="note" class="form-input" rows="5" placeholder="Q. 今日、ゴールに向けてどんな「選択」と「統治」をしましたか？"></textarea></div>
         </div>
+        
         <div id="dayTimeMessage" style="display: none; text-align: center; color: var(--clr-text-secondary); padding: 16px 0;">
           <i class="fas fa-utensils" style="font-size: 2rem; margin-bottom: 12px;"></i><br>昼の食事録はMealsから行ってください。
         </div>
@@ -68,9 +71,33 @@
         <button type="submit" class="btn-primary" id="submitBtn">確認へ進む</button>
       </form>
     </div>
-    <div class="step-panel" id="p2"><div class="form-card"><h3 class="confirm-title">確認 / CONFIRM</h3><div id="cList" class="confirm-list"></div><div class="action-group"><button type="button" class="btn-secondary" onclick="location.reload()">修正</button><button type="button" class="btn-primary" id="saveBtn">確定</button></div></div></div>
-    <div class="step-panel" id="p3"><div class="form-card done-card"><div class="done-icon"><i class="fas fa-check-circle"></i></div><h2 class="done-title">LOGGED!</h2><p style="color:var(--clr-text-secondary); font-size: 0.85rem; margin-top: 12px;">今日も自己統治が完了しました。</p><a href="index.html" class="btn-secondary" style="display:block; text-decoration:none; text-align:center; margin-top:32px;">ダッシュボードへ</a></div></div>
+    
+    <div class="step-panel" id="p2">
+      <div class="form-card">
+        <h3 class="confirm-title">確認 / CONFIRM</h3>
+        <div id="cList" class="confirm-list"></div>
+        <div class="action-group">
+          <button type="button" class="btn-secondary" onclick="location.reload()">修正</button>
+          <button type="button" class="btn-primary" id="saveBtn">確定</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="step-panel" id="p3">
+      <div class="form-card done-card">
+        <div class="done-icon"><i class="fas fa-check-circle"></i></div>
+        <h2 class="done-title">LOGGED!</h2>
+        <p style="color:var(--clr-text-secondary); font-size: 0.85rem; margin-top: 12px;">今日も自己統治が完了しました。</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 32px;">
+          <a href="summary.html" class="btn-primary" style="display:block; text-decoration:none; text-align:center;">続けて修正する（Historyへ）</a>
+          <a href="index.html" class="btn-secondary" style="display:block; text-decoration:none; text-align:center;">ダッシュボードへ</a>
+        </div>
+        
+      </div>
+    </div>
   </main>
+
   <script src="supabase-client.js"></script>
   <script src="form.js"></script>
   <script>

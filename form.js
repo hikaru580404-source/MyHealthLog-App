@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         dateInput.value = logicalDate.toLocaleDateString('sv-SE');
     }
 
-    // --- 【新機能】特定の日のデータをSupabaseから読み込む (Read) ---
+    // ---特定の日のデータをSupabaseから読み込む (Read) ---
     window.loadDataByDate = async function(dateStr) {
         if (!supabaseClient) return;
 
@@ -30,33 +30,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             .eq('measured_date', dateStr)
             .maybeSingle();
 
-        // フォームのリセット (Wakeログで遷移したときなどに残らないよう)
+        // フォームのリセット
         document.getElementById('wt').value = "";
         document.getElementById('bt').value = "";
         document.getElementById('w').value = "";
         document.getElementById('f').value = "";
         document.getElementById('note').value = "";
-        // コンディションボタンリセット
         document.querySelectorAll('#mGrp .cond-btn').forEach(b => b.classList.remove('active'));
-        document.querySelector('#mGrp .cond-btn[data-v="3"]').classList.add('active'); // デフォルトLevel 3
+        document.querySelector('#mGrp .cond-btn[data-v="3"]').classList.add('active'); 
 
         if (data) {
-            // 既存データがあればセット
             if (data.waketime) document.getElementById('wt').value = new Date(data.waketime).toLocaleTimeString('sv-SE', {hour: '2-digit', minute:'2-digit'});
             if (data.bedtime) document.getElementById('bt').value = new Date(data.bedtime).toLocaleTimeString('sv-SE', {hour: '2-digit', minute:'2-digit'});
             if (data.weight) document.getElementById('w').value = data.weight;
             if (data.body_fat) document.getElementById('f').value = data.body_fat;
             if (data.daily_notes) document.getElementById('note').value = data.daily_notes;
             
-            // コンディションボタン
             if (data.mental_condition) {
                 document.querySelectorAll('#mGrp .cond-btn').forEach(b => b.classList.remove('active'));
                 const condBtn = document.querySelector(`#mGrp .cond-btn[data-v="${data.mental_condition}"]`);
                 if (condBtn) condBtn.classList.add('active');
             }
-            document.getElementById('saveBtn').innerText = "更新する"; // ボタンテキスト変更
+            document.getElementById('saveBtn').innerText = "更新する";
         } else {
-            document.getElementById('saveBtn').innerText = "確定する"; // 新規登録
+            document.getElementById('saveBtn').innerText = "確定する";
         }
     }
 
@@ -68,7 +65,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         form.addEventListener('submit', (e) => {
             e.preventDefault();
 
-            // 現在「朝」と「夜」どちらの画面が開いているかを判定 (EDIT MODEなら両方 true)
             const mSec = document.getElementById('morningSection');
             const nSec = document.getElementById('nightSection');
             const isMorningVisible = mSec.style.display === 'block';
@@ -82,7 +78,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const cList = document.getElementById('cList');
             cList.innerHTML = `<div><span>日付</span><span>${dateInput.value}</span></div>`;
 
-            // 朝セクションのデータ収集
+            // 朝セクションのデータ収集と睡眠時間の自動計算
             if (isMorningVisible) {
                 const wt = document.getElementById('wt').value;
                 const bt = document.getElementById('bt').value;
@@ -90,9 +86,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const f = document.getElementById('f').value;
                 const cond = document.querySelector('#mGrp .cond-btn.active').getAttribute('data-v');
 
-                // Wake/Bed Timeをタイムスタンプに
                 if(wt) { payloadToSave.waketime = `${dateInput.value}T${wt}:00`; cList.innerHTML += `<div><span>起床</span><span>${wt}</span></div>`; }
                 if(bt) { payloadToSave.bedtime = `${dateInput.value}T${bt}:00`; cList.innerHTML += `<div><span>就寝</span><span>${bt}</span></div>`; }
+                
+                // 【新機能】睡眠時間の自動算出ロジック
+                if(wt && bt) {
+                    let [wH, wM] = wt.split(':').map(Number);
+                    let [bH, bM] = bt.split(':').map(Number);
+                    let diffM = (wH * 60 + wM) - (bH * 60 + bM);
+                    if (diffM < 0) diffM += 24 * 60; // 日付またぎの補正
+                    let sleepH = Math.round((diffM / 60) * 10) / 10;
+                    payloadToSave.sleep_hours = sleepH;
+                    cList.innerHTML += `<div><span>睡眠時間</span><span style="color:#10b981; font-weight:700;">${sleepH} h (自動算出)</span></div>`;
+                }
                 
                 if(w)  { payloadToSave.weight = parseFloat(w); cList.innerHTML += `<div><span>体重</span><span>${w} kg</span></div>`; }
                 if(f)  { payloadToSave.body_fat = parseFloat(f); cList.innerHTML += `<div><span>体脂肪</span><span>${f} %</span></div>`; }
@@ -100,24 +106,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 cList.innerHTML += `<div><span>コンディション</span><span>Level ${cond}</span></div>`;
             }
 
-            // 夜セクションのデータ収集
             if (isNightVisible) {
                 const note = document.getElementById('note').value;
                 if(note) {
                     payloadToSave.daily_notes = note;
                     cList.innerHTML += `<div><span>ジャーナル</span><span>入力あり</span></div>`;
                 } else {
-                    payloadToSave.daily_notes = null; // 上書きで消せるように
+                    payloadToSave.daily_notes = null;
                 }
             }
 
-            // P1 -> P2
             document.getElementById('p1').classList.remove('active');
             document.getElementById('p2').classList.add('active');
         });
     }
 
-    // --- データベースへの保存 (Upsertロジックはそのまま維持) ---
+    // --- データベースへの保存 ---
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn) {
         saveBtn.addEventListener('click', async (e) => {
@@ -126,14 +130,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             btn.innerText = "保存中...";
 
             try {
-                // Upsert：既存データがあれば更新、なければ挿入
                 const { error } = await supabaseClient
                     .from('health_logs')
                     .upsert(payloadToSave, { onConflict: 'user_id, measured_date' });
 
                 if (error) throw error;
 
-                // 保存成功：P2 -> P3
                 document.getElementById('p2').classList.remove('active');
                 document.getElementById('p3').classList.add('active');
 
