@@ -5,89 +5,70 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>Settings | HEALTH LOG</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="style.css">
+  
   <style>
-    .settings-main { padding: 24px 20px; padding-bottom: 80px; max-width: 600px; margin: 0 auto; }
-    .settings-header { margin-bottom: 32px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px; }
-    .settings-title { font-family: var(--font-en); font-size: 1.5rem; font-weight: 800; color: var(--clr-accent); margin-bottom: 8px;}
-    .release-notes { background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: 12px; padding: 20px; }
-    .version-tag { background: rgba(251, 191, 36, 0.15); color: var(--clr-accent); padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.8rem; font-family: var(--font-en); display: inline-block; margin-bottom: 16px;}
-    .release-date { font-size: 0.85rem; color: var(--clr-text-secondary); margin-left: 8px; }
-    .feature-list { list-style: none; margin-top: 16px; }
+    :root {
+      --clr-bg: #0b0f19; var(--clr-bg-panel): #151b2b; var(--clr-primary: #38bdf8;
+      --clr-accent: #fbbf24; var(--clr-text-main: #ffffff; var(--clr-text-secondary): #8b9bb4;
+    }
+    body { font-family: sans-serif; background-color: var(--clr-bg); color: #fff; margin: 0; }
+    .app-header { background: #111; padding: 16px 20px; border-bottom: 1px solid #222; position: sticky; top: 0; z-index: 100; }
+    .header-inner { display: flex; justify-content: space-between; align-items: center; max-width: 600px; margin: 0 auto; }
+    .logo { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 1rem; }
+    .settings-main { padding: 24px 20px; max-width: 600px; margin: 0 auto; }
+    .release-notes { background: #161e2e; border: 1px solid #2d3748; border-radius: 12px; padding: 20px; }
+    .version-tag { background: rgba(251, 191, 36, 0.15); color: var(--clr-accent); padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.8rem; display: inline-block; margin-bottom: 16px;}
+    .feature-list { list-style: none; padding: 0; margin: 0; }
     .feature-list li { margin-bottom: 16px; font-size: 0.95rem; line-height: 1.6; display: flex; gap: 12px; }
+    .feature-title { font-weight: 600; color: #fff; display: block; margin-bottom: 4px;}
+    .feature-desc { color: #8b9bb4; font-size: 0.85rem; }
     .feature-list i { color: #10b981; margin-top: 4px; }
-    .feature-title { font-weight: 600; color: var(--clr-text-primary); margin-bottom: 4px; display: block; }
-    .feature-desc { color: var(--clr-text-secondary); font-size: 0.85rem; }
-    
-    .danger-zone { margin-top: 48px; border-top: 1px solid rgba(239, 68, 68, 0.3); padding-top: 24px; }
-    .btn-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.5); width: 100%; padding: 16px; border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer; transition: 0.2s; }
-    .btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
 <header class="app-header">
   <div class="header-inner">
-    <a href="index.html" style="color: var(--clr-text-secondary); text-decoration: none; font-size: 1.2rem;"><i class="fas fa-chevron-left"></i></a>
+    <a href="index.html" style="color: #666; text-decoration: none; font-size: 1.2rem;"><i class="fas fa-chevron-left"></i></a>
     <div class="logo">SETTINGS</div>
     <div style="width: 20px;"></div>
   </div>
 </header>
 
 <main class="settings-main">
-  <div class="settings-header">
-    <h1 class="settings-title">Release Notes</h1>
-    <p style="color: var(--clr-text-secondary); font-size: 0.9rem;">システムのアップデート履歴と新機能について</p>
-  </div>
-
   <div class="release-notes">
-    <div class="version-tag">Version 2.0.0</div><span class="release-date">2026.03.23</span>
+    <div class="version-tag">Version 2.0.0</div><span style="color:#666; font-size:0.8rem; margin-left:8px;">2026.03.23</span>
     
     <ul class="feature-list">
       <li>
         <i class="fas fa-check-circle"></i>
         <div>
-          <span class="feature-title">UI/UXの完全刷新（ディープネイビー＆ゴールド）</span>
-          <span class="feature-desc">宇宙のような深いネイビーを基調とし、最上級のゴールドをアクセントに採用。情報の視認性と高級感を両立した「Governance」にふさわしいデザインへと進化しました。</span>
+          <span class="feature-title">【UI/UX】宇宙ネイビー＆ゴールドテーマの採用</span>
+          <span class="feature-desc">システムの配色を、深い宇宙をイメージした「ディープネイビー」と「最上級のゴールド」に統一。情報の視認性と高級感を両立し、あなたの「統治」にふさわしい管理画面へと進化しました。</span>
         </div>
       </li>
       <li>
         <i class="fas fa-check-circle"></i>
         <div>
-          <span class="feature-title">多言語対応（日英切り替え機能）の実装</span>
-          <span class="feature-desc">ヘッダーの「EN/JA」ボタンより、ワンタップで英語と日本語の表示を切り替えることが可能になりました。グローバルスタンダードな管理体験を提供します。</span>
+          <span class="feature-title">【新機能】KPIクリック詳細モーダルの実装</span>
+          <span class="feature-desc">ダッシュボードの各KPIカードをタップすることで、直近30日間の詳細なトレンドグラフと、AI Personal Coachによる専門的な分析アドバイスが表示されるようになりました。</span>
         </div>
       </li>
       <li>
         <i class="fas fa-check-circle"></i>
         <div>
-          <span class="feature-title">KPI詳細分析モーダルの追加</span>
-          <span class="feature-desc">ダッシュボードの各KPIカード（体重、睡眠など）をタップすることで、直近30日間の詳細なトレンドグラフと、AIによる専門的な分析アドバイスが表示されるようになりました。</span>
+          <span class="feature-title">【グローバル】多言語対応（日英切り替え機能）</span>
+          <span class="feature-desc">ヘッダーの「EN/JA」ボタンより、ワンタップで英語と日本語の表示を切り替えることが可能になりました。グローバルな管理体験を提供します。</span>
         </div>
       </li>
       <li>
         <i class="fas fa-check-circle"></i>
         <div>
-          <span class="feature-title">深夜4時バグの完全解消（論理日付システムの導入）</span>
-          <span class="feature-desc">0:00〜3:59の間の入力であっても、システムが自動的に「前日の活動」として認識・処理するロジックを実装。データのズレや干渉が完全に解消されました。</span>
-        </div>
-      </li>
-      <li>
-        <i class="fas fa-check-circle"></i>
-        <div>
-          <span class="feature-title">AI画像解析機能の準備（Upcoming）</span>
-          <span class="feature-desc">食事の写真から自動でカロリーや栄養素を算出するプレミアム機能の開発準備が完了しました。今後のアップデートにご期待ください。</span>
+          <span class="feature-title">【バグ修正】深夜4時バグの完全解消（論理日付システムの導入）</span>
+          <span class="feature-desc">0:00〜3:59の間の入力であっても、システムが自動的に「前日の活動」として認識・処理するロジックを実装。データのズレや重複が完全に解消されました。</span>
         </div>
       </li>
     </ul>
-  </div>
-
-  <div class="danger-zone">
-    <h3 style="color: #ef4444; font-size: 0.9rem; margin-bottom: 12px; font-family: var(--font-en);">DANGER ZONE</h3>
-    <button class="btn-danger" onclick="if(confirm('本当にログアウトしますか？')) { supabaseClient.auth.signOut().then(() => location.href='login.html'); }">
-      <i class="fas fa-sign-out-alt"></i> ログアウト
-    </button>
   </div>
 </main>
 
