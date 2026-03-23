@@ -38,8 +38,12 @@
 <main class="app-main">
   <div class="high-goal-container">
     <div class="high-goal-card" id="highGoalCard">
-      <span class="high-goal-text" id="highGoalText" data-i18n="high_goal_placeholder">（タップして究極のゴールを設定）</span>
-      <i class="fas fa-edit high-goal-edit-icon"></i>
+      <div class="high-goal-header">
+        <i class="fas fa-compass" style="color: var(--clr-accent);"></i> <span data-i18n="north_star">NORTH STAR</span>
+      </div>
+      <div class="high-goal-text-wrap">
+        <span class="high-goal-text" id="highGoalText" data-i18n="high_goal_placeholder">（タップして究極のゴールを設定）</span>
+      </div>
     </div>
   </div>
 
@@ -57,11 +61,6 @@
     
     <div class="score-box">
       <div class="score-title" data-i18n="gov_power">主観戦闘力</div>
-      <div class="guide-tooltip" id="powerGuide" style="display: none;">
-        <i class="fas fa-hand-pointer" style="color: #eecb70; margin-bottom: 4px;"></i><br>
-        <span data-i18n="guide_slider">ダイヤルを上下に動かして、今の戦闘力をセットします。</span><br>
-        <button class="guide-btn-hide" id="btnHideGuide"><span data-i18n="guide_hide">次回から非表示</span> <i class="fas fa-times"></i></button>
-      </div>
       <div class="meter-layout">
         <div class="score-circle-wrap">
           <div class="score-circle" id="powerCircle" style="background: conic-gradient(#eecb70 80%, #1e293b 80%);">
@@ -83,15 +82,15 @@
   
   <button class="btn-secondary edit-history" id="btnEditHistory"><i class="fas fa-calendar-alt"></i> <span data-i18n="edit_history">日次記録（過去ログ修正・監査）</span></button>
 
-  <div class="ai-teaser-premium" onclick="alert('プレミアム機能は準備中です。')">
+  <div class="ai-teaser-premium shiny-banner" onclick="alert('プレミアム機能は準備中です。')">
     <div class="ai-teaser-info">
       <div class="ai-teaser-icon"><i class="fas fa-brain"></i></div>
       <div class="ai-teaser-text">
         <h4 data-i18n="ai_analysis_title">AI Personal Coach Standby</h4>
-        <p data-i18n="ai_analysis_wait">解析・ダイエット支援（準備中）</p>
+        <p data-i18n="ai_analysis_wait">画像解析・ダイエット支援（準備中）</p>
       </div>
     </div>
-    <div style="color: #eecb70;"><i class="fas fa-chevron-right"></i></div>
+    <div class="shiny-arrow"><i class="fas fa-chevron-right"></i></div>
   </div>
 
   <section class="kpi-section">
@@ -132,8 +131,8 @@
 
 <div class="modal-overlay" id="navConfirmModal" style="display:none;">
   <div class="modal-content" style="max-width: 350px; text-align: center;">
-    <div class="modal-title" id="navModalTitle" style="color: #eecb70; margin-bottom: 16px; font-size: 1.2rem; font-family: var(--font-en);">Title</div>
-    <div id="navModalDesc" style="color: #94a3b8; font-size: 0.9rem; line-height: 1.6; margin-bottom: 28px;">ここに機能の説明が入ります。</div>
+    <div class="modal-title" id="navModalTitle" style="color: var(--clr-accent); margin-bottom: 16px; font-size: 1.2rem; font-family: var(--font-en);">Title</div>
+    <div id="navModalDesc" style="color: var(--clr-text-secondary); font-size: 0.9rem; line-height: 1.6; margin-bottom: 28px;">ここに機能の説明が入ります。</div>
     <button class="btn-quick" id="navModalProceed" style="width: 100%; margin-bottom: 12px; padding: 16px 0;"><i class="fas fa-check" style="margin-right:8px;"></i> <span data-i18n="understood">了解 / 遷移する</span></button>
     <button class="btn-secondary" onclick="document.getElementById('navConfirmModal').style.display='none'" style="width: 100%; border: none; background: transparent; color: #64748b;"><span data-i18n="cancel">キャンセル</span></button>
   </div>

@@ -136,3 +136,72 @@ body {
   display: flex; align-items: center; justify-content: center;
 }
 .cond-btn.active { border-color: var(--clr-accent); color: var(--clr-accent); background: rgba(251, 191, 36, 0.1); }
+/* --- 新規追加：North Star スタイリッシュデザイン --- */
+.high-goal-card {
+  background: linear-gradient(145deg, rgba(21, 27, 46, 0.9), rgba(9, 12, 21, 0.95));
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.high-goal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(251, 191, 36, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  border-color: rgba(251, 191, 36, 0.6);
+}
+.high-goal-header {
+  font-family: var(--font-en);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--clr-text-secondary);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.high-goal-text-wrap {
+  position: relative;
+  z-index: 1;
+}
+.high-goal-text {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--clr-accent);
+  line-height: 1.5;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* --- 新規追加：キラキラアニメーション (AI バナー) --- */
+.shiny-banner {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(to right, rgba(30,41,59,0.8), rgba(15,23,42,0.8));
+  border: 1px solid rgba(251, 191, 36, 0.2);
+}
+.shiny-banner::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0) 100%);
+  transform: skewX(-20deg);
+  animation: shine 3s infinite;
+}
+@keyframes shine {
+  0% { left: -100%; }
+  20% { left: 200%; }
+  100% { left: 200%; }
+}
+.shiny-arrow {
+  color: var(--clr-accent);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; text-shadow: 0 0 10px rgba(251, 191, 36, 0.8); }
+  100% { transform: scale(1); opacity: 0.8; }
+}
