@@ -2,29 +2,22 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="AsirLabo">
-  <link rel="manifest" href="manifest.json">
-  <title>記録 | HEALTH LOG</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>記録 | 健康管理システム</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="form.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ja.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body>
+<body style="background: var(--clr-bg);">
   <header class="form-header">
-    <div class="header-left"><a href="index.html" class="nav-back"><i class="fas fa-chevron-left"></i></a></div>
-    <div class="header-center" id="formTitle">DAILY LOG</div>
+    <div class="header-left">
+      <a href="index.html" class="nav-back"><i class="fas fa-chevron-left"></i></a>
+    </div>
+    <div class="header-center">日次記録</div>
     <div class="header-right"></div>
   </header>
+
   <main class="form-main">
     <div class="step-indicator">
       <div class="step active" id="s1"><div class="step-dot">1</div></div>
@@ -33,67 +26,72 @@
       <div class="step-line"></div>
       <div class="step" id="s3"><div class="step-dot"><i class="fas fa-check"></i></div></div>
     </div>
-    
+
     <div class="step-panel active" id="p1">
       <form id="hForm" class="form-card">
         <div class="form-group">
-          <label class="form-label" style="color: var(--clr-accent);"><i class="fas fa-calendar-alt"></i> 記録日 (🗓️タップしてカレンダーから選択)</label>
-          <input type="text" id="date" class="form-input" style="cursor: pointer; background: rgba(251, 191, 36, 0.1); border-color: var(--clr-accent); font-weight: bold;" readonly>
+          <label class="form-label">日付</label>
+          <input type="date" id="date" class="form-input" required>
         </div>
         
-        <div id="morningSection" style="display: none;">
-          <div class="form-row-grid">
-            <div class="form-group"><label class="form-label">起床時刻</label><input type="time" id="wt" class="form-input"></div>
-            <div class="form-group"><label class="form-label">就寝時刻 (昨夜)</label><input type="time" id="bt" class="form-input"></div>
+        <div class="form-row-grid">
+          <div class="form-group">
+            <label class="form-label">起床時刻 (今朝)</label>
+            <input type="time" id="wt" class="form-input">
           </div>
-          <div class="form-row-grid">
-            <div class="form-group"><label class="form-label">体重 (kg)</label><input type="number" id="w" class="form-input" step="0.1" placeholder="00.0"></div>
-            <div class="form-group"><label class="form-label">体脂肪 (%)</label><input type="number" id="f" class="form-input" step="0.1" placeholder="00.0"></div>
+          <div class="form-group">
+            <label class="form-label">就寝時刻 (今夜)</label>
+            <input type="time" id="bt" class="form-input">
           </div>
-          <div class="form-group"><label class="form-label">コンディション</label><div class="cond-group" id="mGrp">
+        </div>
+
+        <div class="form-row-grid">
+          <div class="form-group">
+            <label class="form-label">体重 (kg)</label>
+            <input type="number" id="w" class="form-input" step="0.1" placeholder="00.0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">体脂肪 (%)</label>
+            <input type="number" id="f" class="form-input" step="0.1" placeholder="00.0">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">コンディション</label>
+          <div class="cond-group" id="mGrp">
             <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
             <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
             <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
             <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
             <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
-          </div></div>
-        </div>
-        
-        <div id="nightSection" style="display: none;">
-          <div class="form-group"><label class="form-label" style="color:var(--clr-accent);">ジャーナル（本日のパフォーマンスや気づき）</label>
-          <textarea id="note" class="form-input" rows="5" placeholder="Q. 今日、ゴールに向けてどんな「選択」と「統治」をしましたか？"></textarea></div>
-        </div>
-        
-        <div id="dayTimeMessage" style="display: none; text-align: center; color: var(--clr-text-secondary); padding: 16px 0;">
-          <i class="fas fa-utensils" style="font-size: 2rem; margin-bottom: 12px;"></i><br>昼の食事録はMealsから行ってください。
+          </div>
         </div>
 
-        <button type="submit" class="btn-primary" id="submitBtn">確認へ進む</button>
+        <div class="form-group">
+          <label class="form-label">メモ</label>
+          <textarea id="note" class="form-input" rows="2" placeholder="気づきや特記事項"></textarea>
+        </div>
+
+        <button type="submit" class="btn-primary">確認へ進む</button>
       </form>
     </div>
-    
+
     <div class="step-panel" id="p2">
       <div class="form-card">
-        <h3 class="confirm-title">確認 / CONFIRM</h3>
+        <h3 class="confirm-title">入力内容の確認</h3>
         <div id="cList" class="confirm-list"></div>
         <div class="action-group">
-          <button type="button" class="btn-secondary" id="btnBackToEdit">修正</button>
-          <button type="button" class="btn-primary" id="saveBtn">確定</button>
+          <button type="button" class="btn-secondary" onclick="location.reload()">修正する</button>
+          <button type="button" class="btn-primary" id="saveBtn">確定する</button>
         </div>
       </div>
     </div>
-    
+
     <div class="step-panel" id="p3">
       <div class="form-card done-card">
         <div class="done-icon"><i class="fas fa-check-circle"></i></div>
-        <h2 class="done-title">LOGGED!</h2>
-        <p style="color:var(--clr-text-secondary); font-size: 0.85rem; margin-top: 12px;">今日も自己統治が完了しました。</p>
-        
-        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 32px;">
-          <a href="summary.html" class="btn-primary" style="display:block; text-decoration:none; text-align:center;">続けて修正する（Historyへ）</a>
-          <a href="index.html" class="btn-secondary" style="display:block; text-decoration:none; text-align:center;">ダッシュボードへ</a>
-        </div>
-        
+        <h2 class="done-title">記録完了</h2>
+        <a href="index.html" class="btn-secondary" style="display:block; text-decoration:none; text-align:center; margin-top:24px;">ダッシュボードへ</a>
       </div>
     </div>
   </main>
