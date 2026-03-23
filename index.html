@@ -11,21 +11,20 @@
 </head>
 <body>
   <header class="app-header">
-    <div class="header-left">
-      <div class="logo" data-i18n="app_title">GOVERNANCE</div>
-    </div>
-    <div class="header-right">
-      <button id="langToggleBtn" class="lang-toggle">EN | ja</button>
-    </div>
+    <div class="logo" data-i18n="app_title">GOVERNANCE LOG</div>
+    <button id="langToggleBtn" class="lang-toggle">EN | ja</button>
   </header>
 
   <main class="dashboard-main">
-    <section class="goal-section" id="highGoalCard">
-      <div class="section-header">
-        <i class="fas fa-star primary-color"></i>
-        <span data-i18n="north_star">NORTH STAR</span>
+    <section class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label" data-i18n="streak">STREAK</div>
+        <div class="stat-value"><span id="streakDays">--</span> <span class="unit" data-i18n="days">Days</span></div>
       </div>
-      <div class="goal-text" id="highGoalText"></div>
+      <div class="stat-card">
+        <div class="stat-label" data-i18n="logs">LOGS</div>
+        <div class="stat-value"><span id="monthLogs">--</span> <span class="unit" data-i18n="this_month">This M</span></div>
+      </div>
     </section>
 
     <section class="power-section">
@@ -49,9 +48,6 @@
     </section>
 
     <section class="kpi-section">
-      <div class="section-header">
-        <span data-i18n="daily_kpi">Daily Log (KPIs)</span>
-      </div>
       <div class="kpi-grid">
         <div class="kpi-card" data-kpi="weight">
           <div class="kpi-label" data-i18n="weight">WEIGHT</div>
@@ -68,7 +64,7 @@
         </div>
         <div class="kpi-card" data-kpi="mental">
           <div class="kpi-label" data-i18n="mental">MENTAL</div>
-          <div class="kpi-value" id="latestMental">--</div>
+          <div class="kpi-value"><span id="latestMental">--</span> <span class="unit">Lv</span></div>
         </div>
       </div>
       <p class="kpi-hint" data-i18n="hint_click_kpi">* Tap cards for detailed charts & AI advice.</p>
@@ -76,10 +72,10 @@
 
     <section class="action-grid">
       <button class="action-btn wake-btn" id="btnWaketime">
-        <i class="fas fa-sun"></i> <span data-i18n="wake">Wake</span>
+        <i class="fas fa-sun"></i> <span data-i18n="wake">WAKE</span>
       </button>
       <button class="action-btn bed-btn" id="btnBedtime">
-        <i class="fas fa-moon"></i> <span data-i18n="sleep">Sleep</span>
+        <i class="fas fa-moon"></i> <span data-i18n="sleep">SLEEP</span>
       </button>
     </section>
     

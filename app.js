@@ -14,7 +14,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.dict = {
         en: {
             app_title: "GOVERNANCE LOG",
-            north_star: "NORTH STAR",
+            streak: "STREAK",
+            days: "Days",
+            logs: "LOGS",
+            this_month: "This Month",
             vitality_ai: "VITALITY SCORE",
             gov_power: "GOVERNANCE POWER",
             daily_kpi: "DAILY LOG (KPIs)",
@@ -23,12 +26,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             sleep_lbl: "SLEEP",
             mental: "MENTAL",
             hint_click_kpi: "* Tap cards for detailed charts & AI advice.",
-            wake: "Wake",
-            sleep: "Sleep",
+            wake: "WAKE",
+            sleep: "SLEEP",
             edit_history: "Edit Daily Log",
             close: "Close",
             night_msg: "Governance completed. Good night.",
-            high_goal_placeholder: "(Tap to set your North Star / Ultimate Goal)",
             adv_weight: "[Analysis] Focus on the long-term trend (1-4 weeks) rather than daily water fluctuations.",
             adv_fat: "[Analysis] Measure under identical conditions daily (e.g., after waking up) for precise tracking.",
             adv_sleep: "[Analysis] Sleep is strategic maintenance. Aim for quality to maximize daytime decision making.",
@@ -36,7 +38,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         },
         ja: {
             app_title: "統治ログ",
-            north_star: "北極星（究極のゴール）",
+            streak: "継続日数",
+            days: "日",
+            logs: "記録数",
+            this_month: "今月",
             vitality_ai: "客観活力",
             gov_power: "主観戦闘力",
             daily_kpi: "日次記録 (KPIs)",
@@ -50,7 +55,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             edit_history: "過去の記録を編集する",
             close: "閉じる",
             night_msg: "今日も統治完了。おやすみなさい。",
-            high_goal_placeholder: "（タップして究極のゴールを設定）",
             adv_weight: "【分析】日々の水分量で変動します。一喜一憂せず、1週間〜1ヶ月の長期トレンドを重視してください。",
             adv_fat: "【分析】毎日同じ条件（起床後など）で計測することで、ノイズのない正確な推移が把握できます。",
             adv_sleep: "【分析】睡眠は「戦略的メンテナンス」です。日中の意思決定の質を最大化するために確保しましょう。",
@@ -72,16 +76,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (langBtn) {
             langBtn.innerText = window.currentLang === 'en' ? 'EN | ja' : 'en | JA';
         }
-
-        // High Goalのプレースホルダー処理
-        const goalText = document.getElementById('highGoalText');
-        if (goalText) {
-            const savedGoal = localStorage.getItem('highGoal_v2');
-            const jaP = window.dict.ja.high_goal_placeholder;
-            const enP = window.dict.en.high_goal_placeholder;
-            if (savedGoal && savedGoal !== jaP && savedGoal !== enP) goalText.innerText = savedGoal;
-            else goalText.innerText = window.dict[window.currentLang].high_goal_placeholder;
-        }
     }
     updateLanguage();
 
@@ -95,22 +89,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    // --- High Goal 設定 ---
-    const goalCard = document.getElementById('highGoalCard');
-    const goalText = document.getElementById('highGoalText');
-    if (goalCard && goalText) {
-        goalCard.onclick = () => {
-            const currentGoal = localStorage.getItem('highGoal_v2') || "";
-            const isFirst = !currentGoal || currentGoal === window.dict.ja.high_goal_placeholder || currentGoal === window.dict.en.high_goal_placeholder;
-            const newGoal = prompt(window.currentLang === 'ja' ? "あなたの『北極星』を入力：" : "Enter your North Star:", isFirst ? "" : currentGoal);
-            if (newGoal !== null) {
-                const final = newGoal.trim() || window.dict[window.currentLang].high_goal_placeholder;
-                localStorage.setItem('highGoal_v2', final);
-                goalText.innerText = final;
-            }
-        };
-    }
-
     // --- 主観戦闘力（ダイヤル）の制御 ---
     const powerSlider = document.getElementById('powerSlider');
     const powerValue = document.getElementById('powerValue');
@@ -119,12 +97,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const savedPower = localStorage.getItem('govPower_v2') || 80;
         powerSlider.value = savedPower;
         powerValue.innerText = savedPower;
-        powerCircle.style.background = `conic-gradient(var(--clr-primary) ${savedPower}%, var(--clr-bg) ${savedPower}%)`;
+        powerCircle.style.background = `conic-gradient(var(--clr-primary) ${savedPower}%, var(--clr-border) ${savedPower}%)`;
 
         powerSlider.addEventListener('input', (e) => {
             const val = e.target.value;
             powerValue.innerText = val;
-            powerCircle.style.background = `conic-gradient(var(--clr-primary) ${val}%, var(--clr-bg) ${val}%)`;
+            powerCircle.style.background = `conic-gradient(var(--clr-primary) ${val}%, var(--clr-border) ${val}%)`;
             localStorage.setItem('govPower_v2', val);
         });
     }
@@ -175,7 +153,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (kpiType === 'mental') {
             title = dict.mental;
             const mFaces = ["", "😫", "😟", "😐", "🙂", "🤩"];
-            val = latestLog.mental_condition ? mFaces[latestLog.mental_condition] : "--";
+            let lv = latestLog.mental_condition ? latestLog.mental_condition : "--";
+            val = `Level ${lv} ${latestLog.mental_condition ? mFaces[lv] : ""}`;
             adviceEl.innerText = dict.adv_mental;
             chartData = logs.map(l => l.mental_condition || null);
             chartLabel = "Mental Level";
@@ -186,6 +165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // チャートの描画
         const labels = logs.map(l => {
+            if(!l.measured_date) return "";
             const parts = l.measured_date.split('-');
             return `${parts[1]}/${parts[2]}`; // MM/DD 形式
         });
@@ -204,10 +184,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 datasets: [{
                     label: labelName,
                     data: data,
-                    borderColor: '#eecb70', // ゴールド
-                    backgroundColor: 'rgba(238, 203, 112, 0.1)',
+                    borderColor: '#d4af37', // ゴールド
+                    backgroundColor: 'rgba(212, 175, 55, 0.1)',
                     borderWidth: 2,
-                    pointBackgroundColor: '#eecb70',
+                    pointBackgroundColor: '#d4af37',
                     pointRadius: 3,
                     tension: 0.3,
                     fill: true,
@@ -218,8 +198,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { ticks: { color: '#94a3b8', font: { family: 'Inter' }, maxTicksLimit: 7 }, grid: { display: false } },
-                    y: { ticks: { color: '#94a3b8', font: { family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    x: { ticks: { color: '#8b9bb4', font: { family: 'Inter' }, maxTicksLimit: 7 }, grid: { display: false } },
+                    y: { ticks: { color: '#8b9bb4', font: { family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.05)' } }
                 }
             }
         });
@@ -274,7 +254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 setTimeout(() => { overlay.classList.remove('active'); loadDashboard(); }, 3000);
             }
         } else {
-            alert(window.currentLang === 'ja' ? "おはようございます！記録しました。" : "Good morning! Logged successfully.");
+            alert(window.currentLang === 'ja' ? "記録しました。" : "Logged successfully.");
             loadDashboard(); // リロードせずに画面更新
         }
     }
@@ -303,6 +283,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         allLogs.sort((a, b) => (b.measured_date || "").localeCompare(a.measured_date || ""));
         window.globalAllLogs = allLogs;
 
+        // ストリーク＆ログ数計算
+        let streak = 0;
+        let logsCount = 0;
+        try {
+            const { data: kpiData } = await supabaseClient.rpc('get_user_performance', { target_user_id: window.currentUser.id });
+            streak = kpiData?.[0]?.streak_days || 0;
+            logsCount = kpiData?.[0]?.logs_count || allLogs.filter(l => l.measured_date?.startsWith(new Date().toISOString().slice(0, 7))).length;
+        } catch (e) {
+            logsCount = allLogs.filter(l => l.measured_date?.startsWith(new Date().toISOString().slice(0, 7))).length;
+        }
+        
+        const streakEl = document.getElementById('streakDays');
+        const logsEl = document.getElementById('monthLogs');
+        if(streakEl) streakEl.innerText = streak;
+        if(logsEl) logsEl.innerText = logsCount;
+
         const todayD = new Date();
         if (todayD.getHours() < 4) todayD.setDate(todayD.getDate() - 1);
         const lToday = todayD.toLocaleDateString('sv-SE');
@@ -326,8 +322,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('latestSleep').innerText = current.sleep_hours || "--";
             sleepH = current.sleep_hours || 6;
             
-            const mFaces = ["", "😫", "😟", "😐", "🙂", "🤩"];
-            document.getElementById('latestMental').innerText = current.mental_condition ? mFaces[current.mental_condition] : "--";
+            let lv = current.mental_condition ? current.mental_condition : "--";
+            document.getElementById('latestMental').innerText = lv;
             
             if (previous && current.weight && previous.weight) {
                 const diff = (current.weight - previous.weight).toFixed(1);
@@ -343,7 +339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (vValue && vCircle) {
             let vScore = Math.min(100, Math.round(50 + (sleepH / 7) * 40));
             vValue.innerText = vScore;
-            vCircle.style.background = `conic-gradient(var(--clr-good) ${vScore}%, var(--clr-bg) ${vScore}%)`;
+            vCircle.style.background = `conic-gradient(var(--clr-primary) ${vScore}%, var(--clr-border) ${vScore}%)`;
         }
     };
     
