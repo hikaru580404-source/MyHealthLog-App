@@ -6,7 +6,7 @@
 // --- Connection Settings ---
 // IMPORTANT: Replace with your actual Supabase ANON KEY (ASCII only, no spaces)
 const SUPABASE_URL = "https://qzxajtlisscwxwidicfh.supabase.co";
-const SUPABASE_KEY = "YOUR_SUPABASE_ANON_KEY_HERE";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6eGFqdGxpc3Njd3h3aWRpY2ZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM4ODMyODcsImV4cCI6MjA4OTQ1OTI4N30.a_p0H8IA9G2GzCQXirIDmHCsw38SDGGxIBwRFvbJtf0";
 
 // --- Client Initialization ---
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
