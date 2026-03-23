@@ -1,84 +1,57 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // 認証チェック
     const user = await checkAuth();
     if (!user) return;
 
     const listContainer = document.getElementById('historyBody');
     if (!listContainer) return;
-    listContainer.innerHTML = '<div style="text-align:center; padding: 3rem; color: #64748b; font-weight: 600; letter-spacing: 0.1em;">Loading...</div>';
+    listContainer.innerHTML = '<div style="text-align:center; padding: 3rem; color: #8b9bb4;">Loading Governance History...</div>';
 
-    // Supabaseからユーザーの全ログを取得
-    const { data: logs, error } = await supabaseClient
-        .from('health_logs')
-        .select('*')
+    const { data: rawLogs, error } = await supabaseClient
+        .from('universal_logs')
+        .select('payload')
         .eq('user_id', user.id)
-        .order('measured_date', { ascending: false });
+        .eq('project_id', 'jwa')
+        .eq('log_type', 'daily_metric');
 
     if (error) {
-        listContainer.innerHTML = '<div style="text-align:center; color:#ef4444; padding: 2rem;">Error loading data</div>';
+        listContainer.innerHTML = '<div style="text-align:center; color:#eecb70;">Error Loading History</div>';
         return;
     }
 
-    // 日付をキーにしたマップを作成
+    let logs = rawLogs ? rawLogs.map(r => r.payload) : [];
     const logMap = {};
-    if (logs) {
-        logs.forEach(log => { logMap[log.measured_date] = log; });
-    }
+    logs.forEach(log => { logMap[log.measured_date] = log; });
 
     listContainer.innerHTML = '';
-    
-    // 深夜4時ルールを適用した「今日」の論理日付を取得
     const today = new Date();
     if (today.getHours() < 4) today.setDate(today.getDate() - 1);
 
-    // 過去30日間をループして一覧を生成
     for (let i = 0; i < 30; i++) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toLocaleDateString('sv-SE'); // YYYY-MM-DD
-        
-        // 1行分のコンテナ (div) を生成
+        const d = new Date(today); d.setDate(d.getDate() - i);
+        const dateStr = d.toLocaleDateString('sv-SE');
         const row = document.createElement('div');
         row.className = 'archive-row';
+        row.style.cursor = 'pointer';
         row.onclick = () => { location.href = `form.html?date=${dateStr}`; };
 
-        const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
-        // 例: 03/22 Sun
-        const dateDisplay = `${dateStr.slice(5).replace('-', '/')} <span class="dow">${dayOfWeek}</span>`; 
+        const dws = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dateDisplay = `${dateStr.slice(5).replace('-', '/')} <span style="font-size:0.7rem; opacity:0.6;">${dws[d.getDay()]}</span>`;
 
         if (logMap[dateStr]) {
-            // 記録がある場合
             const log = logMap[dateStr];
-            const weight = log.weight ? `${log.weight} <small>kg</small>` : '--';
-            const sleep = log.sleep_hours ? `${log.sleep_hours} <small>h</small>` : '--';
-            
-            let mentalBadge = '--';
-            if (log.mental_condition) {
-                const mFaces = ["", "😫", "😟", "😐", "🙂", "🤩"];
-                mentalBadge = mFaces[log.mental_condition];
-            }
-            
-            // CSSで自動省略されるため、そのまま全テキストを投入
-            const note = log.daily_notes || '';
-
-            row.innerHTML = `
-                <div class="col-date">${dateDisplay}</div>
-                <div class="col-metrics">
-                    <div class="metric-val">${weight}</div>
-                    <div class="metric-val">${sleep}</div>
-                </div>
-                <div class="col-mental">${mentalBadge}</div>
-                <div class="col-journal">${note}</div>
-            `;
+            const weight = log.weight ? `${log.weight}kg` : '--';
+            const sleep = log.sleep_hours ? `${log.sleep_hours}h` : '--';
+            row.innerHTML = `<div style="padding:15px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-weight:700;">${dateDisplay}</div>
+                <div style="color:var(--clr-accent); font-size:0.9rem;">W: ${weight} / S: ${sleep}</div>
+                <i class="fas fa-chevron-right" style="opacity:0.3;"></i>
+            </div>`;
         } else {
-            // 記録がない場合（Nullスタイルを適用）
-            row.classList.add('is-null');
-            row.innerHTML = `
-                <div class="col-date">${dateDisplay}</div>
-                <div class="col-null-msg">
-                    <span class="null-badge">[ NULL ]</span>
-                </div>
-            `;
+            row.innerHTML = `<div style="padding:15px; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center; opacity:0.3;">
+                <div>${dateDisplay}</div>
+                <div style="font-size:0.8rem;">[ NULL ]</div>
+                <i class="fas fa-chevron-right"></i>
+            </div>`;
         }
         listContainer.appendChild(row);
     }

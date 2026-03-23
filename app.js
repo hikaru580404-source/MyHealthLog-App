@@ -1,240 +1,50 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // 1. Auth Check (Assuming auth.js provides checkAuth and supabaseClient)
-    if (typeof checkAuth === 'function') {
-        const user = await checkAuth();
-        if (!user) return;
-        window.currentUser = user;
-    }
-    
-    // グローバルデータ（モーダル描画用）
-    window.globalAllLogs = [];
+    // 1. 認証チェック
+    const user = await checkAuth();
+    if (!user) return;
 
-    // --- 多言語辞書 (i18n) 2.0対応版 ---
-    window.currentLang = localStorage.getItem('appLang_2.0') || 'en'; // デフォルトは英語
-    window.dict = {
-        en: {
-            app_title: "GOVERNANCE LOG",
-            streak: "STREAK",
-            days: "Days",
-            logs: "LOGS",
-            this_month: "This Month",
-            vitality_ai: "VITALITY SCORE",
-            gov_power: "GOVERNANCE POWER",
-            daily_kpi: "DAILY LOG (KPIs)",
-            weight: "WEIGHT",
-            fat: "BODY FAT",
-            sleep_lbl: "SLEEP",
-            mental: "MENTAL",
-            hint_click_kpi: "* Tap cards for detailed charts & AI advice.",
-            wake: "WAKE",
-            sleep: "SLEEP",
-            edit_history: "Edit Daily Log",
-            close: "Close",
-            night_msg: "Governance completed. Good night.",
-            adv_weight: "[Analysis] Focus on the long-term trend (1-4 weeks) rather than daily water fluctuations.",
-            adv_fat: "[Analysis] Measure under identical conditions daily (e.g., after waking up) for precise tracking.",
-            adv_sleep: "[Analysis] Sleep is strategic maintenance. Aim for quality to maximize daytime decision making.",
-            adv_mental: "[Analysis] Represents your margin for altruism. Prioritize recovery if the level drops."
-        },
+    // 2. 状態管理（UI要素）
+    const btnWake = document.getElementById('btnWaketime');
+    const btnBed = document.getElementById('btnBedtime');
+    const vValue = document.getElementById('vitalityValue');
+    const vCircle = document.getElementById('vitalityCircle');
+    const navHistory = document.getElementById('navHistory');
+    const navModal = document.getElementById('navConfirmModal');
+
+    // 3. 多言語（簡易版）
+    window.currentLang = 'ja';
+    const dict = {
         ja: {
-            app_title: "統治ログ",
-            streak: "継続日数",
-            days: "日",
-            logs: "記録数",
-            this_month: "今月",
-            vitality_ai: "客観活力",
-            gov_power: "主観戦闘力",
-            daily_kpi: "日次記録 (KPIs)",
-            weight: "体重",
-            fat: "体脂肪率",
-            sleep_lbl: "睡眠時間",
-            mental: "コンディション",
-            hint_click_kpi: "※カードをタップで詳細トレンドとAI分析を表示",
-            wake: "起床",
-            sleep: "就寝",
-            edit_history: "過去の記録を編集する",
-            close: "閉じる",
-            night_msg: "今日も統治完了。おやすみなさい。",
-            adv_weight: "【分析】日々の水分量で変動します。一喜一憂せず、1週間〜1ヶ月の長期トレンドを重視してください。",
-            adv_fat: "【分析】毎日同じ条件（起床後など）で計測することで、ノイズのない正確な推移が把握できます。",
-            adv_sleep: "【分析】睡眠は「戦略的メンテナンス」です。日中の意思決定の質を最大化するために確保しましょう。",
-            adv_mental: "【分析】利他のための「余裕」の指標です。低下している場合は自己回復を最優先にしてください。"
+            msg_wake: "おはようございます！今日も統治を始めましょう。",
+            title_hist: "History & Audit",
+            desc_hist: "過去の統治記録を振り返り、修正や監査を行います。"
         }
     };
 
-    // --- 言語アップデート処理 ---
-    function updateLanguage() {
-        document.querySelectorAll('[data-i18n]').forEach(el => {
-            const key = el.getAttribute('data-i18n');
-            if (window.dict[window.currentLang] && window.dict[window.currentLang][key]) {
-                el.innerHTML = window.dict[window.currentLang][key];
-            }
-        });
-        
-        // 言語トグルボタンの表示更新
-        const langBtn = document.getElementById('langToggleBtn');
-        if (langBtn) {
-            langBtn.innerText = window.currentLang === 'en' ? 'EN | ja' : 'en | JA';
-        }
-    }
-    updateLanguage();
-
-    // 言語切り替えイベント
-    const langBtn = document.getElementById('langToggleBtn');
-    if (langBtn) {
-        langBtn.onclick = () => {
-            window.currentLang = (window.currentLang === 'en' ? 'ja' : 'en');
-            localStorage.setItem('appLang_2.0', window.currentLang);
-            updateLanguage();
-        };
-    }
-
-    // --- 主観戦闘力（ダイヤル）の制御 ---
-    const powerSlider = document.getElementById('powerSlider');
-    const powerValue = document.getElementById('powerValue');
-    const powerCircle = document.getElementById('powerCircle');
-    if (powerSlider && powerValue && powerCircle) {
-        const savedPower = localStorage.getItem('govPower_v2') || 80;
-        powerSlider.value = savedPower;
-        powerValue.innerText = savedPower;
-        powerCircle.style.background = `conic-gradient(var(--clr-primary) ${savedPower}%, var(--clr-border) ${savedPower}%)`;
-
-        powerSlider.addEventListener('input', (e) => {
-            const val = e.target.value;
-            powerValue.innerText = val;
-            powerCircle.style.background = `conic-gradient(var(--clr-primary) ${val}%, var(--clr-border) ${val}%)`;
-            localStorage.setItem('govPower_v2', val);
-        });
-    }
-
-    // --- KPIカードのクリック詳細表示 (Detail Modal) ---
-    document.querySelectorAll('.kpi-card').forEach(card => {
-        card.addEventListener('click', () => {
-            const kpiType = card.getAttribute('data-kpi');
-            if (kpiType) openKpiDetailModal(kpiType);
-        });
-    });
-
-    function openKpiDetailModal(kpiType) {
-        const modal = document.getElementById('kpiDetailModal');
-        if(!modal) return;
-
-        const titleEl = document.getElementById('mdKpiTitle');
-        const mainValEl = document.getElementById('mdKpiMainValue');
-        const adviceEl = document.getElementById('mdAdvice');
-
-        let title = "";
-        let val = "--";
-        let logs = window.globalAllLogs.slice(0, 30).reverse(); // 直近30日のデータ
-        let chartData = [];
-        let chartLabel = "";
-
-        const latestLog = window.globalAllLogs[0] || {};
-        const dict = window.dict[window.currentLang];
-
-        if (kpiType === 'weight') {
-            title = dict.weight;
-            val = (latestLog.weight ? latestLog.weight.toFixed(1) : "--") + " kg";
-            adviceEl.innerText = dict.adv_weight;
-            chartData = logs.map(l => l.weight || null);
-            chartLabel = "Weight (kg)";
-        } else if (kpiType === 'fat') {
-            title = dict.fat;
-            val = (latestLog.body_fat ? latestLog.body_fat.toFixed(1) : "--") + " %";
-            adviceEl.innerText = dict.adv_fat;
-            chartData = logs.map(l => l.body_fat || null);
-            chartLabel = "Body Fat (%)";
-        } else if (kpiType === 'sleep') {
-            title = dict.sleep_lbl;
-            val = (latestLog.sleep_hours ? latestLog.sleep_hours.toFixed(1) : "--") + " h";
-            adviceEl.innerText = dict.adv_sleep;
-            chartData = logs.map(l => l.sleep_hours || null);
-            chartLabel = "Sleep (h)";
-        } else if (kpiType === 'mental') {
-            title = dict.mental;
-            const mFaces = ["", "😫", "😟", "😐", "🙂", "🤩"];
-            let lv = latestLog.mental_condition ? latestLog.mental_condition : "--";
-            val = `Level ${lv} ${latestLog.mental_condition ? mFaces[lv] : ""}`;
-            adviceEl.innerText = dict.adv_mental;
-            chartData = logs.map(l => l.mental_condition || null);
-            chartLabel = "Mental Level";
-        }
-
-        titleEl.innerText = title;
-        mainValEl.innerText = val;
-
-        // チャートの描画
-        const labels = logs.map(l => {
-            if(!l.measured_date) return "";
-            const parts = l.measured_date.split('-');
-            return `${parts[1]}/${parts[2]}`; // MM/DD 形式
-        });
-        renderDetailChart(labels, chartData, chartLabel);
-        modal.style.display = 'flex';
-    }
-
-    function renderDetailChart(labels, data, labelName) {
-        const ctx = document.getElementById('detailModalChart').getContext('2d');
-        if (window.detailChart) window.detailChart.destroy();
-
-        window.detailChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: labelName,
-                    data: data,
-                    borderColor: '#d4af37', // ゴールド
-                    backgroundColor: 'rgba(212, 175, 55, 0.1)',
-                    borderWidth: 2,
-                    pointBackgroundColor: '#d4af37',
-                    pointRadius: 3,
-                    tension: 0.3,
-                    fill: true,
-                    spanGaps: true
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { ticks: { color: '#8b9bb4', font: { family: 'Inter' }, maxTicksLimit: 7 }, grid: { display: false } },
-                    y: { ticks: { color: '#8b9bb4', font: { family: 'Inter' } }, grid: { color: 'rgba(255,255,255,0.05)' } }
-                }
-            }
-        });
-    }
-
-    // --- クイックログ機能 (起床・就寝 / 深夜4時バグ対策済み) ---
+    // 4. クイックログ機能 (起床・就寝)
     async function quickLog(field, doAnimation = false) {
-        if (!window.currentUser) return;
         const now = new Date();
-        
-        // 日本時間のタイムスタンプ文字列を手動生成 (YYYY-MM-DD HH:mm:ss+09)
-        const offset = now.getTimezoneOffset() * 60000;
-        const localISO = new Date(now - offset).toISOString().slice(0, 19).replace('T', ' ') + "+09";
-
         let lDate = new Date(now);
-        if (now.getHours() < 4) lDate.setDate(lDate.getDate() - 1); // 深夜4時ルール
+        if (now.getHours() < 4) lDate.setDate(lDate.getDate() - 1);
         const dateStr = lDate.toLocaleDateString('sv-SE');
 
         const { data: existing } = await supabaseClient
             .from('universal_logs')
             .select('id, payload')
-            .eq('user_id', window.currentUser.id)
+            .eq('user_id', user.id)
             .eq('project_id', 'jwa')
             .eq('log_type', 'daily_metric')
             .eq('payload->>measured_date', dateStr)
             .maybeSingle();
             
         let pToSave = existing && existing.payload ? existing.payload : { measured_date: dateStr };
-        pToSave[field] = localISO;
+        pToSave[field] = now.toISOString();
 
-        // 睡眠時間の自動計算
+        // 睡眠時間の算出
         if (pToSave.waketime && pToSave.bedtime) {
-            let wD = new Date(pToSave.waketime.replace(' ', 'T'));
-            let bD = new Date(pToSave.bedtime.replace(' ', 'T'));
-            let diffM = (wD - bD) / 60000;
+            let wD = new Date(pToSave.waketime);
+            let bD = new Date(pToSave.bedtime);
+            let diffM = (wD - bD) / (1000 * 60);
             if (diffM < 0) diffM += 24 * 60;
             pToSave.sleep_hours = Math.round((diffM / 60) * 10) / 10;
         }
@@ -243,106 +53,69 @@ document.addEventListener('DOMContentLoaded', async () => {
             await supabaseClient.from('universal_logs').update({ payload: pToSave }).eq('id', existing.id);
         } else {
             await supabaseClient.from('universal_logs').insert({
-                user_id: window.currentUser.id, project_id: 'jwa', log_type: 'daily_metric', payload: pToSave
+                user_id: user.id, project_id: 'jwa', log_type: 'daily_metric', payload: pToSave
             });
         }
         
-        if (doAnimation) {
-            const overlay = document.getElementById('nightOverlay');
-            if (overlay) {
-                overlay.classList.add('active');
-                setTimeout(() => { overlay.classList.remove('active'); loadDashboard(); }, 3000);
-            }
-        } else {
-            alert(window.currentLang === 'ja' ? "記録しました。" : "Logged successfully.");
-            loadDashboard(); // リロードせずに画面更新
-        }
+        alert(dict.ja.msg_wake);
+        loadDashboard();
     }
 
-    const btnWake = document.getElementById('btnWaketime');
-    const btnBed = document.getElementById('btnBedtime');
     if (btnWake) btnWake.onclick = () => quickLog('waketime', false);
     if (btnBed) btnBed.onclick = () => quickLog('bedtime', true);
-    
-    // フォームへの遷移
-    const btnEdit = document.getElementById('btnEditHistory');
-    if (btnEdit) btnEdit.onclick = () => { location.href = 'form.html'; };
 
-    // --- ダッシュボードデータ読込 ---
+    // 5. ナビゲーション（不具合解消済）
+    if (navHistory) {
+        navHistory.onclick = (e) => {
+            e.preventDefault();
+            document.getElementById('navModalTitle').innerText = dict.ja.title_hist;
+            document.getElementById('navModalDesc').innerText = dict.ja.desc_hist;
+            navModal.style.display = 'flex';
+        };
+    }
+
+    const modalProceed = document.getElementById('navModalProceed');
+    if (modalProceed) {
+        modalProceed.onclick = () => { location.href = 'summary.html'; };
+    }
+
+    window.onclick = (event) => {
+        if (event.target == navModal) navModal.style.display = "none";
+    };
+
+    // 6. ダッシュボード描画
     window.loadDashboard = async function() {
-        if (!window.currentUser || typeof supabaseClient === 'undefined') return;
-
         const { data } = await supabaseClient
             .from('universal_logs')
             .select('payload')
-            .eq('user_id', window.currentUser.id)
+            .eq('user_id', user.id)
             .eq('project_id', 'jwa')
             .eq('log_type', 'daily_metric');
-            
-        let allLogs = data ? data.map(d => d.payload) : [];
-        allLogs.sort((a, b) => (b.measured_date || "").localeCompare(a.measured_date || ""));
-        window.globalAllLogs = allLogs;
+        
+        let logs = data ? data.map(d => d.payload) : [];
+        logs.sort((a, b) => (b.measured_date || "").localeCompare(a.measured_date || ""));
 
-        // ストリーク＆ログ数計算
-        let streak = 0;
-        let logsCount = 0;
-        try {
-            const { data: kpiData } = await supabaseClient.rpc('get_user_performance', { target_user_id: window.currentUser.id });
-            streak = kpiData?.[0]?.streak_days || 0;
-            logsCount = kpiData?.[0]?.logs_count || allLogs.filter(l => l.measured_date?.startsWith(new Date().toISOString().slice(0, 7))).length;
-        } catch (e) {
-            logsCount = allLogs.filter(l => l.measured_date?.startsWith(new Date().toISOString().slice(0, 7))).length;
+        // 活力スコア算出（直近データ）
+        let vScore = 50; 
+        if (logs.length > 0) {
+            const latest = logs[0];
+            const sleepH = latest.sleep_hours || 6;
+            vScore = Math.min(100, Math.round(50 + (sleepH / 7) * 40));
         }
         
-        const streakEl = document.getElementById('streakDays');
-        const logsEl = document.getElementById('monthLogs');
-        if(streakEl) streakEl.innerText = streak;
-        if(logsEl) logsEl.innerText = logsCount;
+        if(vValue) vValue.innerText = vScore;
+        if(vCircle) vCircle.style.background = `conic-gradient(var(--clr-accent) ${vScore}%, #1e293b ${vScore}%)`;
 
-        const todayD = new Date();
-        if (todayD.getHours() < 4) todayD.setDate(todayD.getDate() - 1);
-        const lToday = todayD.toLocaleDateString('sv-SE');
-        
-        const todayLog = allLogs.find(l => l.measured_date === lToday);
-        if (todayLog && todayLog.waketime && !todayLog.bedtime) {
-            if(btnWake) { btnWake.style.opacity = '0.5'; btnWake.style.pointerEvents = 'none'; }
-            if(btnBed) { btnBed.style.opacity = '1'; btnBed.style.pointerEvents = 'auto'; }
+        // ボタン状態制御
+        const now = new Date();
+        const lToday = (now.getHours() < 4 ? new Date(now.setDate(now.getDate()-1)) : now).toLocaleDateString('sv-SE');
+        const todayLog = logs.find(l => l.measured_date === lToday);
+        if (todayLog && todayLog.waketime) {
+            btnWake.classList.add('disabled');
         } else {
-            if(btnWake) { btnWake.style.opacity = '1'; btnWake.style.pointerEvents = 'auto'; }
-            if(btnBed) { btnBed.style.opacity = '0.5'; btnBed.style.pointerEvents = 'none'; }
-        }
-
-        let sleepH = 6;
-        if (allLogs.length > 0) {
-            const current = allLogs[0];
-            const previous = allLogs[1] || null;
-            
-            document.getElementById('latestWeight').innerText = current.weight || "--";
-            document.getElementById('latestFat').innerText = current.body_fat || "--";
-            document.getElementById('latestSleep').innerText = current.sleep_hours || "--";
-            sleepH = current.sleep_hours || 6;
-            
-            let lv = current.mental_condition ? current.mental_condition : "--";
-            document.getElementById('latestMental').innerText = lv;
-            
-            if (previous && current.weight && previous.weight) {
-                const diff = (current.weight - previous.weight).toFixed(1);
-                const el = document.getElementById('deltaWeight');
-                el.innerText = `Δ ${diff > 0 ? '+' : ''}${diff} kg`;
-                el.className = `kpi-delta ${diff > 0 ? 'delta-bad' : 'delta-good'}`;
-            }
-        }
-
-        // Vitality Score (客観活力)
-        const vValue = document.getElementById('vitalityValue');
-        const vCircle = document.getElementById('vitalityCircle');
-        if (vValue && vCircle) {
-            let vScore = Math.min(100, Math.round(50 + (sleepH / 7) * 40));
-            vValue.innerText = vScore;
-            vCircle.style.background = `conic-gradient(var(--clr-primary) ${vScore}%, var(--clr-border) ${vScore}%)`;
+            btnWake.classList.remove('disabled');
         }
     };
-    
-    // 初期化実行
+
     loadDashboard();
 });
