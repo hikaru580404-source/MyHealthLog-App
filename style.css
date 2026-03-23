@@ -1,178 +1,85 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+document.addEventListener('DOMContentLoaded', async () => {
+    // 認証チェック
+    const user = await checkAuth();
+    if (!user) return;
 
-:root {
-  --clr-bg: #0b0f19;         /* より深い黒寄りのネイビー（高級感） */
-  --clr-card: #151b2b;       /* カード背景 */
-  --clr-primary: #d4af37;    /* 上質なゴールド */
-  --clr-text-main: #ffffff;  /* ピュアホワイト */
-  --clr-text-muted: #8b9bb4; /* 青みがかったグレー */
-  --clr-border: #232d42;     /* ボーダー */
-  --clr-good: #10b981;       /* 改善（緑） */
-  --clr-bad: #ef4444;        /* 悪化（赤） */
-}
+    const listContainer = document.getElementById('historyBody');
+    if (!listContainer) return;
+    listContainer.innerHTML = '<div style="text-align:center; padding: 3rem; color: #64748b; font-weight: 600; letter-spacing: 0.1em;">Loading...</div>';
 
-* { box-sizing: border-box; }
+    // Supabaseからユーザーの全ログを取得
+    const { data: logs, error } = await supabaseClient
+        .from('health_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('measured_date', { ascending: false });
 
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--clr-bg);
-  color: var(--clr-text-main);
-  margin: 0; 
-  padding: 0;
-  -webkit-font-smoothing: antialiased;
-}
+    if (error) {
+        listContainer.innerHTML = '<div style="text-align:center; color:#ef4444; padding: 2rem;">Error loading data</div>';
+        return;
+    }
 
-/* Header */
-.app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  background: rgba(11, 15, 25, 0.85);
-  backdrop-filter: blur(12px);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  border-bottom: 1px solid var(--clr-border);
-}
+    // 日付をキーにしたマップを作成
+    const logMap = {};
+    if (logs) {
+        logs.forEach(log => { logMap[log.measured_date] = log; });
+    }
 
-.logo {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 2.5px;
-  color: var(--clr-text-main);
-}
+    listContainer.innerHTML = '';
+    
+    // 深夜4時ルールを適用した「今日」の論理日付を取得
+    const today = new Date();
+    if (today.getHours() < 4) today.setDate(today.getDate() - 1);
 
-.lang-toggle {
-  background: transparent;
-  border: 1px solid var(--clr-border);
-  color: var(--clr-text-muted);
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.lang-toggle:hover { border-color: var(--clr-primary); color: var(--clr-primary); }
+    // 過去30日間をループして一覧を生成
+    for (let i = 0; i < 30; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toLocaleDateString('sv-SE'); // YYYY-MM-DD
+        
+        // 1行分のコンテナ (div) を生成
+        const row = document.createElement('div');
+        row.className = 'archive-row';
+        row.onclick = () => { location.href = `form.html?date=${dateStr}`; };
 
-.dashboard-main { padding-top: 16px; max-width: 600px; margin: 0 auto; }
+        const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+        // 例: 03/22 Sun
+        const dateDisplay = `${dateStr.slice(5).replace('-', '/')} <span class="dow">${dayOfWeek}</span>`; 
 
-/* Stats Grid (Top) */
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 0 16px 16px;
-}
-.stat-card {
-  background: var(--clr-card);
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid var(--clr-border);
-  text-align: center;
-}
-.stat-label { font-size: 11px; color: var(--clr-text-muted); font-weight: 600; letter-spacing: 1.5px; margin-bottom: 8px;}
-.stat-value { font-size: 24px; font-weight: 700; color: var(--clr-primary); }
-.stat-value .unit { font-size: 12px; color: var(--clr-text-muted); font-weight: 500; }
+        if (logMap[dateStr]) {
+            // 記録がある場合
+            const log = logMap[dateStr];
+            const weight = log.weight ? `${log.weight} <small>kg</small>` : '--';
+            const sleep = log.sleep_hours ? `${log.sleep_hours} <small>h</small>` : '--';
+            
+            let mentalBadge = '--';
+            if (log.mental_condition) {
+                const mFaces = ["", "😫", "😟", "😐", "🙂", "🤩"];
+                mentalBadge = mFaces[log.mental_condition];
+            }
+            
+            // CSSで自動省略されるため、そのまま全テキストを投入
+            const note = log.daily_notes || '';
 
-/* Power & Vitality */
-.power-section {
-  display: flex;
-  justify-content: space-around;
-  padding: 24px 16px;
-  background: linear-gradient(180deg, var(--clr-card), transparent);
-  border-top: 1px solid var(--clr-border);
-  border-bottom: 1px solid var(--clr-border);
-  margin-bottom: 16px;
-}
-.power-box { text-align: center; width: 45%; }
-.circle-chart {
-  width: 100px; height: 100px;
-  border-radius: 50%;
-  margin: 0 auto 12px;
-  display: flex; justify-content: center; align-items: center;
-  background: conic-gradient(var(--clr-primary) 0%, var(--clr-border) 0%);
-  transition: background 0.3s;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-.circle-inner {
-  width: 86px; height: 86px;
-  background: var(--clr-bg);
-  border-radius: 50%;
-  display: flex; justify-content: center; align-items: center;
-}
-.circle-val { font-size: 28px; font-weight: 700; }
-.circle-label { font-size: 11px; color: var(--clr-text-muted); letter-spacing: 1px; font-weight: 600; }
-.power-slider { width: 100%; margin-top: 16px; accent-color: var(--clr-primary); }
-
-/* KPI Grid */
-.kpi-section { padding: 0 16px; }
-.kpi-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.kpi-card {
-  background: var(--clr-card);
-  border-radius: 12px;
-  padding: 20px 16px;
-  border: 1px solid var(--clr-border);
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-.kpi-card:hover { transform: translateY(-3px); border-color: var(--clr-primary); box-shadow: 0 6px 16px rgba(212, 175, 55, 0.1); }
-.kpi-label { font-size: 11px; color: var(--clr-text-muted); font-weight: 600; letter-spacing: 1.5px; margin-bottom: 12px;}
-.kpi-value { font-size: 26px; font-weight: 700; color: var(--clr-text-main); }
-.kpi-value .unit { font-size: 13px; color: var(--clr-text-muted); font-weight: 500; margin-left: 2px; }
-.kpi-delta { font-size: 12px; margin-top: 6px; font-weight: 600; }
-.delta-good { color: var(--clr-good); }
-.delta-bad { color: var(--clr-bad); }
-.kpi-hint { font-size: 11px; color: var(--clr-text-muted); margin-top: 12px; text-align: center; }
-
-/* Buttons */
-.action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 24px 16px; }
-.action-btn {
-  padding: 18px; border: none; border-radius: 12px; font-size: 15px; font-weight: 700;
-  letter-spacing: 1px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px;
-  transition: opacity 0.2s;
-}
-.wake-btn { background: var(--clr-card); color: var(--clr-text-main); border: 1px solid var(--clr-border); }
-.bed-btn { background: var(--clr-primary); color: #000; box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2); }
-.btn-primary {
-  padding: 16px; background: transparent; color: var(--clr-text-muted);
-  border: 1px solid var(--clr-border); border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer;
-  letter-spacing: 1px; transition: all 0.2s;
-}
-.btn-primary:hover { border-color: var(--clr-text-main); color: var(--clr-text-main); }
-
-/* Modal */
-.modal-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.85); backdrop-filter: blur(8px);
-  display: flex; justify-content: center; align-items: center; z-index: 1000;
-}
-.modal-card {
-  background: var(--clr-card); padding: 24px; border-radius: 16px; width: 90%; max-width: 400px;
-  border: 1px solid var(--clr-border); box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-}
-.modal-title { margin: 0 0 8px; font-size: 13px; color: var(--clr-text-muted); font-weight: 600; letter-spacing: 1.5px; }
-.modal-main-val { font-size: 36px; font-weight: 700; margin-bottom: 16px; color: var(--clr-primary); }
-.modal-chart-container { height: 180px; width: 100%; margin-bottom: 20px; }
-.modal-advice { 
-  font-size: 13px; color: var(--clr-text-main); line-height: 1.6; margin-bottom: 24px; 
-  background: rgba(255,255,255,0.03); padding: 16px; border-radius: 8px; 
-  border-left: 3px solid var(--clr-primary); 
-}
-.modal-card .btn-primary { background: var(--clr-card); width: 100%; }
-
-/* Night Overlay */
-.night-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000;
-  display: flex; justify-content: center; align-items: center; z-index: 9999;
-  opacity: 0; pointer-events: none; transition: opacity 1s ease;
-}
-.night-overlay.active { opacity: 1; pointer-events: auto; }
-.night-message { color: var(--clr-primary); font-size: 18px; font-weight: 600; letter-spacing: 1px; text-align: center; }
+            row.innerHTML = `
+                <div class="col-date">${dateDisplay}</div>
+                <div class="col-metrics">
+                    <div class="metric-val">${weight}</div>
+                    <div class="metric-val">${sleep}</div>
+                </div>
+                <div class="col-mental">${mentalBadge}</div>
+                <div class="col-journal">${note}</div>
+            `;
+        } else {
+            // 記録がない場合（Nullスタイルを適用）
+            row.classList.add('is-null');
+            row.innerHTML = `
+                <div class="col-date">${dateDisplay}</div>
+                <div class="col-null-msg">
+                    <span class="null-badge">[ NULL ]</span>
+                </div>
+            `;
+        }
+        listContainer.appendChild(row);
+    }
+});
