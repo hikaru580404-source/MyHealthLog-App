@@ -3,75 +3,90 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Settings | HEALTH LOG</title>
+  <title>SETTINGS | HEALTH LOG</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    :root {
-      --clr-bg: #0b0f19; var(--clr-bg-panel): #151b2b; var(--clr-primary: #38bdf8;
-      --clr-accent: #fbbf24; var(--clr-text-main: #ffffff; var(--clr-text-secondary): #8b9bb4;
-    }
-    body { font-family: sans-serif; background-color: var(--clr-bg); color: #fff; margin: 0; }
-    .app-header { background: #111; padding: 16px 20px; border-bottom: 1px solid #222; position: sticky; top: 0; z-index: 100; }
-    .header-inner { display: flex; justify-content: space-between; align-items: center; max-width: 600px; margin: 0 auto; }
-    .logo { font-family: 'Inter', sans-serif; font-weight: 800; font-size: 1rem; }
-    .settings-main { padding: 24px 20px; max-width: 600px; margin: 0 auto; }
-    .release-notes { background: #161e2e; border: 1px solid #2d3748; border-radius: 12px; padding: 20px; }
-    .version-tag { background: rgba(251, 191, 36, 0.15); color: var(--clr-accent); padding: 4px 8px; border-radius: 4px; font-weight: 700; font-size: 0.8rem; display: inline-block; margin-bottom: 16px;}
-    .feature-list { list-style: none; padding: 0; margin: 0; }
-    .feature-list li { margin-bottom: 16px; font-size: 0.95rem; line-height: 1.6; display: flex; gap: 12px; }
-    .feature-title { font-weight: 600; color: #fff; display: block; margin-bottom: 4px;}
-    .feature-desc { color: #8b9bb4; font-size: 0.85rem; }
-    .feature-list i { color: #10b981; margin-top: 4px; }
+    .settings-container { max-width: 500px; margin: 0 auto; padding: 24px 16px; }
+    .settings-section-title { font-size: 0.75rem; font-weight: 800; color: var(--clr-accent); margin-bottom: 16px; letter-spacing: 0.1em; text-transform: uppercase; }
+    .settings-card { background: var(--clr-surface); border-radius: var(--radius-lg); padding: 24px; border: 1px solid var(--clr-border); backdrop-filter: blur(10px); margin-bottom: 24px; }
+    .settings-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .settings-item label { display: block; font-size: 0.7rem; font-weight: 600; color: var(--clr-text-secondary); margin-bottom: 6px; text-transform: uppercase; }
+    .settings-input { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); color: var(--clr-text-primary); font-family: inherit; font-size: 1rem; }
+    .cond-group { display: flex; gap: 8px; justify-content: space-between; margin-bottom: 24px; }
+    .cond-btn { flex: 1; aspect-ratio: 1; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm); color: var(--clr-text-secondary); font-size: 1.2rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+    .cond-btn.active { border-color: var(--clr-accent); color: var(--clr-accent); background: rgba(251, 191, 36, 0.1); }
+    .btn-guide { width: 100%; padding: 14px; background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; margin-bottom: 24px; text-align: center; border: none; }
   </style>
 </head>
 <body>
+  <header class="app-header">
+    <div class="header-inner" style="justify-content: flex-start; gap: 16px;">
+      <a href="index.html" class="header-icon-btn"><i class="fas fa-arrow-left"></i></a>
+      <div class="logo">SETTINGS</div>
+    </div>
+  </header>
 
-<header class="app-header">
-  <div class="header-inner">
-    <a href="index.html" style="color: #666; text-decoration: none; font-size: 1.2rem;"><i class="fas fa-chevron-left"></i></a>
-    <div class="logo">SETTINGS</div>
-    <div style="width: 20px;"></div>
+  <main class="app-main settings-container">
+    <form id="settingsForm">
+      <div class="settings-section-title">KPI Targets</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-item"><label>Target Weight (kg)</label><input type="number" id="goalWeight" class="settings-input" step="0.1"></div>
+          <div class="settings-item"><label>Target Fat (%)</label><input type="number" id="goalFat" class="settings-input" step="0.1"></div>
+        </div>
+      </div>
+
+      <div class="settings-section-title">Today's Record</div>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div class="settings-item"><label>昨晩の就寝</label><input type="time" id="bedtime" class="settings-input"></div>
+          <div class="settings-item"><label>今朝の起床</label><input type="time" id="waketime" class="settings-input"></div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-item"><label>現在の体重 (kg)</label><input type="number" id="nowWeight" class="settings-input" step="0.1"></div>
+          <div class="settings-item"><label>現在の体脂肪 (%)</label><input type="number" id="nowFat" class="settings-input" step="0.1"></div>
+        </div>
+        <label class="settings-item" style="color: var(--clr-text-secondary); font-size: 0.7rem; margin-bottom: 8px; display: block; text-transform: uppercase;">コンディション</label>
+        <div class="cond-group" id="mentalGrp">
+          <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
+          <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
+          <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
+          <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
+          <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
+        </div>
+        <button type="button" class="btn-guide" id="openGuideBtn"><i class="fas fa-book"></i> リリースノート (Guide)</button>
+      </div>
+
+      <div style="display: flex; gap: 12px; margin-top: 32px;">
+        <button type="button" class="btn-secondary" onclick="location.href='index.html'">Cancel</button>
+        <button type="submit" class="btn-primary" id="saveAllBtn">Save Changes</button>
+      </div>
+    </form>
+    <div id="saveMsg" style="margin-top: 16px; text-align: center; font-size: 0.85rem; color: #10b981; display: none;">Saved successfully!</div>
+  </main>
+
+  <div class="modal-overlay" id="guideModal">
+    <div class="modal-content" style="max-width: 500px; text-align: left;">
+      <div class="modal-title">Release Notes</div>
+      <div style="max-height: 400px; overflow-y: auto; padding-right: 8px;">
+        <h4 style="color: var(--clr-accent); margin-bottom: 8px;">Ver 2.0</h4>
+        <ul style="font-size: 0.85rem; padding-left: 18px; color: var(--clr-text-secondary); line-height: 1.6;">
+          <li><b>PWA化：</b> ホーム画面に追加でフルスクリーン起動可能。</li>
+          <li><b>Activity Grid：</b> GitHub風の継続グラフ搭載。</li>
+          <li><b>インスタ風UI：</b> 3列タイルの食事ギャラリー。</li>
+          <li><b>AIティザー：</b> 次世代AI解析エンジンの準備。</li>
+        </ul>
+      </div>
+      <button class="btn-secondary" style="margin-top:20px;" onclick="document.getElementById('guideModal').style.display='none'">Close</button>
+    </div>
   </div>
-</header>
 
-<main class="settings-main">
-  <div class="release-notes">
-    <div class="version-tag">Version 2.0.0</div><span style="color:#666; font-size:0.8rem; margin-left:8px;">2026.03.23</span>
-    
-    <ul class="feature-list">
-      <li>
-        <i class="fas fa-check-circle"></i>
-        <div>
-          <span class="feature-title">【UI/UX】宇宙ネイビー＆ゴールドテーマの採用</span>
-          <span class="feature-desc">システムの配色を、深い宇宙をイメージした「ディープネイビー」と「最上級のゴールド」に統一。情報の視認性と高級感を両立し、あなたの「統治」にふさわしい管理画面へと進化しました。</span>
-        </div>
-      </li>
-      <li>
-        <i class="fas fa-check-circle"></i>
-        <div>
-          <span class="feature-title">【新機能】KPIクリック詳細モーダルの実装</span>
-          <span class="feature-desc">ダッシュボードの各KPIカードをタップすることで、直近30日間の詳細なトレンドグラフと、AI Personal Coachによる専門的な分析アドバイスが表示されるようになりました。</span>
-        </div>
-      </li>
-      <li>
-        <i class="fas fa-check-circle"></i>
-        <div>
-          <span class="feature-title">【グローバル】多言語対応（日英切り替え機能）</span>
-          <span class="feature-desc">ヘッダーの「EN/JA」ボタンより、ワンタップで英語と日本語の表示を切り替えることが可能になりました。グローバルな管理体験を提供します。</span>
-        </div>
-      </li>
-      <li>
-        <i class="fas fa-check-circle"></i>
-        <div>
-          <span class="feature-title">【バグ修正】深夜4時バグの完全解消（論理日付システムの導入）</span>
-          <span class="feature-desc">0:00〜3:59の間の入力であっても、システムが自動的に「前日の活動」として認識・処理するロジックを実装。データのズレや重複が完全に解消されました。</span>
-        </div>
-      </li>
-    </ul>
-  </div>
-</main>
-
-<script src="auth.js"></script>
+  <script src="supabase-client.js"></script>
+  <script src="settings.js"></script>
 </body>
 </html>
