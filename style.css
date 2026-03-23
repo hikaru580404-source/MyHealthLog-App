@@ -24,12 +24,21 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body { 
-  font-family: var(--font-en); /* 全体を英語フォントベースに */
+  font-family: var(--font-en);
+  /* background-attachment:fixed は iOS Safari でレンダリングバグあり → html要素に移す */
   background: radial-gradient(circle at top right, var(--clr-bg-top) 0%, var(--clr-bg-bottom) 80%);
-  background-attachment: fixed;
   color: var(--clr-text-primary); 
   min-height: 100vh; 
-  letter-spacing: 0.02em; 
+  min-height: -webkit-fill-available; /* iOS Safari の 100vh バグ対応 */
+  letter-spacing: 0.02em;
+  -webkit-tap-highlight-color: transparent; /* スマホタップ時のハイライト除去 */
+}
+
+/* iOS Safari の background-attachment:fixed 代替 */
+html {
+  background: radial-gradient(circle at top right, var(--clr-bg-top) 0%, var(--clr-bg-bottom) 80%);
+  background-attachment: fixed;
+  min-height: 100%;
 }
 
 /* ヘッダー */

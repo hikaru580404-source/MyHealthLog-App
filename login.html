@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="AsirLabo">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <title>Login | HEALTH LOG</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
@@ -17,7 +23,7 @@
     }
     .auth-logo { font-size: 1.5rem; font-weight: 800; color: var(--clr-accent); font-family: var(--font-en); letter-spacing: 0.1em; margin-bottom: 24px; }
     .auth-title { font-size: 1rem; font-weight: 700; color: var(--clr-text-primary); margin-bottom: 24px; letter-spacing: 0.05em; }
-    .auth-input { width: 100%; padding: 14px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 16px; color: var(--clr-text-primary); font-family: inherit; font-size: 0.95rem; }
+    .auth-input { width: 100%; padding: 14px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; margin-bottom: 16px; color: var(--clr-text-primary); font-family: inherit; font-size: 1rem; /* 16px以上でiOSの自動ズームを防ぐ */ -webkit-appearance: none; }
     .auth-input:focus { border-color: var(--clr-accent); outline: none; }
     .auth-btn { width: 100%; padding: 14px; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%); color: #000; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.95rem; margin-top: 8px; }
     .auth-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4); }
@@ -35,8 +41,10 @@
       <div id="authTitle" class="auth-title">システム ログイン</div>
       
       <form id="authForm">
-        <input type="email" id="email" class="auth-input" placeholder="Email Address" required>
-        <input type="password" id="password" class="auth-input" placeholder="Password" required>
+        <input type="email" id="email" class="auth-input" placeholder="Email Address" required
+          autocomplete="email" inputmode="email">
+        <input type="password" id="password" class="auth-input" placeholder="Password" required
+          autocomplete="current-password">
         
         <div id="consentGroup" class="consent-group">
           <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
