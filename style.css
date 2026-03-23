@@ -1,85 +1,138 @@
-document.addEventListener('DOMContentLoaded', async () => {
-    // 認証チェック
-    const user = await checkAuth();
-    if (!user) return;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap');
 
-    const listContainer = document.getElementById('historyBody');
-    if (!listContainer) return;
-    listContainer.innerHTML = '<div style="text-align:center; padding: 3rem; color: #64748b; font-weight: 600; letter-spacing: 0.1em;">Loading...</div>';
+:root {
+  /* 宇宙のような深いネイビーのグラデーションベース */
+  --clr-bg-top: #151b2e; 
+  --clr-bg-bottom: #090c15;
+  
+  --clr-surface: rgba(26, 33, 51, 0.6); /* ガラスのような透明感 */
+  --clr-border: rgba(251, 191, 36, 0.2);
+  
+  --clr-accent: #fbbf24; /* 最上級のゴールド */
+  --clr-accent-dim: #d97706; 
+  
+  --clr-text-primary: #f8fafc;
+  --clr-text-secondary: #8b9bb4;
+  
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --font-en: 'Inter', sans-serif;
+  --font-jp: 'Noto Sans JP', sans-serif;
+}
 
-    // Supabaseからユーザーの全ログを取得
-    const { data: logs, error } = await supabaseClient
-        .from('health_logs')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('measured_date', { ascending: false });
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    if (error) {
-        listContainer.innerHTML = '<div style="text-align:center; color:#ef4444; padding: 2rem;">Error loading data</div>';
-        return;
-    }
+body { 
+  font-family: var(--font-en); /* 全体を英語フォントベースに */
+  background: radial-gradient(circle at top right, var(--clr-bg-top) 0%, var(--clr-bg-bottom) 80%);
+  background-attachment: fixed;
+  color: var(--clr-text-primary); 
+  min-height: 100vh; 
+  letter-spacing: 0.02em; 
+}
 
-    // 日付をキーにしたマップを作成
-    const logMap = {};
-    if (logs) {
-        logs.forEach(log => { logMap[log.measured_date] = log; });
-    }
+/* ヘッダー */
+.app-header { 
+  background: transparent; border-bottom: 1px solid rgba(255,255,255,0.03); 
+}
+.header-inner { 
+  max-width: 800px; margin: 0 auto; padding: 20px 16px; 
+  display: flex; justify-content: space-between; align-items: center; 
+}
+.logo { font-size: 1.1rem; font-weight: 800; color: var(--clr-accent); letter-spacing: 0.1em; }
+.header-icon-btn, .header-logout-btn {
+  background: transparent; border: 1px solid rgba(255,255,255,0.2); 
+  color: var(--clr-text-primary); padding: 6px 12px; border-radius: 6px; 
+  font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.2s; font-family: var(--font-en);
+}
+.header-icon-btn:hover, .header-logout-btn:hover { border-color: var(--clr-accent); color: var(--clr-accent); }
 
-    listContainer.innerHTML = '';
-    
-    // 深夜4時ルールを適用した「今日」の論理日付を取得
-    const today = new Date();
-    if (today.getHours() < 4) today.setDate(today.getDate() - 1);
+.app-main { max-width: 800px; margin: 0 auto; padding: 20px 16px; }
+.section-title { font-size: 0.9rem; font-weight: 600; color: var(--clr-text-primary); margin-bottom: 12px; letter-spacing: 0.05em; }
 
-    // 過去30日間をループして一覧を生成
-    for (let i = 0; i < 30; i++) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toLocaleDateString('sv-SE'); // YYYY-MM-DD
-        
-        // 1行分のコンテナ (div) を生成
-        const row = document.createElement('div');
-        row.className = 'archive-row';
-        row.onclick = () => { location.href = `form.html?date=${dateStr}`; };
+/* クイックアクション */
+.quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+.btn-quick {
+  border: none; border-radius: var(--radius-md); padding: 18px 0; font-size: 1rem; font-weight: 700; cursor: pointer;
+  display: flex; justify-content: center; align-items: center; gap: 10px; 
+  transition: 0.3s; font-family: var(--font-en);
+}
+.btn-quick.wake { background: linear-gradient(135deg, #fcd34d 0%, #d97706 100%); color: #000; box-shadow: 0 4px 15px rgba(217, 119, 6, 0.4); }
+.btn-quick.meal { background: transparent; border: 1px solid var(--clr-accent); color: var(--clr-accent); backdrop-filter: blur(4px); }
+.btn-quick.bed { background: linear-gradient(135deg, #334155 0%, #0f172a 100%); color: #fff; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
 
-        const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
-        // 例: 03/22 Sun
-        const dateDisplay = `${dateStr.slice(5).replace('-', '/')} <span class="dow">${dayOfWeek}</span>`; 
+/* KPIカード */
+.kpi-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.kpi-card {
+  background: var(--clr-surface); border-radius: var(--radius-md); padding: 20px;
+  border: 1px solid var(--clr-border); backdrop-filter: blur(10px);
+  display: flex; flex-direction: column; justify-content: center;
+}
+.kpi-label { font-size: 0.75rem; color: var(--clr-text-secondary); margin-bottom: 8px; letter-spacing: 0.05em; text-transform: uppercase;}
+.kpi-value { font-size: 1.8rem; font-weight: 800; color: var(--clr-accent); margin-bottom: 6px; }
+.kpi-delta { font-size: 0.75rem; font-weight: 600; }
+.delta-good { color: #10b981; } 
+.delta-bad { color: #ef4444; } 
 
-        if (logMap[dateStr]) {
-            // 記録がある場合
-            const log = logMap[dateStr];
-            const weight = log.weight ? `${log.weight} <small>kg</small>` : '--';
-            const sleep = log.sleep_hours ? `${log.sleep_hours} <small>h</small>` : '--';
-            
-            let mentalBadge = '--';
-            if (log.mental_condition) {
-                const mFaces = ["", "😫", "😟", "😐", "🙂", "🤩"];
-                mentalBadge = mFaces[log.mental_condition];
-            }
-            
-            // CSSで自動省略されるため、そのまま全テキストを投入
-            const note = log.daily_notes || '';
+/* タブナビ（画像のようなシンプルな下線スタイル） */
+.tab-nav { display: flex; gap: 24px; }
+.tab-btn { 
+  background: none; border: none; font-size: 0.85rem; font-weight: 600; color: var(--clr-text-secondary); 
+  padding-bottom: 6px; cursor: pointer; transition: 0.2s; font-family: var(--font-en);
+}
+.tab-btn.active { color: var(--clr-accent); border-bottom: 2px solid var(--clr-accent); }
+.tab-btn:hover:not(.active) { color: var(--clr-text-primary); }
 
-            row.innerHTML = `
-                <div class="col-date">${dateDisplay}</div>
-                <div class="col-metrics">
-                    <div class="metric-val">${weight}</div>
-                    <div class="metric-val">${sleep}</div>
-                </div>
-                <div class="col-mental">${mentalBadge}</div>
-                <div class="col-journal">${note}</div>
-            `;
-        } else {
-            // 記録がない場合（Nullスタイルを適用）
-            row.classList.add('is-null');
-            row.innerHTML = `
-                <div class="col-date">${dateDisplay}</div>
-                <div class="col-null-msg">
-                    <span class="null-badge">[ NULL ]</span>
-                </div>
-            `;
-        }
-        listContainer.appendChild(row);
-    }
-});
+/* チャート */
+.chart-card { 
+  background: var(--clr-surface); border-radius: var(--radius-md); padding: 24px; 
+  border: 1px solid var(--clr-border); backdrop-filter: blur(10px);
+}
+.chart-header-flex { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 20px; }
+.chart-card-title { font-size: 0.9rem; font-weight: 700; color: var(--clr-text-primary); letter-spacing: 0.05em; }
+.chart-toggle { display: flex; gap: 16px; }
+.btn-toggle { 
+  background: transparent; border: none; font-size: 0.75rem; font-weight: 600; 
+  color: var(--clr-text-secondary); cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: var(--font-en);
+}
+.btn-toggle::before { content: ''; display: block; width: 10px; height: 10px; border-radius: 2px; }
+.btn-toggle#modeWeight::before { background: #f8fafc; }
+.btn-toggle#modeSleep::before { background: linear-gradient(to bottom, #fbbf24, transparent); }
+.btn-toggle.active { color: var(--clr-text-primary); }
+
+/* モーダル */
+.modal-overlay {
+  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(9, 12, 21, 0.85); z-index: 1000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(5px);
+}
+.modal-content {
+  background: #151b2e; width: 100%; max-width: 400px; border-radius: var(--radius-lg); padding: 32px;
+  border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px rgba(0,0,0,0.8);
+}
+.modal-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 16px; color: var(--clr-text-primary); text-align: center; }
+.modal-desc { font-size: 0.8rem; color: var(--clr-text-secondary); margin-bottom: 24px; text-align: center; font-family: var(--font-jp); }
+.form-input { 
+  width: 100%; padding: 12px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); 
+  border-radius: var(--radius-sm); font-size: 0.95rem; color: var(--clr-text-primary); font-family: inherit; transition: 0.2s;
+}
+.form-input:focus { border-color: var(--clr-accent); outline: none; }
+.form-label { display: block; font-size: 0.75rem; font-weight: 600; margin-bottom: 6px; color: var(--clr-text-secondary); }
+.form-group { margin-bottom: 16px; }
+.form-row-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.btn-primary {
+  width: 100%; padding: 14px; background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  color: #000; border: none; border-radius: var(--radius-sm); font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 0.95rem;
+}
+.btn-secondary {
+  width: 100%; padding: 14px; background: transparent; color: var(--clr-text-secondary);
+  border: 1px solid rgba(255,255,255,0.2); border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; transition: 0.2s;
+}
+.modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+.cond-group { display: flex; gap: 8px; justify-content: space-between; }
+.cond-btn {
+  flex: 1; aspect-ratio: 1; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-sm);
+  color: var(--clr-text-secondary); font-size: 1.2rem; cursor: pointer; transition: 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.cond-btn.active { border-color: var(--clr-accent); color: var(--clr-accent); background: rgba(251, 191, 36, 0.1); }
