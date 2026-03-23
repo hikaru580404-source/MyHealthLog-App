@@ -1,161 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HEALTH LOG // DB</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Dashboard | Governance</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="form.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-<header class="app-header">
-  <div class="header-inner">
-    <div class="logo">HEALTH LOG <span style="color:var(--clr-text-secondary); font-weight:400;">// DB</span></div>
-    <div style="display: flex; gap: 16px; align-items: center;">
-      <button id="settingsBtn" class="header-icon-btn"><i class="fas fa-cog"></i></button>
-      <button id="logoutBtn" class="header-logout-btn"><i class="fas fa-sign-out-alt"></i> Log Out</button>
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo" data-i18n="app_title">GOVERNANCE</div>
     </div>
-  </div>
-</header>
+    <div class="header-right">
+      <button id="langToggleBtn" class="lang-toggle">EN | ja</button>
+    </div>
+  </header>
 
-<main class="app-main">
-  <div class="section-title">Quick Action</div>
-  <div class="quick-actions">
-    <button class="btn-quick wake" id="btnWaketime"><i class="fas fa-sun"></i> Wake Up</button>
-    <button class="btn-quick meal" id="btnMealOpen"><i class="fas fa-utensils"></i> Meal</button>
-    <button class="btn-quick bed" id="btnBedtime">Sleep 🌕</button>
-  </div>
-
-  <div class="section-title">KPI</div>
-  <section class="kpi-section">
-    <div class="kpi-card">
-      <div class="kpi-label">Weight</div>
-      <div class="kpi-value"><span id="latestWeight">-- kg</span></div>
-      <div id="deltaWeight" class="kpi-delta"></div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Sleep</div>
-      <div class="kpi-value"><span id="latestSleep">-- h</span></div>
-      <div id="deltaSleep" class="kpi-delta"></div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Mental Condition</div>
-      <div class="kpi-value" style="font-size: 1.2rem;"><span id="latestMental">--</span></div>
-      <div id="deltaMental" class="kpi-delta" style="color:var(--clr-text-secondary);">--</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-label">Month Count</div>
-      <div class="kpi-value"><span id="monthCount">0</span> <span style="font-size: 0.9rem; margin-left:4px;">Days</span></div>
-      <div class="kpi-delta delta-good">Logging</div>
-    </div>
-  </section>
-
-  <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
-    <div class="section-title" style="margin-bottom: 0;">7-Day Trend</div>
-    <nav class="tab-nav">
-      <button class="tab-btn active">Analysis</button>
-      <button class="tab-btn" onclick="location.href='meals.html'">Meals</button>
-      <button class="tab-btn" onclick="location.href='form.html'">Daily Log</button>
-      <button class="tab-btn" onclick="location.href='summary.html'">History</button>
-    </nav>
-  </div>
-
-  <div class="chart-card">
-    <div class="chart-header-flex">
-      <div class="chart-card-title">Recent 7-Day Trend</div>
-      <div class="chart-toggle">
-        <button class="btn-toggle active" id="modeWeight">Weight / Fat</button>
-        <button class="btn-toggle" id="modeSleep">Sleep / Mental</button>
+  <main class="dashboard-main">
+    <section class="goal-section" id="highGoalCard">
+      <div class="section-header">
+        <i class="fas fa-star primary-color"></i>
+        <span data-i18n="north_star">NORTH STAR</span>
       </div>
-    </div>
-    <div style="height:250px;"><canvas id="healthCorrelationChart"></canvas></div>
-  </div>
-</main>
+      <div class="goal-text" id="highGoalText"></div>
+    </section>
 
-<div class="modal-overlay" id="initialSetupModal">
-  <div class="modal-content" id="initModalBlock">
-    <div class="modal-title">Initial Setup</div>
-    <div class="modal-desc">管理の基準となる最初のデータと、<br><span style="color: var(--clr-accent); font-weight:700;">あなたの目標値</span>を入力してください。</div>
-    <form id="initialSetupForm">
-      <div class="form-row-grid" style="background: rgba(251, 191, 36, 0.05); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(251, 191, 36, 0.2);">
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label" style="color: var(--clr-accent);">TARGET Weight (kg)</label>
-          <input type="number" id="initTargetWeight" class="form-input" step="0.1" value="65.0" required>
+    <section class="power-section">
+      <div class="power-box">
+        <div class="circle-chart" id="vitalityCircle">
+          <div class="circle-inner">
+            <span class="circle-val" id="vitalityValue">--</span>
+          </div>
         </div>
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label" style="color: var(--clr-accent);">TARGET Fat (%)</label>
-          <input type="number" id="initTargetFat" class="form-input" step="0.1" value="13.0" required>
+        <div class="circle-label" data-i18n="vitality_ai">VITALITY SCORE</div>
+      </div>
+      <div class="power-box">
+        <div class="circle-chart" id="powerCircle">
+          <div class="circle-inner">
+            <span class="circle-val" id="powerValue">80</span>
+          </div>
+        </div>
+        <div class="circle-label" data-i18n="gov_power">GOVERNANCE POWER</div>
+        <input type="range" id="powerSlider" min="0" max="100" value="80" class="power-slider">
+      </div>
+    </section>
+
+    <section class="kpi-section">
+      <div class="section-header">
+        <span data-i18n="daily_kpi">Daily Log (KPIs)</span>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-card" data-kpi="weight">
+          <div class="kpi-label" data-i18n="weight">WEIGHT</div>
+          <div class="kpi-value"><span id="latestWeight">--</span> <span class="unit">kg</span></div>
+          <div id="deltaWeight" class="kpi-delta"></div>
+        </div>
+        <div class="kpi-card" data-kpi="fat">
+          <div class="kpi-label" data-i18n="fat">BODY FAT</div>
+          <div class="kpi-value"><span id="latestFat">--</span> <span class="unit">%</span></div>
+        </div>
+        <div class="kpi-card" data-kpi="sleep">
+          <div class="kpi-label" data-i18n="sleep_lbl">SLEEP</div>
+          <div class="kpi-value"><span id="latestSleep">--</span> <span class="unit">h</span></div>
+        </div>
+        <div class="kpi-card" data-kpi="mental">
+          <div class="kpi-label" data-i18n="mental">MENTAL</div>
+          <div class="kpi-value" id="latestMental">--</div>
         </div>
       </div>
-      <div class="form-row-grid">
-        <div class="form-group"><label class="form-label">昨晩の就寝</label><input type="time" id="initBedtime" class="form-input" required></div>
-        <div class="form-group"><label class="form-label">今朝の起床</label><input type="time" id="initWaketime" class="form-input" required></div>
-      </div>
-      <div class="form-row-grid">
-        <div class="form-group"><label class="form-label">現在の体重 (kg)</label><input type="number" id="initWeight" class="form-input" step="0.1"></div>
-        <div class="form-group"><label class="form-label">現在の体脂肪 (%)</label><input type="number" id="initFat" class="form-input" step="0.1"></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">コンディション</label>
-        <div class="cond-group" id="initMGrp">
-          <button type="button" class="cond-btn" data-v="1"><i class="far fa-sad-tear"></i></button>
-          <button type="button" class="cond-btn" data-v="2"><i class="far fa-frown"></i></button>
-          <button type="button" class="cond-btn active" data-v="3"><i class="far fa-meh"></i></button>
-          <button type="button" class="cond-btn" data-v="4"><i class="far fa-smile"></i></button>
-          <button type="button" class="cond-btn" data-v="5"><i class="far fa-laugh-beam"></i></button>
-        </div>
-      </div>
-      <button type="submit" class="btn-primary" id="initSaveBtn">Set Targets & Start</button>
-    </form>
-  </div>
-</div>
+      <p class="kpi-hint" data-i18n="hint_click_kpi">* Tap cards for detailed charts & AI advice.</p>
+    </section>
 
-<div class="modal-overlay" id="settingsModal">
-  <div class="modal-content">
-    <div class="modal-title">Settings</div>
-    <div class="form-row-grid" style="margin-bottom: 20px;">
-      <div class="form-group">
-        <label class="form-label" style="color: var(--clr-accent);">TARGET Weight (kg)</label>
-        <input type="number" id="settingTargetWeight" class="form-input" step="0.1" required>
-      </div>
-      <div class="form-group">
-        <label class="form-label" style="color: var(--clr-accent);">TARGET Fat (%)</label>
-        <input type="number" id="settingTargetFat" class="form-input" step="0.1" required>
-      </div>
+    <section class="action-grid">
+      <button class="action-btn wake-btn" id="btnWaketime">
+        <i class="fas fa-sun"></i> <span data-i18n="wake">Wake</span>
+      </button>
+      <button class="action-btn bed-btn" id="btnBedtime">
+        <i class="fas fa-moon"></i> <span data-i18n="sleep">Sleep</span>
+      </button>
+    </section>
+    
+    <div style="padding: 0 16px 32px;">
+        <button class="btn-primary" id="btnEditHistory" style="width: 100%;">
+            <i class="fas fa-edit"></i> <span data-i18n="edit_history">Edit Daily Log</span>
+        </button>
     </div>
-    <div class="modal-actions">
-      <button id="btnSettingsCancel" class="btn-secondary" style="margin-top:0;">Cancel</button>
-      <button id="btnSettingsSave" class="btn-primary" style="margin-top:0;">Save Changes</button>
+  </main>
+
+  <div id="kpiDetailModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <h3 id="mdKpiTitle" class="modal-title">--</h3>
+      <div class="modal-main-val" id="mdKpiMainValue">--</div>
+      <div class="modal-chart-container">
+        <canvas id="detailModalChart"></canvas>
+      </div>
+      <p id="mdAdvice" class="modal-advice">--</p>
+      <button class="btn-primary" onclick="document.getElementById('kpiDetailModal').style.display='none'" data-i18n="close">Close</button>
     </div>
   </div>
-</div>
 
-<div class="modal-overlay" id="mealModal">
-  <div class="modal-content">
-    <div class="modal-title">Meal Log</div>
-    <input type="date" id="quickMealDate" class="form-input" style="margin-bottom: 20px;">
-    <select id="quickMealType" class="form-input" style="margin-bottom: 20px;">
-      <option value="Breakfast">Breakfast</option>
-      <option value="Lunch">Lunch</option>
-      <option value="Dinner">Dinner</option>
-      <option value="Snack">Snack</option>
-    </select>
-    <input type="file" id="quickMealImage" accept="image/*" class="form-input" style="margin-bottom: 20px;">
-    <input type="text" id="quickMealMemo" class="form-input" placeholder="Memo / Calories" style="margin-bottom: 20px;">
-    <div class="modal-actions">
-      <button id="btnMealCancel" class="btn-secondary" style="margin-top:0;">Cancel</button>
-      <button id="btnMealSave" class="btn-primary" style="margin-top:0;">Save</button>
-    </div>
+  <div id="nightOverlay" class="night-overlay">
+    <div class="night-message" data-i18n="night_msg">Governance completed. Good night.</div>
   </div>
-</div>
 
-<script src="supabase-client.js"></script>
-<script src="app.js"></script>
+  <script src="auth.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
