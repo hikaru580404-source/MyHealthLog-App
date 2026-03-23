@@ -100,57 +100,5 @@
 
   <script src="supabase-client.js"></script>
   <script src="form.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const dateInput = document.getElementById('date');
-      const title = document.getElementById('formTitle');
-      const mSec = document.getElementById('morningSection');
-      const nSec = document.getElementById('nightSection');
-      const dMsg = document.getElementById('dayTimeMessage');
-      const btn = document.getElementById('submitBtn');
-
-      function getLogicalToday() {
-        let logicalTodayDate = new Date();
-        if (logicalTodayDate.getHours() < 4) {
-          logicalTodayDate.setDate(logicalTodayDate.getDate() - 1);
-        }
-        return logicalTodayDate.toLocaleDateString('sv-SE');
-      }
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const initialDate = urlParams.get('date') || getLogicalToday();
-
-      function updateUIByTimeAndDate(selectedDateStr) {
-        const now = new Date();
-        const hour = now.getHours();
-        const logicalTodayStr = getLogicalToday();
-
-        mSec.style.display = 'none'; nSec.style.display = 'none'; dMsg.style.display = 'none'; btn.style.display = 'block';
-
-        if (selectedDateStr === logicalTodayStr) {
-          if (hour >= 4 && hour < 12) { title.innerText = "MORNING LOG"; mSec.style.display = 'block'; }
-          else if (hour >= 20 || hour < 4) { title.innerText = "NIGHT LOG"; nSec.style.display = 'block'; }
-          else { title.innerText = "DAY TIME (Log meals in Meals tab)"; dMsg.style.display = 'block'; btn.style.display = 'none'; }
-        } else {
-          title.innerText = "EDIT MODE / " + selectedDateStr;
-          mSec.style.display = 'block'; nSec.style.display = 'block';
-        }
-        
-        if (typeof window.loadDataByDate === 'function') window.loadDataByDate(selectedDateStr);
-      }
-
-      flatpickr("#date", {
-        locale: "ja",
-        dateFormat: "Y-m-d",
-        defaultDate: initialDate,
-        disableMobile: "true", 
-        onChange: function(selectedDates, dateStr, instance) {
-          updateUIByTimeAndDate(dateStr);
-        }
-      });
-
-      updateUIByTimeAndDate(initialDate);
-    });
-  </script>
 </body>
 </html>

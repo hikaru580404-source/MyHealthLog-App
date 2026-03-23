@@ -168,12 +168,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ============================================================
     // クイックログ（起床・就寝ボタン）
     // MIGRATED: health_logs → universal_logs (payload JSONB)
+    // JST固定: toISOString()はUTCのためJST変換して保存
     // ============================================================
+
+    /**
+     * 現在時刻をJSTタイムスタンプ文字列として返す
+     * 形式: "YYYY-MM-DDTHH:MM:SS+09:00"
+     */
+    function getNowJSTTimestamp() {
+        const now = new Date();
+        const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+        const y   = jst.getUTCFullYear();
+        const mo  = String(jst.getUTCMonth() + 1).padStart(2, '0');
+        const d   = String(jst.getUTCDate()).padStart(2, '0');
+        const h   = String(jst.getUTCHours()).padStart(2, '0');
+        const mi  = String(jst.getUTCMinutes()).padStart(2, '0');
+        const s   = String(jst.getUTCSeconds()).padStart(2, '0');
+        return `${y}-${mo}-${d}T${h}:${mi}:${s}+09:00`;
+    }
+
     async function quickLog(field, doAnimation = false) {
         const now = new Date();
-        let lDate = new Date(now);
-        if (now.getHours() < 4) lDate.setDate(lDate.getDate() - 1);
-        const dateStr = lDate.toLocaleDateString('sv-SE');
+        // JSTのHH時を取得
+        const jstHour = (now.getUTCHours() + 9) % 24;
+        const jstDate = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+        if (jstHour < 4) jstDate.setDate(jstDate.getDate() - 1);
+        const dateStr = jstDate.toISOString().slice(0, 10); // YYYY-MM-DD (JST)
 
         const { data: existing } = await supabaseClient
             .from('universal_logs')
@@ -185,7 +205,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             .maybeSingle();
 
         let pToSave = (existing && existing.payload) ? { ...existing.payload } : { measured_date: dateStr };
-        pToSave[field] = now.toISOString();
+        // JST タイムスタンプで保存 (UTC ではなく +09:00 明示)
+        pToSave[field] = getNowJSTTimestamp();
 
         // 睡眠時間の自動算出
         const wTime = field === 'waketime' ? pToSave.waketime : (pToSave.waketime || null);
@@ -336,18 +357,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             ? rawLogs.map(r => r.payload).sort((a,b) => (b.measured_date||'').localeCompare(a.measured_date||''))
             : [];
 
-        // --- Streak 計算 ---
+        // --- Streak 計算 (JST基準) ---
         let streak = 0;
         const loggedDates = new Set(allLogs.map(l => l.measured_date));
-        const todayD = new Date();
-        if (todayD.getHours() < 4) todayD.setDate(todayD.getDate() - 1);
+        const nowForStreak = new Date();
+        const jstHourStreak = (nowForStreak.getUTCHours() + 9) % 24;
+        const todayD = new Date(nowForStreak.getTime() + 9 * 60 * 60 * 1000);
+        if (jstHourStreak < 4) todayD.setDate(todayD.getDate() - 1);
         for (let i = 0; i < 365; i++) {
             const d = new Date(todayD); d.setDate(d.getDate() - i);
-            if (loggedDates.has(d.toLocaleDateString('sv-SE'))) streak++;
+            if (loggedDates.has(d.toISOString().slice(0, 10))) streak++;
             else break;
         }
-        // --- 今月ログ数 ---
-        const thisMonth = new Date().toISOString().slice(0, 7);
+        // --- 今月ログ数 (JST基準) ---
+        const nowForMonth = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
+        const thisMonth = nowForMonth.toISOString().slice(0, 7);
         const monthLogs = allLogs.filter(l => (l.measured_date||'').startsWith(thisMonth)).length;
 
         const elStreakDays = document.getElementById('streakDays');
@@ -355,9 +379,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const elMonthLogs = document.getElementById('monthLogs');
         if (elMonthLogs)  elMonthLogs.innerText  = monthLogs;
 
-        // --- 起床/就寝ボタン状態 ---
+        // --- 起床/就寝ボタン状態 (JST基準) ---
         if (btnWake && btnBed) {
-            const logicalTodayStr = todayD.toLocaleDateString('sv-SE');
+            const logicalTodayStr = todayD.toISOString().slice(0, 10);
             const todayLog = allLogs.find(l => l.measured_date === logicalTodayStr);
             if (todayLog && todayLog.waketime) {
                 btnWake.classList.add('disabled'); btnBed.classList.remove('disabled');
@@ -396,14 +420,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // --- Activity Grid (過去90日) ---
+        // --- Activity Grid (過去90日, JST基準) ---
         const grid = document.getElementById('activityGrid');
         if (grid) {
             grid.innerHTML = '';
-            const now = new Date();
+            const nowJST = new Date(new Date().getTime() + 9 * 60 * 60 * 1000);
             for (let i = 89; i >= 0; i--) {
-                const d = new Date(); d.setDate(now.getDate() - i);
-                const dStr = d.toLocaleDateString('sv-SE');
+                const d = new Date(nowJST); d.setDate(nowJST.getDate() - i);
+                const dStr = d.toISOString().slice(0, 10);
                 const cell = document.createElement('div');
                 cell.className = 'streak-cell' + (loggedDates.has(dStr) ? ' lv-2' : '');
                 grid.appendChild(cell);
