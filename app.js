@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         logoutBtn.onclick = async () => {
             if(confirm("ログアウトしますか？")) {
                 await supabaseClient.auth.signOut();
-                location.href = 'login.html';
+                window.location.replace('login.html');
             }
         };
     }

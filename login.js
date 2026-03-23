@@ -5,11 +5,10 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
 
-    // --- Login guard: already authenticated → redirect to dashboard ---
-    // getSessionUser() is defined in supabase-client.js (NO redirect on null)
-    const user = await getSessionUser();
-    if (user) {
-        window.location.href = "index.html";
+    // --- Login guard: セッションがあれば即ダッシュボードへ ---
+    const existingUser = await getSessionUser();
+    if (existingUser) {
+        window.location.replace("index.html");
         return;
     }
 
@@ -43,6 +42,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const email    = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
 
+        if (!email || !password) {
+            showMsg("メールアドレスとパスワードを入力してください。", "error");
+            return;
+        }
+
         // Sign-up: consent check
         if (!isLoginMode && !consentCheck.checked) {
             showMsg("エラー: 個人情報の取り扱いに同意してください。", "error");
@@ -54,30 +58,60 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (isLoginMode) {
             // ---- LOGIN ----
-            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) {
-                showMsg("ログインエラー: メールアドレスまたはパスワードが違います。", "error");
+            try {
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+                if (error) {
+                    console.error('Login error:', error.message);
+                    showMsg("ログインエラー: " + (error.message || "メールアドレスまたはパスワードが違います。"), "error");
+                    authSubmitBtn.disabled = false;
+                    return;
+                }
+
+                if (!data || !data.session) {
+                    showMsg("ログインエラー: セッションを取得できませんでした。再試行してください。", "error");
+                    authSubmitBtn.disabled = false;
+                    return;
+                }
+
+                // セッション確立を確認してからリダイレクト
+                showMsg("ログイン成功！移動中...", "success");
+
+                // 少し待ってセッションがLocalStorageに書き込まれるのを確保
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                // replace() で履歴を上書き（戻るボタンでlogin.htmlに戻れないようにする）
+                window.location.replace("index.html");
+
+            } catch (err) {
+                console.error('Login exception:', err);
+                showMsg("予期しないエラーが発生しました。再試行してください。", "error");
                 authSubmitBtn.disabled = false;
-            } else {
-                window.location.href = "index.html";
             }
+
         } else {
             // ---- SIGN UP ----
-            const { error } = await supabaseClient.auth.signUp({
-                email,
-                password,
-                options: {
-                    emailRedirectTo: window.location.origin + '/index.html'
-                }
-            });
+            try {
+                const { error } = await supabaseClient.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        emailRedirectTo: window.location.origin + '/index.html'
+                    }
+                });
 
-            if (error) {
-                showMsg("登録エラー: " + error.message, "error");
-                authSubmitBtn.disabled = false;
-            } else {
-                showMsg("確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。", "success");
-                authForm.reset();
-                consentCheck.checked = false;
+                if (error) {
+                    showMsg("登録エラー: " + error.message, "error");
+                    authSubmitBtn.disabled = false;
+                } else {
+                    showMsg("確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。", "success");
+                    authForm.reset();
+                    consentCheck.checked = false;
+                    authSubmitBtn.disabled = false;
+                }
+            } catch (err) {
+                console.error('SignUp exception:', err);
+                showMsg("予期しないエラーが発生しました。", "error");
                 authSubmitBtn.disabled = false;
             }
         }
