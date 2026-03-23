@@ -10,14 +10,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         return d.toLocaleDateString('sv-SE'); // YYYY-MM-DD
     }
 
-    // --- Helper: ローカルタイムスタンプ生成 (UTCズレ防止と深夜対応) ---
+    // --- Helper: ローカルタイムスタンプ生成 (修正版：日本時間+09を固定) ---
     function getLocalTimestamp(logicalDateStr, timeStr, isBedtime) {
         if (!timeStr) return null;
         let d = new Date(logicalDateStr + "T00:00:00");
         const [h, m] = timeStr.split(':').map(Number);
         
         // 就寝時刻が12:00以降（例: 23:00）なら前日の夜とみなし、物理日付を-1日する
-        // 深夜（例: 01:00）ならそのままの論理日付＝物理日付となる
         if (isBedtime && h >= 12) {
             d.setDate(d.getDate() - 1);
         }
@@ -28,14 +27,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         const hh = String(h).padStart(2, '0');
         const min = String(m).padStart(2, '0');
         
-        return `${yy}-${mm}-${dd}T${hh}:${min}:00`;
+        // 修正ポイント: タイムゾーン+09を明示的に付与して保存
+        return `${yy}-${mm}-${dd} ${hh}:${min}:00+09`;
     }
 
-    // --- Helper: タイムスタンプから HH:MM を抽出 ---
+    // --- Helper: タイムスタンプから HH:MM を抽出 (修正版：Tと半スペの両方に対応) ---
     function extractTime(timestampStr) {
         if (!timestampStr) return "";
-        if (timestampStr.includes('T')) {
-            return timestampStr.split('T')[1].substring(0, 5);
+        const t = timestampStr.replace('T', ' ');
+        if (t.includes(' ')) {
+            return t.split(' ')[1].substring(0, 5);
         }
         return "";
     }
@@ -199,12 +200,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 cList.innerHTML += `<div><span>就寝</span><span>${bt}</span></div>`; 
             }
             
-            // 睡眠時間の自動算出（正確な物理日付から計算）
+            // 睡眠時間の自動算出
             if(wt && bt) {
-                let wDate = new Date(payloadToSave.waketime);
-                let bDate = new Date(payloadToSave.bedtime);
+                let wDate = new Date(payloadToSave.waketime.replace(' ', 'T'));
+                let bDate = new Date(payloadToSave.bedtime.replace(' ', 'T'));
                 let diffM = (wDate - bDate) / 60000;
-                if (diffM < 0) diffM += 24 * 60; // 異常値へのフェイルセーフ
+                if (diffM < 0) diffM += 24 * 60;
                 let sleepH = Math.round((diffM / 60) * 10) / 10;
                 
                 payloadToSave.sleep_hours = sleepH;
@@ -232,7 +233,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('s2').classList.add('active');
     });
 
-    // --- 保存処理 (universal_logs へ INSERT または UPDATE) ---
+    // --- 保存処理 ---
     const saveBtn = document.getElementById('saveBtn');
     saveBtn.addEventListener('click', async (e) => {
         const btn = e.target;
@@ -240,7 +241,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.innerText = "保存中...";
 
         try {
-            // 既存のpayloadと今回の入力内容をマージ（既存のデータを消さない）
             const finalPayload = { ...existingPayload, ...payloadToSave };
             let err = null;
 

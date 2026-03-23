@@ -153,10 +153,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- クイックログ機能 (起床・就寝) ---
     async function quickLog(field, doAnimation = false) {
         const now = new Date();
+        // 修正ポイント: UTCではなく日本時間のタイムスタンプ文字列を生成 (YYYY-MM-DD HH:mm:ss+09)
+        const offset = now.getTimezoneOffset() * 60000;
+        const localISO = new Date(now - offset).toISOString().slice(0, 19).replace('T', ' ') + "+09";
+
         let lDate = new Date(now);
         if (now.getHours() < 4) lDate.setDate(lDate.getDate() - 1); // 深夜4時ルール
         const dateStr = lDate.toLocaleDateString('sv-SE');
-        const timeISO = now.toISOString();
 
         const { data: existing } = await supabaseClient
             .from('universal_logs')
@@ -168,12 +171,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             .maybeSingle();
             
         let pToSave = existing && existing.payload ? existing.payload : { measured_date: dateStr };
-        pToSave[field] = timeISO;
+        pToSave[field] = localISO;
 
         // 睡眠時間の自動計算
         if (pToSave.waketime && pToSave.bedtime) {
-            let wD = new Date(pToSave.waketime);
-            let bD = new Date(pToSave.bedtime);
+            let wD = new Date(pToSave.waketime.replace(' ', 'T'));
+            let bD = new Date(pToSave.bedtime.replace(' ', 'T'));
             let diffM = (wD - bD) / 60000;
             if (diffM < 0) diffM += 24 * 60;
             pToSave.sleep_hours = Math.round((diffM / 60) * 10) / 10;
